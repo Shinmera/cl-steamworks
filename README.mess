@@ -1,0 +1,7 @@
+## About cl-steamworks
+This is a wrapper library to allow you to interface with the Valve SteamWorks API.
+
+## Setup
+This library does //not// ship the SteamWorks and SteamClient binaries. You must get your own copy from "Valve"(https://partner.steamgames.com/).
+
+# DON'T LOOK AAAAAAAAAAAAAAAAAAAAAAAAA

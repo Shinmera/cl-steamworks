@@ -168,7 +168,7 @@
         #+windows ;; CSteamIDs make the struct 4-byte aligned.
         (when (and (find "class CSteamID" (getf struct :fields)
                          :key (lambda (a) (getf a :fieldtype))
-                         :test #'string=)
+                         :test #'search)
                    (not (find (getf struct :name) *large-structs* :test #'string=)))
           (setf align 4))
         `(cffi:defcstruct ,(name (getf struct :struct))

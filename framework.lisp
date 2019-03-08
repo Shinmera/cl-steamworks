@@ -52,11 +52,12 @@
 
 (defun maybe-load-low-level (&optional (file (make-pathname :name "low-level" :type "lisp" :defaults *this*)))
   (when (probe-file file)
+    (cffi:load-foreign-library 'steamworks)
     #+asdf
     (let ((component (make-instance 'asdf:cl-source-file
                                     :parent (asdf:find-system :cl-steamworks)
                                     :name "low-level"
-                                    :absolute-pathname file)))
+                                    :pathname file)))
       (asdf:perform 'asdf:compile-op component)
       (asdf:perform 'asdf:load-op component))
     #-asdf

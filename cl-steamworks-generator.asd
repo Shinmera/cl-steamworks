@@ -17,4 +17,5 @@
   :depends-on (:yason
                :cffi
                :pathname-utils
-               :alexandria))
+               :alexandria
+               :cl-steamworks))

@@ -199,7 +199,18 @@
                     :library org.shirakumo.fraf.steamworks.cffi::steamworks)
          ,(parse-typespec (getf method :returntype))
        ,@(when (getf method :desc) (list (getf method :desc)))
+       (this :pointer)
        ,@(loop for arg in (getf method :params)
+               collect (list (name (getf arg :paramname))
+                             (parse-typespec (getf arg :paramtype)))))))
+
+(defun compile-function (function)
+  (let ((name (getf function :functionname)))
+    `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name
+                    :library org.shirakumo.fraf.steamworks.cffi::steamworks)
+         ,(parse-typespec (getf function :returntype))
+       ,@(when (getf function :desc) (list (getf function :desc)))
+       ,@(loop for arg in (getf function :params)
                collect (list (name (getf arg :paramname))
                              (parse-typespec (getf arg :paramtype)))))))
 
@@ -225,7 +236,8 @@
             (%compile #'compile-enum (getf spec :enums))
             (%compile #'compile-typedef (getf spec :typedefs))
             (%compile #'compile-struct (getf spec :structs))
-            (%compile #'compile-method (getf spec :methods)))))
+            (%compile #'compile-method (getf spec :methods))
+            (%compile #'compile-function (getf spec :functions)))))
 
 (defun write-form (form &optional (stream *standard-output*))
   (with-standard-io-syntax
@@ -298,4 +310,6 @@
     (generate (make-pathname :name "steam_api"
                              :type "json"
                              :defaults (pathname-utils:subdirectory sdk-directory "public" "steam")))
-    (format *query-io* "~&Done. You can now load cl-steamworks!~%")))
+    (format *query-io* "~&Loading the library...")
+    (cl-steamworks-cffi::maybe-load-low-level)
+    (format *query-io* "~&Done. You can now use cl-steamworks!~%")))

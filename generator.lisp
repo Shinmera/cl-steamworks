@@ -15,11 +15,38 @@
                  :defaults #.(or *compile-file-pathname* *load-pathname*
                                  (error "COMPILE-FILE or LOAD this file."))))
 
+(defvar *c-type-map*
+  (let ((map (make-hash-table :test 'equalp)))
+    (flet ((to-c-name (name)
+             (map 'string (lambda (c) (if (char= #\- c) #\  c))
+                  (string-downcase name))))
+      (loop for type in '(:char :unsigned-char
+                          :short :unsigned-short
+                          :long :unsigned-long
+                          :long-long :unsigned-long-long
+                          :int8 :uint8
+                          :int16 :uint16
+                          :int32 :uint32
+                          :int64 :uint64
+                          :void)
+            do (setf (gethash (to-c-name type) map) type))
+      map)))
+
 (defun kw (name)
   (intern (string-upcase name) "KEYWORD"))
 
+(defun translate-name (string)
+  (with-output-to-string (out)
+    (loop for char across string
+          do (case char
+               (#\_ (write-char #\- out))
+               (#\: (write-char #\- out))
+               (T (when (upper-case-p char)
+                    (write-char char out))
+                (write-char (char-upcase char) out))))))
+
 (defun name (string)
-  )
+  (intern (translate-name string) #.*package*))
 
 (defun split (split string)
   (let ((parts ())
@@ -54,8 +81,6 @@
                (#\E
                 (setf type `(:enum ,(name part))))
                (T (cond ((string= part "const"))
-                        ((string= part "void")
-                         (setf type :void))
                         ((string= part "enum")
                          (setf type `(:enum ,(name (pop parts)))))
                         ((string= part "class")
@@ -63,7 +88,12 @@
                         ((string= part "struct")
                          (setf type `(:struct ,(name (pop parts)))))
                         (T
-                         (name part))))))
+                         (let* ((parts (list* part (loop for part = (car parts)
+                                                         until (find (char part 0) "*[(E")
+                                                         collect part do (pop parts))))
+                                (name (format NIL "~{~a ~}" parts)))
+                           (or (gethash name *c-type-map*)
+                               (name name))))))))
     (values type count)))
 
 ;; FIXME: Some structure types that appear referenced as return value types

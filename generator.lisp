@@ -207,11 +207,19 @@
   (yason:parse source :object-key-fn #'kw
                       :object-as :plist))
 
+(defun merge-steam-api-spec (thing into)
+  (loop for (key val) on thing by #'cddr
+        do (setf (getf into key) (append val (getf into key))))
+  into)
+
 (defun compile-steam-api-spec (spec)
   (flet ((%compile (compiler definitions)
            (loop for definition in definitions
                  for (res note) = (multiple-value-list (funcall compiler definition))
-                 do (if res (eval res) (warn note))
+                 do (if res
+                        (handler-bind ((style-warning #'muffle-warning))
+                          (eval res))
+                        (warn note))
                  when res collect res)))
     (append (%compile #'compile-const (getf spec :consts))
             (%compile #'compile-enum (getf spec :enums))
@@ -255,9 +263,9 @@
   (write-low-level-file
    (append
     (compile-steam-api-spec
-     (read-steam-api-spec *extras-file*))
-    (compile-steam-api-spec
-     (read-steam-api-spec source)))
+     (merge-steam-api-spec
+      (read-steam-api-spec *extras-file*)
+      (read-steam-api-spec source))))
    :output output
    :if-exists if-exists))
 

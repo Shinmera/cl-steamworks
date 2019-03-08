@@ -12,6 +12,7 @@
   :description "Generator for the low-level steamworks bindings."
   :homepage "https://github.com/Shinmera/cl-steamworks"
   :serial T
-  :components ((:file "generator"))
+  :components ((:file "package")
+               (:file "generator"))
   :depends-on (:yason
                :cffi))

@@ -1,0 +1,35 @@
+{
+    "structs":[
+        {
+            "struct": "InputAnalogActionData_t",
+            "fields": [
+                {"fieldname": "eMode", "fieldtype": "EInputSourceMode"},
+                {"fieldname": "x", "fieldtype": "float"},
+                {"fieldname": "y", "fieldtype": "float"},
+                {"fieldname": "bActive", "fieldtype": "bool"},
+            ]
+        },
+        {
+            "struct": "InputDigitalActionData_t",
+            "fields": [
+                {"fieldname": "bState", "fieldtype": "bool"},
+                {"fieldname": "bActive", "fieldtype": "bool"},
+            ]
+        },
+        {
+            "struct": "InputMotionData_t",
+            "fields": [
+                {"fieldname": "rotQuatX", "fieldtype": "float"},
+                {"fieldname": "rotQuatY", "fieldtype": "float"},
+                {"fieldname": "rotQuatZ", "fieldtype": "float"},
+                {"fieldname": "rotQuatW", "fieldtype": "float"},
+                {"fieldname": "posAccelX", "fieldtype": "float"},
+                {"fieldname": "posAccelY", "fieldtype": "float"},
+                {"fieldname": "posAccelZ", "fieldtype": "float"},
+                {"fieldname": "rotVelX", "fieldtype": "float"},
+                {"fieldname": "rotVelY", "fieldtype": "float"},
+                {"fieldname": "rotVelZ", "fieldtype": "float"},
+            ]
+        },
+    ]
+}

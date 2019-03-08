@@ -15,38 +15,74 @@
                  :defaults #.(or *compile-file-pathname* *load-pathname*
                                  (error "COMPILE-FILE or LOAD this file."))))
 
-(defvar *c-type-map*
+(defparameter *c-type-map*
   (let ((map (make-hash-table :test 'equalp)))
     (flet ((to-c-name (name)
              (map 'string (lambda (c) (if (char= #\- c) #\  c))
                   (string-downcase name))))
-      (loop for type in '(:char :unsigned-char
-                          :short :unsigned-short
-                          :long :unsigned-long
-                          :long-long :unsigned-long-long
-                          :int8 :uint8
+      (loop for type in '(:int8 :uint8
                           :int16 :uint16
                           :int32 :uint32
                           :int64 :uint64
+                          :float :double
+                          :bool :boolean
                           :void)
             do (setf (gethash (to-c-name type) map) type))
+      (loop for type in '(:char :short :int :long :long-long)
+            do (setf (gethash (to-c-name type) map) type)
+               (setf (gethash (to-c-name (format NIL "SIGNED-~a" type)) map) type)
+               (let ((type (intern (format NIL "UNSIGNED-~a" type) "KEYWORD")))
+                 (setf (gethash (to-c-name type) map) type)))
       map)))
+
+(defvar *bad-types* #("ValvePackingSentinel_t"))
+
+(defvar *bad-structs* #("CSteamID" "CGameID" "CSteamAPIContext" "CCallResult"
+                        "CCallback" "CCallbackBase" "ValvePackingSentinel_t"))
+
+(defvar *large-structs* #("LeaderboardEntry_t"))
+
+(defun prefix-p (prefix string)
+  (and (<= (length prefix) (length string))
+       (string-equal string prefix :end1 (length prefix))))
+
+(defun strip-prefixes (string &rest prefixes)
+  (loop for prefix in prefixes
+        when (prefix-p prefix string)
+        do (return (subseq string (length prefix)))
+        finally (return string)))
+
+(defun strip-hungarian (string)
+  (let ((i 0))
+    (loop while (or (lower-case-p (char string i))
+                    (char= (char string i) #\_))
+          do (incf i))
+    (if (= i (length string))
+        string
+        (subseq string i))))
 
 (defun kw (name)
   (intern (string-upcase name) "KEYWORD"))
 
 (defun translate-name (string)
   (with-output-to-string (out)
-    (loop for char across string
+    (loop for prev = (char string 0) then char
+          for char across string
           do (case char
-               (#\_ (write-char #\- out))
-               (#\: (write-char #\- out))
-               (T (when (upper-case-p char)
-                    (write-char char out))
+               (#\_ (unless (char= #\_ prev)
+                      (write-char #\- out)))
+               (#\: (unless (char= #\: prev)
+                      (write-char #\- out)))
+               (T
+                (when (and (not (find prev "_:"))
+                           (upper-case-p char)
+                           (lower-case-p prev))
+                  (write-char #\- out))
                 (write-char (char-upcase char) out))))))
 
 (defun name (string)
-  (intern (translate-name string) #.*package*))
+  (intern (translate-name string)
+          #.(find-package '#:org.shirakumo.fraf.steamworks.cffi)))
 
 (defun split (split string)
   (let ((parts ())
@@ -70,8 +106,11 @@
           while part
           do (case (char part 0)
                (#\*
-                (loop repeat (length part)
-                      do (setf type `(:pointer ,type))))
+                ;; (loop repeat (length part)
+                ;;       do (setf type `(:pointer ,type)))
+                (setf type :pointer))
+               (#\&
+                (setf type :pointer))
                (#\[
                 (setf count (parse-integer part :start 1
                                                 :end (1- (length part)))))
@@ -79,53 +118,78 @@
                 (setf type :pointer)
                 (loop-finish))
                (#\E
-                (setf type `(:enum ,(name part))))
+                (setf type (name part)))
                (T (cond ((string= part "const"))
-                        ((string= part "enum")
-                         (setf type `(:enum ,(name (pop parts)))))
+                        ((string= part "enum"))
                         ((string= part "class")
-                         (setf type `(:struct ,(name (pop parts)))))
+                         (let ((name (pop parts)))
+                           (cond ((string= name "CSteamID") (setf type :unsigned-long))
+                                 ((string= name "CGameID") (setf type :unsigned-long))
+                                 (T (setf type `(:struct ,(name name)))))))
                         ((string= part "struct")
                          (setf type `(:struct ,(name (pop parts)))))
+                        ((string= "_Bool" specstring)
+                         (setf type :bool))
                         (T
                          (let* ((parts (list* part (loop for part = (car parts)
-                                                         until (find (char part 0) "*[(E")
+                                                         until (or (null part) (find (char part 0) "*[(E"))
                                                          collect part do (pop parts))))
-                                (name (format NIL "~{~a ~}" parts)))
-                           (or (gethash name *c-type-map*)
-                               (name name))))))))
+                                (name (format NIL "~{~a~^ ~}" parts)))
+                           (setf type (or (gethash name *c-type-map*)
+                                          (name name)))))))))
+    (when (equal type '(:pointer :char)) (setf type :string))
     (values type count)))
 
-;; FIXME: Some structure types that appear referenced as return value types
-;;        or argument types are not defined in the json file, but are present
-;;        in other headers, sometimes through a type alias.
-;; FIXME: The API seems to rely pretty heavily on structure returns...
-
 (defun compile-typedef (typedef)
-  `(defctype ,(name (getf typedef :typedef))
-       ,(name (parse-typespec (getf typedef :type)))))
+  (if (or (find (getf typedef :typedef) *bad-types* :test #'string=))
+      (values NIL (format NIL "Ignored type definition ~s" (getf typedef :typedef)))
+      `(cffi:defctype ,(name (getf typedef :typedef))
+           ,(parse-typespec (getf typedef :type))
+         ,@(when (getf typedef :desc) (list (getf typedef :desc))))))
 
 (defun compile-enum (enum)
-  `(defcenum ,(name (getf enum :enumname))
+  `(cffi:defcenum ,(name (getf enum :enumname))
+     ,@(when (getf enum :desc) (list (getf enum :desc)))
      ,@(loop for entry in (getf enum :values)
-             collect (list (kw (getf entry :name))
+             collect (list (kw (translate-name (strip-prefixes (strip-prefixes (getf entry :name) "k_n" "k_e" "k_" "dc_")
+                                                               (subseq (getf enum :enumname) 1))))
                            (parse-integer (getf entry :value))))))
 
 (defun compile-const (const)
-  `(defconstant ,(name (getf const :constname))
-     ,(parse-integer (getf const :constval))))
+  `(cl:defconstant ,(name (strip-prefixes (getf const :constname) "k_cch" "k_cwch" "k_c" "k_i"))
+     ,(parse-integer (getf const :constval))
+     ,@(when (getf const :desc) (list (getf const :desc)))))
 
 (defun compile-struct (struct)
-  `(defcstruct ,(name (getf struct :struct))
-     ,@(loop for field in (getf struct :fields)
-             collect (multiple-value-bind (type count) (parse-typespec (getf field :fieldtype))
-                       (list (name (getf field :fieldname))
-                             type
-                             count)))))
+  (if (or (find (getf struct :struct) *bad-structs* :test #'string=)
+          (search "::" (getf struct :struct)))
+      (values NIL (format NIL "Ignored struct definition ~s" (getf struct :struct)))
+      (let ((align #-windows 4 #+windows 8))
+        #+windows ;; CSteamIDs make the struct 4-byte aligned.
+        (when (and (find "class CSteamID" (getf struct :fields)
+                         :key (lambda (a) (getf a :fieldtype))
+                         :test #'string=)
+                   (not (find (getf struct :name) *large-structs* :test #'string=)))
+          (setf align 4))
+        `(cffi:defcstruct ,(name (getf struct :struct))
+           ,@(when (getf struct :desc) (list (getf struct :desc)))
+           ,@(loop with offset = 0
+                   for field in (getf struct :fields)
+                   collect (multiple-value-bind (type count) (parse-typespec (getf field :fieldtype))
+                             (prog1 (list (name (strip-hungarian (getf field :fieldname)))
+                                          type
+                                          :count count
+                                          :offset offset)
+                               ;; Increase offset
+                               (incf offset (* (cffi:foreign-type-size type) count))
+                               ;; Force alignment
+                               (setf offset (* align (ceiling offset align))))))))))
 
 (defun compile-method (method)
   (let ((name (format NIL "SteamAPI_~a_~a" (getf method :classname) (getf method :methodname))))
-    `(defcfun (,(name name) ,name) ,(parse-typespec (getf method :returntype))
+    `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name)
+         ,(parse-typespec (getf method :returntype))
+       ,@(when (getf method :desc) (list (getf method :desc)))
        ,@(loop for arg in (getf method :params)
                collect (list (name (getf arg :paramname))
                              (parse-typespec (getf arg :paramtype)))))))
@@ -135,11 +199,16 @@
                       :object-as :plist))
 
 (defun compile-steam-api-spec (spec)
-  (append (mapcar #'compile-const (getf spec :consts))
-          (mapcar #'compile-enum (getf spec :enums))
-          (mapcar #'compile-typedef (getf spec :typedefs))
-          (mapcar #'compile-struct (getf spec :structs))
-          (mapcar #'compile-method (getf spec :methods))))
+  (flet ((%compile (compiler definitions)
+           (loop for definition in definitions
+                 for (res note) = (multiple-value-list (funcall compiler definition))
+                 do (if res (eval res) (warn note))
+                 when res collect res)))
+    (append (%compile #'compile-const (getf spec :consts))
+            (%compile #'compile-enum (getf spec :enums))
+            (%compile #'compile-typedef (getf spec :typedefs))
+            (%compile #'compile-struct (getf spec :structs))
+            (%compile #'compile-method (getf spec :methods)))))
 
 (defun write-form (form &optional (stream *standard-output*))
   (with-standard-io-syntax

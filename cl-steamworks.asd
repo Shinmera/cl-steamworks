@@ -13,9 +13,10 @@
   :homepage "https://github.com/Shinmera/cl-steamworks"
   :serial T
   :components ((:file "package")
-               (:file "low-level")
+               (:file "framework")
                (:file "wrapper")
                (:file "documentation"))
   :depends-on (:documentation-utils
+               :alexandria
                :trivial-features
                :cffi))

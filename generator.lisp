@@ -10,15 +10,14 @@
   (:export))
 (in-package #:org.shirakumo.fraf.steamworks.generator)
 
+(defvar *this* #.(or *compile-file-pathname* *load-pathname*
+                     (error "COMPILE-FILE or LOAD this file.")))
+
 (defvar *standard-low-level-file*
-  (make-pathname :name "low-level" :type "lisp"
-                 :defaults #.(or *compile-file-pathname* *load-pathname*
-                                 (error "COMPILE-FILE or LOAD this file."))))
+  (make-pathname :name "low-level" :type "lisp" :defaults *this*))
 
 (defvar *extras-file*
-  (make-pathname :name "extra" :type "json"
-                 :defaults #.(or *compile-file-pathname* *load-pathname*
-                                 (error "COMPILE-FILE or LOAD this file."))))
+  (make-pathname :name "extra" :type "json" :defaults *this*))
 
 (defparameter *c-type-map*
   (let ((map (make-hash-table :test 'equalp)))
@@ -196,7 +195,8 @@
 
 (defun compile-method (method)
   (let ((name (format NIL "SteamAPI_~a_~a" (getf method :classname) (getf method :methodname))))
-    `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name)
+    `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name
+                    :library org.shirakumo.fraf.steamworks.cffi::steamworks)
          ,(parse-typespec (getf method :returntype))
        ,@(when (getf method :desc) (list (getf method :desc)))
        ,@(loop for arg in (getf method :params)
@@ -260,3 +260,34 @@
      (read-steam-api-spec source)))
    :output output
    :if-exists if-exists))
+
+(defun query-directory ()
+  (format *query-io* "~&~%Please enter the path to the SteamWorks SDK root directory:~%> ")
+  (let ((path (read-line *query-io*)))
+    (when (string/= "" path)
+      (parse-namestring
+       (if (find (char path (1- (length path))) "\\/")
+           path
+           (format NIL "~a~c" path #+windows #\\ #-windows #\/))))))
+
+(defun copy-directory-contents (source dest)
+  (dolist (file (directory (merge-pathnames pathname-utils:*wild-file* source)))
+    (cond ((pathname-utils:directory-p file)
+           (let ((dest (pathname-utils:subdirectory dest (pathname-utils:directory-name file))))
+             (ensure-directories-exist dest)
+             (copy-directory-contents file dest)))
+          (T
+           (let ((dest (merge-pathnames (pathname-utils:to-file file) dest)))
+             (alexandria:copy-file file dest))))))
+
+(defun setup (&optional (sdk-directory (query-directory)))
+  (when sdk-directory
+    (format *query-io* "~&Copying binaries...")
+    (copy-directory-contents
+     (pathname-utils:subdirectory sdk-directory "redistributable_bin")
+     (ensure-directories-exist (pathname-utils:subdirectory *this* "static")))
+    (format *query-io* "~&Generating bindings...")
+    (generate (make-pathname :name "steam_api"
+                             :type "json"
+                             :defaults (pathname-utils:subdirectory sdk-directory "public" "steam")))
+    (format *query-io* "~&Done. You can now load cl-steamworks!~%")))

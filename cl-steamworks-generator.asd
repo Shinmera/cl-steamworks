@@ -15,4 +15,6 @@
   :components ((:file "package")
                (:file "generator"))
   :depends-on (:yason
-               :cffi))
+               :cffi
+               :pathname-utils
+               :alexandria))

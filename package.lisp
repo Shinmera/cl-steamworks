@@ -6,10 +6,10 @@
 
 (defpackage #:cl-steamworks-cffi
   (:nicknames #:org.shirakumo.fraf.steamworks.cffi)
-  (:use #:cl #:cffi)
+  (:use #:cl)
   (:export))
 
 (defpackage #:cl-steamworks
   (:nicknames #:org.shirakumo.fraf.steamworks)
-  (:use #:cl #:cffi)
+  (:use #:cl)
   (:export))

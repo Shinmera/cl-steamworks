@@ -15,6 +15,11 @@
                  :defaults #.(or *compile-file-pathname* *load-pathname*
                                  (error "COMPILE-FILE or LOAD this file."))))
 
+(defvar *extras-file*
+  (make-pathname :name "extra" :type "json"
+                 :defaults #.(or *compile-file-pathname* *load-pathname*
+                                 (error "COMPILE-FILE or LOAD this file."))))
+
 (defparameter *c-type-map*
   (let ((map (make-hash-table :test 'equalp)))
     (flet ((to-c-name (name)
@@ -212,11 +217,12 @@
 
 (defun write-form (form &optional (stream *standard-output*))
   (with-standard-io-syntax
-    (let ((*package* #.*package*))
+    (let ((*package* #.(find-package '#:org.shirakumo.fraf.steamworks.cffi)))
       (fresh-line stream)
       (terpri stream)
       (write form :stream stream
-                  :readably T
+                  :readably NIL
+                  :pretty T
                   :case :downcase)
       (fresh-line stream))))
 
@@ -243,7 +249,10 @@
 
 (defun generate (source &key output (if-exists :supersede))
   (write-low-level-file
-   (compile-steam-api-spec
-    (read-steam-api-spec source))
+   (append
+    (compile-steam-api-spec
+     (read-steam-api-spec *extras-file*))
+    (compile-steam-api-spec
+     (read-steam-api-spec source)))
    :output output
    :if-exists if-exists))

@@ -42,6 +42,8 @@
 
 (defvar *bad-types* #("ValvePackingSentinel_t"))
 
+(defvar *bad-consts* #("k_cchPersonaNameMax"))
+
 (defvar *bad-structs* #("CSteamID" "CGameID" "CSteamAPIContext" "CCallResult"
                         "CCallback" "CCallbackBase" "ValvePackingSentinel_t"))
 
@@ -161,9 +163,11 @@
                            (parse-integer (getf entry :value))))))
 
 (defun compile-const (const)
-  `(cl:defconstant ,(name (strip-prefixes (getf const :constname) "k_cch" "k_cwch" "k_c" "k_i"))
-     ,(parse-integer (getf const :constval))
-     ,@(when (getf const :desc) (list (getf const :desc)))))
+  (if (or (find (getf const :constname) *bad-consts* :test #'string=))
+      (values NIL (format NIL "Ignored const definition ~s" (getf const :constname)))
+      `(cl:defconstant ,(name (strip-prefixes (getf const :constname) "k_cch" "k_cwch" "k_c" "k_i"))
+         ,(parse-integer (getf const :constval))
+         ,@(when (getf const :desc) (list (getf const :desc))))))
 
 (defun compile-struct (struct)
   (if (or (find (getf struct :struct) *bad-structs* :test #'string=)

@@ -33,22 +33,30 @@
    "steam_api.dll"
    :search-path #.(merge-pathnames "win64/" *static*)))
 
-(cffi:defcstruct callback
-  (vtable :pointer)
-  (flags :uint8)
-  (id :int))
-
 #+windows
-(cffi:defcstruct vtable
-  (b :pointer)
-  (a :pointer)
+(cffi:defcstruct (vtable :class vtable :conc-name vtable-)
+  (result-with-info :pointer)
+  (result :pointer)
   (size :pointer))
 
 #-windows
-(cffi:defcstruct vtable
-  (a :pointer)
-  (b :pointer)
+(cffi:defcstruct (vtable :class vtable :conc-name vtable-)
+  ;; void (pointer this, pointer param)
+  (result :pointer)
+  ;; void (pointer this, pointer param, bool failed, steam-apicall-t api-call)
+  (result-with-info :pointer)
+  ;; int (pointer this)
   (size :pointer))
+
+(cffi:defcstruct (callback :class callback :conc-name callback-)
+  ;; Pointer to vtable instance.
+  (vtable-ptr :pointer)
+  ;; Should be 2 on a game server, 0 otherwise?
+  (flags :uint8)
+  ;; Identifier of the type of callback to register.
+  (id :int)
+  ;; vtable alloc
+  (vtable (:struct vtable)))
 
 (defun maybe-load-low-level (&optional (file (make-pathname :name "low-level" :type "lisp" :defaults *this*)))
   (when (probe-file file)

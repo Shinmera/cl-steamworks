@@ -331,3 +331,5 @@
     (format *query-io* "~&Loading the library...")
     (cl-steamworks-cffi::maybe-load-low-level)
     (format *query-io* "~&Done. You can now use cl-steamworks!~%")))
+
+;; FIXME: scrape constants for struct callback IDs

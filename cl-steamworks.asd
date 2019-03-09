@@ -14,7 +14,9 @@
   :serial T
   :components ((:file "package")
                (:file "framework")
-               (:file "wrapper")
+               (:file "toolkit")
+               (:file "c-object")
+               (:file "callback")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

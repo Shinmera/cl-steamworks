@@ -212,7 +212,7 @@
                         :library org.shirakumo.fraf.steamworks.cffi::steamworks)
              ,(parse-typespec (getf method :returntype))
            ,@(when (getf method :desc) (list (getf method :desc)))
-           (this :pointer)
+           (,(name "this") :pointer)
            ,@(loop for arg in (getf method :params)
                    collect (list (name (getf arg :paramname))
                                  (parse-typespec (getf arg :paramtype))))))))

@@ -193,16 +193,29 @@
                                ;; Force alignment
                                (setf offset (* align (ceiling offset align))))))))))
 
-(defun compile-method (method)
+(defun %structure-types-p (method)
+  (flet ((struct-type-p (type)
+           (let ((type (parse-typespec type)))
+             (and (listp type) (eql :struct (car type))))))
+    (or (struct-type-p (getf method :returntype))
+        (loop for param in (getf method :params)
+              thereis (struct-type-p (getf param :paramtype))))))
+
+(defun compile-method (method cache)
   (let ((name (format NIL "SteamAPI_~a_~a" (getf method :classname) (getf method :methodname))))
-    `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name
-                    :library org.shirakumo.fraf.steamworks.cffi::steamworks)
-         ,(parse-typespec (getf method :returntype))
-       ,@(when (getf method :desc) (list (getf method :desc)))
-       (this :pointer)
-       ,@(loop for arg in (getf method :params)
-               collect (list (name (getf arg :paramname))
-                             (parse-typespec (getf arg :paramtype)))))))
+    (when (<= 0 (incf (gethash name cache -2)))
+      (setf name (format NIL "~a~d" name (gethash name cache))))
+    (if (and (%structure-types-p method)
+             (not (find-symbol (string '#:libffi) '#:cffi)))
+        (values NIL (format NIL "Ignored method definition ~s due to missing libffi." name))
+        `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name
+                        :library org.shirakumo.fraf.steamworks.cffi::steamworks)
+             ,(parse-typespec (getf method :returntype))
+           ,@(when (getf method :desc) (list (getf method :desc)))
+           (this :pointer)
+           ,@(loop for arg in (getf method :params)
+                   collect (list (name (getf arg :paramname))
+                                 (parse-typespec (getf arg :paramtype))))))))
 
 (defun compile-function (function)
   (let ((name (getf function :functionname)))
@@ -236,7 +249,8 @@
             (%compile #'compile-enum (getf spec :enums))
             (%compile #'compile-typedef (getf spec :typedefs))
             (%compile #'compile-struct (getf spec :structs))
-            (%compile #'compile-method (getf spec :methods))
+            (let ((cache (make-hash-table :test 'equal)))
+              (%compile (lambda (f) (compile-method f cache)) (getf spec :methods)))
             (%compile #'compile-function (getf spec :functions)))))
 
 (defun write-form (form &optional (stream *standard-output*))

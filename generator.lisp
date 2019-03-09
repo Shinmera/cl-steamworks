@@ -7,7 +7,11 @@
 (defpackage #:cl-steamworks-generator
   (:nicknames #:org.shirakumo.fraf.steamworks.generator)
   (:use #:cl #:cffi)
-  (:export))
+  (:export
+   #:*standard-low-level-file*
+   #:*extras-file*
+   #:generate
+   #:setup))
 (in-package #:org.shirakumo.fraf.steamworks.generator)
 
 (defvar *this* #.(or *compile-file-pathname* *load-pathname*

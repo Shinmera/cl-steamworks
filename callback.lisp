@@ -21,7 +21,7 @@
                                             'cl-steamworks-cffi::vtable)))
     (setf (cl-steamworks-cffi::callback-vtable-ptr handle) vtable)
     (setf (cl-steamworks-cffi::callback-id handle) (symbol-value (struct-type callback)))
-    (setf (cl-steamworks-cffi::callback-flags handle) 0)
+    (setf (cl-steamworks-cffi::callback-flags handle) (if (server-p (steamworks)) 2 0))
     (setf (cl-steamworks-cffi::vtable-result vtable) (cffi:callback result))
     (setf (cl-steamworks-cffi::vtable-result-with-info vtable) (cffi:callback result-with-info))
     (setf (cl-steamworks-cffi::vtable-size vtable) (cffi:callback size))))

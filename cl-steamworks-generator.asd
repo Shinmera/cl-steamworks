@@ -18,4 +18,5 @@
                :cffi
                :pathname-utils
                :alexandria
-               :cl-steamworks))
+               :cl-steamworks
+               :cl-ppcre))

@@ -150,43 +150,52 @@
     (when (equal type '(:pointer :char)) (setf type :string))
     (values type count)))
 
-(defun compile-typedef (typedef)
-  (if (or (find (getf typedef :typedef) *bad-types* :test #'string=))
-      (values NIL (format NIL "Ignored type definition ~s" (getf typedef :typedef)))
-      `(cffi:defctype ,(name (getf typedef :typedef))
-           ,(parse-typespec (getf typedef :type))
-         ,@(when (getf typedef :desc) (list (getf typedef :desc))))))
+(defun compile-typedef (def)
+  (if (or (find (getf def :typedef) *bad-types* :test #'string=))
+      (values NIL (format NIL "Ignored type definition ~s" (getf def :typedef)))
+      `(cffi:defctype ,(name (getf def :typedef))
+           ,(parse-typespec (getf def :type))
+         ,@(when (getf def :desc) (list (getf def :desc))))))
 
-(defun compile-enum (enum)
-  `(cffi:defcenum ,(name (getf enum :enumname))
-     ,@(when (getf enum :desc) (list (getf enum :desc)))
-     ,@(loop for entry in (getf enum :values)
+(defun compile-enum (def)
+  `(cffi:defcenum ,(name (getf def :enumname))
+     ,@(when (getf def :desc) (list (getf def :desc)))
+     ,@(loop for entry in (getf def :values)
              collect (list (kw (translate-name (strip-prefixes (strip-prefixes (getf entry :name) "k_n" "k_e" "k_" "dc_")
-                                                               (subseq (getf enum :enumname) 1))))
+                                                               (subseq (getf def :enumname) 1))))
                            (parse-integer (getf entry :value))))))
 
-(defun compile-const (const)
-  (if (or (find (getf const :constname) *bad-consts* :test #'string=))
-      (values NIL (format NIL "Ignored const definition ~s" (getf const :constname)))
-      `(cl:defconstant ,(name (strip-prefixes (getf const :constname) "k_cch" "k_cwch" "k_c" "k_i"))
-         ,(parse-integer (getf const :constval))
-         ,@(when (getf const :desc) (list (getf const :desc))))))
+(defun compile-const (def)
+  (if (or (find (getf def :constname) *bad-consts* :test #'string=))
+      (values NIL (format NIL "Ignored const definition ~s" (getf def :constname)))
+      `(cl:defconstant ,(name (strip-prefixes (getf def :constname) "k_cch" "k_cwch" "k_c" "k_i"))
+         ,(parse-integer (getf def :constval))
+         ,@(when (getf def :desc) (list (getf def :desc))))))
 
-(defun compile-struct (struct)
-  (if (or (find (getf struct :struct) *bad-structs* :test #'string=)
-          (search "::" (getf struct :struct)))
-      (values NIL (format NIL "Ignored struct definition ~s" (getf struct :struct)))
+(defun compile-callback (def)
+  (if (and (string= (getf def :struct) "callbackname")
+           (string= (getf def :constname) "callbackid"))
+      (values NIL "Ignored callback definition scanned from preprocessor directive.")
+      `(cl:defconstant ,(name (getf def :struct))
+         (+ ,(name (strip-prefixes (getf def :constname) "k_cch" "k_cwch" "k_c" "k_i"))
+            ,(parse-integer (getf def :offset)))
+         ,@(when (getf def :desc) (list (getf def :desc))))))
+
+(defun compile-struct (def)
+  (if (or (find (getf def :struct) *bad-structs* :test #'string=)
+          (search "::" (getf def :struct)))
+      (values NIL (format NIL "Ignored struct definition ~s" (getf def :struct)))
       (let ((align #-windows 4 #+windows 8))
         #+windows ;; CSteamIDs make the struct 4-byte aligned.
-        (when (and (find "class CSteamID" (getf struct :fields)
+        (when (and (find "class CSteamID" (getf def :fields)
                          :key (lambda (a) (getf a :fieldtype))
                          :test #'search)
-                   (not (find (getf struct :name) *large-structs* :test #'string=)))
+                   (not (find (getf def :name) *large-structs* :test #'string=)))
           (setf align 4))
-        `(cffi:defcstruct ,(name (getf struct :struct))
-           ,@(when (getf struct :desc) (list (getf struct :desc)))
+        `(cffi:defcstruct ,(name (getf def :struct))
+           ,@(when (getf def :desc) (list (getf def :desc)))
            ,@(loop with offset = 0
-                   for field in (getf struct :fields)
+                   for field in (getf def :fields)
                    collect (multiple-value-bind (type count) (parse-typespec (getf field :fieldtype))
                              (prog1 (list (name (strip-hungarian (getf field :fieldname)))
                                           type
@@ -205,8 +214,8 @@
         (loop for param in (getf method :params)
               thereis (struct-type-p (getf param :paramtype))))))
 
-(defun compile-method (method cache)
-  (let ((name (format NIL "SteamAPI_~a_~a" (getf method :classname) (getf method :methodname))))
+(defun compile-method (def cache)
+  (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
     (when (<= 0 (incf (gethash name cache -2)))
       (setf name (format NIL "~a~d" name (gethash name cache))))
     (if (and (%structure-types-p method)
@@ -214,20 +223,20 @@
         (values NIL (format NIL "Ignored method definition ~s due to missing libffi." name))
         `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name
                         :library org.shirakumo.fraf.steamworks.cffi::steamworks)
-             ,(parse-typespec (getf method :returntype))
-           ,@(when (getf method :desc) (list (getf method :desc)))
+             ,(parse-typespec (getf def :returntype))
+           ,@(when (getf def :desc) (list (getf def :desc)))
            (,(name "this") :pointer)
-           ,@(loop for arg in (getf method :params)
+           ,@(loop for arg in (getf def :params)
                    collect (list (name (getf arg :paramname))
                                  (parse-typespec (getf arg :paramtype))))))))
 
-(defun compile-function (function)
-  (let ((name (getf function :functionname)))
+(defun compile-function (def)
+  (let ((name (getf def :functionname)))
     `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name
                     :library org.shirakumo.fraf.steamworks.cffi::steamworks)
-         ,(parse-typespec (getf function :returntype))
-       ,@(when (getf function :desc) (list (getf function :desc)))
-       ,@(loop for arg in (getf function :params)
+         ,(parse-typespec (getf def :returntype))
+       ,@(when (getf def :desc) (list (getf def :desc)))
+       ,@(loop for arg in (getf def :params)
                collect (list (name (getf arg :paramname))
                              (parse-typespec (getf arg :paramtype)))))))
 
@@ -235,9 +244,10 @@
   (yason:parse source :object-key-fn #'kw
                       :object-as :plist))
 
-(defun merge-steam-api-spec (thing into)
-  (loop for (key val) on thing by #'cddr
-        do (setf (getf into key) (append val (getf into key))))
+(defun merge-steam-api-spec (into &rest things)
+  (dolist (thing things)
+    (loop for (key val) on thing by #'cddr
+          do (setf (getf into key) (append val (getf into key)))))
   into)
 
 (defun compile-steam-api-spec (spec)
@@ -250,12 +260,35 @@
                         (warn note))
                  when res collect res)))
     (append (%compile #'compile-const (getf spec :consts))
+            (%compile #'compile-callback (getf spec :callbacks))
             (%compile #'compile-enum (getf spec :enums))
             (%compile #'compile-typedef (getf spec :typedefs))
             (%compile #'compile-struct (getf spec :structs))
             (let ((cache (make-hash-table :test 'equal)))
               (%compile (lambda (f) (compile-method f cache)) (getf spec :methods)))
             (%compile #'compile-function (getf spec :functions)))))
+
+(defun scan-for-callbacks (content)
+  (let ((results ()))
+    (flet ((add-callback (struct const offset)
+             (push (list :struct struct :constname const :offset (or offset "0"))
+                   results)))
+      (cl-ppcre:do-register-groups (struct base offset) ("struct ([\\w_]+)\\s*\\{(?:.|\\s)*?enum \\{ k_iCallback = ([\\w_]+)(?: \\+ ([0-9]+))? \\};"
+                                                         content)
+        (add-callback struct base offset))
+      (cl-ppcre:do-register-groups (struct base offset) ("STEAM_CALLBACK_BEGIN\\( ([\\w_]+), ([\\w_]+)(?: \\+ ([0-9]+))? \\);"
+                                                         content)
+        (add-callback struct base offset)))
+    results))
+
+(defun scan-all-headers (directory)
+  (let ((scan (merge-pathnames (make-pathname :type "h" :name pathname-utils:*wild-component*
+                                              :directory (list :relative pathname-utils:*wild-inferiors-component*))
+                               directory)))
+    (loop for path in (directory scan)
+          for content = (alexandria:read-file-into-string path :external-format :latin-1)
+          append (scan-for-callbacks content) into callbacks
+          finally (return (list :callbacks callbacks)))))
 
 (defun write-form (form &optional (stream *standard-output*))
   (with-standard-io-syntax
@@ -290,14 +323,17 @@
             do (write-form form stream)))))
 
 (defun generate (source &key output (if-exists :supersede))
-  (write-low-level-file
-   (append
-    (compile-steam-api-spec
-     (merge-steam-api-spec
-      (read-steam-api-spec *extras-file*)
-      (read-steam-api-spec source))))
-   :output output
-   :if-exists if-exists))
+  (let* ((meta (pathname-utils:subdirectory source "public" "steam"))
+         (json (make-pathname :name "steam_api" :type "json" :defaults meta)))
+    (write-low-level-file
+     (append
+      (compile-steam-api-spec
+       (merge-steam-api-spec
+        (read-steam-api-spec json)
+        (read-steam-api-spec *extras-file*)
+        (scan-all-headers meta))))
+     :output output
+     :if-exists if-exists)))
 
 (defun query-directory ()
   (format *query-io* "~&~%Please enter the path to the SteamWorks SDK root directory:~%> ")
@@ -325,9 +361,7 @@
      (pathname-utils:subdirectory sdk-directory "redistributable_bin")
      (ensure-directories-exist (pathname-utils:subdirectory *this* "static")))
     (format *query-io* "~&Generating bindings...")
-    (generate (make-pathname :name "steam_api"
-                             :type "json"
-                             :defaults (pathname-utils:subdirectory sdk-directory "public" "steam")))
+    (generate sdk-directory)
     (format *query-io* "~&Loading the library...")
     (cl-steamworks-cffi::maybe-load-low-level)
     (format *query-io* "~&Done. You can now use cl-steamworks!~%")))

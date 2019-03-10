@@ -168,9 +168,11 @@
 (defun compile-const (def)
   (if (or (find (getf def :constname) *bad-consts* :test #'string=))
       (values NIL (format NIL "Ignored const definition ~s" (getf def :constname)))
-      `(cl:defconstant ,(name (strip-prefixes (getf def :constname) "k_cch" "k_cwch" "k_c" "k_i"))
-         ,(parse-integer (getf def :constval))
-         ,@(when (getf def :desc) (list (getf def :desc))))))
+      (let ((name (name (strip-prefixes (getf def :constname) "k_cch" "k_cwch" "k_c" "k_i"))))
+        `(cl:defconstant ,name
+           ,(or (ignore-errors (parse-integer (getf def :constval)))
+                `(if (boundp ',name) (symbol-value ',name) ,(getf def :constval)))
+           ,@(when (getf def :desc) (list (getf def :desc)))))))
 
 (defun compile-callback (def)
   (if (and (string= (getf def :struct) "callbackname")
@@ -218,7 +220,7 @@
   (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
     (when (<= 0 (incf (gethash name cache -2)))
       (setf name (format NIL "~a~d" name (gethash name cache))))
-    (if (and (%structure-types-p method)
+    (if (and (%structure-types-p def)
              (not (find-symbol (string '#:libffi) '#:cffi)))
         (values NIL (format NIL "Ignored method definition ~s due to missing libffi." name))
         `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name
@@ -239,6 +241,40 @@
        ,@(loop for arg in (getf def :params)
                collect (list (name (getf arg :paramname))
                              (parse-typespec (getf arg :paramtype)))))))
+
+(defun scan-for-callbacks (content)
+  (let ((results ()))
+    (flet ((add-callback (struct const offset)
+             (push (list :struct struct :constname const :offset (or offset "0"))
+                   results)))
+      (cl-ppcre:do-register-groups (struct base offset) ("struct ([\\w_]+)\\s*\\{(?:.|\\s)*?enum \\{ k_iCallback = ([\\w_]+)(?: \\+ ([0-9]+))? \\};"
+                                                         content)
+        (add-callback struct base offset))
+      (cl-ppcre:do-register-groups (struct base offset) ("STEAM_CALLBACK_BEGIN\\( ([\\w_]+), ([\\w_]+)(?: \\+ ([0-9]+))? \\);"
+                                                         content)
+        (add-callback struct base offset)))
+    results))
+
+(defun scan-for-constants (content)
+  (let ((results ()))
+    (flet ((add-constant (name value)
+             (push (list :constname name :constval value)
+                   results)))
+      ;; #define STEAMCLIENT_INTERFACE_VERSION		"SteamClient018"
+      (cl-ppcre:do-register-groups (name value) ("#define ([\\w_]+)\\s+\"([^\"]+?)\"" content)
+        (add-constant name value)))
+    results))
+
+(defun scan-all-headers (directory)
+  (let ((scan (merge-pathnames (make-pathname :type "h" :name pathname-utils:*wild-component*
+                                              :directory (list :relative pathname-utils:*wild-inferiors-component*))
+                               directory)))
+    (loop for path in (directory scan)
+          for content = (alexandria:read-file-into-string path :external-format :latin-1)
+          append (scan-for-callbacks content) into callbacks
+          append (scan-for-constants content) into constants
+          finally (return (list :callbacks callbacks
+                                :consts constants)))))
 
 (defun read-steam-api-spec (source)
   (yason:parse source :object-key-fn #'kw
@@ -267,28 +303,6 @@
             (let ((cache (make-hash-table :test 'equal)))
               (%compile (lambda (f) (compile-method f cache)) (getf spec :methods)))
             (%compile #'compile-function (getf spec :functions)))))
-
-(defun scan-for-callbacks (content)
-  (let ((results ()))
-    (flet ((add-callback (struct const offset)
-             (push (list :struct struct :constname const :offset (or offset "0"))
-                   results)))
-      (cl-ppcre:do-register-groups (struct base offset) ("struct ([\\w_]+)\\s*\\{(?:.|\\s)*?enum \\{ k_iCallback = ([\\w_]+)(?: \\+ ([0-9]+))? \\};"
-                                                         content)
-        (add-callback struct base offset))
-      (cl-ppcre:do-register-groups (struct base offset) ("STEAM_CALLBACK_BEGIN\\( ([\\w_]+), ([\\w_]+)(?: \\+ ([0-9]+))? \\);"
-                                                         content)
-        (add-callback struct base offset)))
-    results))
-
-(defun scan-all-headers (directory)
-  (let ((scan (merge-pathnames (make-pathname :type "h" :name pathname-utils:*wild-component*
-                                              :directory (list :relative pathname-utils:*wild-inferiors-component*))
-                               directory)))
-    (loop for path in (directory scan)
-          for content = (alexandria:read-file-into-string path :external-format :latin-1)
-          append (scan-for-callbacks content) into callbacks
-          finally (return (list :callbacks callbacks)))))
 
 (defun write-form (form &optional (stream *standard-output*))
   (with-standard-io-syntax
@@ -361,9 +375,6 @@
      (pathname-utils:subdirectory sdk-directory "redistributable_bin")
      (ensure-directories-exist (pathname-utils:subdirectory *this* "static")))
     (format *query-io* "~&Generating bindings...")
+    (cffi:load-foreign-library 'cl-steamworks-cffi:steamworks)
     (generate sdk-directory)
-    (format *query-io* "~&Loading the library...")
-    (cl-steamworks-cffi::maybe-load-low-level)
     (format *query-io* "~&Done. You can now use cl-steamworks!~%")))
-
-;; FIXME: scrape constants for struct callback IDs

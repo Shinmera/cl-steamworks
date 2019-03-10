@@ -13,12 +13,14 @@
   :homepage "https://github.com/Shinmera/cl-steamworks"
   :serial T
   :components ((:file "package")
-               (:file "framework")
+               (:file "c-support")
                (:file "toolkit")
                (:file "c-object")
                (:file "callback")
+               (:file "steamworks")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria
                :trivial-features
+               :trivial-garbage
                :cffi))

@@ -28,7 +28,7 @@
 (defmethod initialize-instance ((object c-object) &key free-on-gc)
   (call-next-method)
   (unless (handle object)
-    (let ((handle ((allocate-handle object))))
+    (let ((handle (allocate-handle object)))
       (when free-on-gc
         (tg:finalize object (free-handle-function object handle)))
       (setf (handle object) handle)

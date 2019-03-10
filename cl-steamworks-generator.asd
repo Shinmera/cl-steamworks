@@ -13,10 +13,10 @@
   :homepage "https://github.com/Shinmera/cl-steamworks"
   :serial T
   :components ((:file "package")
+               (:file "c-support")
                (:file "generator"))
   :depends-on (:yason
                :cffi
                :pathname-utils
                :alexandria
-               :cl-steamworks
                :cl-ppcre))

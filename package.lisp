@@ -6,9 +6,8 @@
 
 (defpackage #:cl-steamworks-cffi
   (:nicknames #:org.shirakumo.fraf.steamworks.cffi)
-  (:use #:cl)
+  (:use)
   (:export
-   #:*static*
    #:steamworks))
 
 (defpackage #:cl-steamworks

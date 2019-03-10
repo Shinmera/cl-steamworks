@@ -52,5 +52,11 @@
   (flags :uint8)
   ;; Identifier of the type of callback to register.
   (id :int)
+  ;; Identifier for the callresult token.
+  (token :uint64)
+  ;; Self pointer used when calling back.
+  (this :pointer)
+  ;; Function pointer to call for callresult
+  (function :pointer)
   ;; vtable alloc
   (vtable (:struct vtable)))

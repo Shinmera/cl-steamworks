@@ -22,8 +22,8 @@
     (setf (cl-steamworks-cffi::callback-vtable-ptr handle) vtable)
     (setf (cl-steamworks-cffi::callback-id handle) (symbol-value (struct-type callback)))
     (setf (cl-steamworks-cffi::callback-flags handle) (if (server-p (steamworks)) 2 0))
-    (setf (cl-steamworks-cffi::vtable-result vtable) (cffi:callback result))
-    (setf (cl-steamworks-cffi::vtable-result-with-info vtable) (cffi:callback result-with-info))
+    (setf (cl-steamworks-cffi::vtable-result vtable) (cffi:callback callback))
+    (setf (cl-steamworks-cffi::vtable-result-with-info vtable) (cffi:callback callback-with-info))
     (setf (cl-steamworks-cffi::vtable-size vtable) (cffi:callback size))))
 
 (defmethod free-handle-function ((callback callback) handle)
@@ -35,16 +35,16 @@
 ;; FIXME: thiscall does /not/ work via a this pointer as the first arg on the stack
 ;;        but rather like stdcall with ECX being the this pointer. That's a big problem.
 ;;        See: https://docs.microsoft.com/en-us/cpp/cpp/thiscall?view=vs-2017
-(cffi:defcallback result :void ((this :pointer) (parameter :pointer))
+(cffi:defcallback callback :void ((this :pointer) (parameter :pointer))
   (let ((callback (pointer->object this)))
     (if callback
-        (result callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))) NIL)
+        (callback callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))))
         (warn "Callback for unregistered pointer ~a" this))))
 
-(cffi:defcallback result-with-info :void ((this :pointer) (parameter :pointer) (failed :bool) (api-call :uint64))
+(cffi:defcallback callback-with-info :void ((this :pointer) (parameter :pointer) (failed :bool) (api-call :uint64))
   (let ((callback (pointer->object this)))
     (if callback
-        (result callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))) failed api-call)
+        (callback callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))) failed api-call)
         (warn "Callback for unregistered pointer ~a" this))))
 
 (cffi:defcallback size :int ((this :pointer))
@@ -54,7 +54,14 @@
         (warn "Callback for unregistered pointer ~a" this))))
 
 (defclass callresult (callback)
-  ((call-id :initarg :call-id :accessor call-id)))
+  ())
+
+(defmethod initialize-instance :after ((callresult callresult) &key call-id)
+  (let ((handle (handle callresult)))
+    (setf (cl-steamworks-cffi::callback-token handle) call-id)
+    (setf (cl-steamworks-cffi::callback-this handle) handle)
+    (setf (cl-steamworks-cffi::callback-function handle) (cffi:callback result))
+    (cl-steamworks-cffi::register-call-result handle call-id)))
 
 (defmethod maybe-result ((callresult callresult))
   (let ((utils (handle (utils (steamworks)))))
@@ -69,3 +76,9 @@
       (when (cl-steamworks-cffi::utils-get-apicall-result
              utils id result (cffi:foreign-type-size result-type) (symbol-value (struct-type callresult)) failed)
         (cffi:mem-ref result result-type)))))
+
+(cffi:defcallback result :void ((this :pointer) (parameter :pointer) (failed :bool))
+  (let ((callback (pointer->object this)))
+    (if callback
+        (callback callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))))
+        (warn "Callback for unregistered pointer ~a" this))))

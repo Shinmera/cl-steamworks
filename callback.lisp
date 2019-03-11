@@ -105,4 +105,22 @@
 
 (defmethod callback ((callresult closure-callresult) parameter &optional failed api-call)
   (declare (ignore api-call))
-  (funcall (closure callresult) (if failed NIL parameter)))
+  (unwind-protect (funcall (closure callresult) (if failed NIL parameter))
+    (free callresult)))
+
+(defmacro with-call-result ((result) (method interface &rest args) &body body &environment env)
+  ;; KLUDGE: in order to infer the struct-type we need access to the method name
+  ;;         which extends the macro to the call and disallows passing a token
+  ;;         directly.
+  (let ((thunk (gensym "THUNK"))
+        (callresult (or (find-symbol (format NIL "~a-CALLRESULT" method) '#:steam)
+                        (error "No call result known for method ~a" method)))
+        (interface (if (constantp interface env)
+                       `(interface ,interface T)
+                       interface)))
+    `(flet ((,thunk (,result)
+              ,@body))
+       (make-instance 'closure-callresult
+                      :token (call-with #',method ,interface ,@args)
+                      :struct-type ,callresult
+                      :closure #',thunk))))

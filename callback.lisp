@@ -73,9 +73,10 @@
   (let ((utils (handle (utils (steamworks))))
         (result-type `(:struct ,(struct-type callresult))))
     (cffi:with-foreign-object (result result-type)
-      (when (cl-steamworks-cffi::utils-get-apicall-result
-             utils id result (cffi:foreign-type-size result-type) (symbol-value (struct-type callresult)) failed)
-        (cffi:mem-ref result result-type)))))
+      (if (cl-steamworks-cffi::utils-get-apicall-result
+           utils id result (cffi:foreign-type-size result-type) (symbol-value (struct-type callresult)) failed)
+          (cffi:mem-ref result result-type)
+          (error "FIXME: call failed: ~a" (cl-steamworks-cffi::utils-get-apicall-failure-reason utils id))))))
 
 (cffi:defcallback result :void ((this :pointer) (parameter :pointer) (failed :bool))
   (let ((callback (pointer->object this)))

@@ -248,6 +248,12 @@
                collect (list (name (getf arg :paramname))
                              (parse-typespec (getf arg :paramtype)))))))
 
+(defun compile-callresult (def)
+  (when (getf def :callresult)
+    (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
+      `(cl:defconstant ,(name (format NIL "~a-callresult" (strip-function-name name)))
+           ',(name (getf def :callresult))))))
+
 (defun scan-for-callbacks (content)
   (let ((results ()))
     (flet ((add-callback (struct const offset)
@@ -295,16 +301,18 @@
   (flet ((%compile (compiler definitions)
            (loop for definition in definitions
                  for (res note) = (multiple-value-list (funcall compiler definition))
-                 do (if res
-                        (handler-bind ((style-warning #'muffle-warning))
-                          (eval res))
-                        (warn note))
+                 do (cond (res
+                           (handler-bind ((style-warning #'muffle-warning))
+                             (eval res)))
+                          (note
+                           (warn note)))
                  when res collect res)))
     (append (%compile #'compile-const (getf spec :consts))
             (%compile #'compile-callback (getf spec :callbacks))
             (%compile #'compile-enum (getf spec :enums))
             (%compile #'compile-typedef (getf spec :typedefs))
             (%compile #'compile-struct (getf spec :structs))
+            (%compile #'compile-callresult (getf spec :methods))
             (let ((cache (make-hash-table :test 'equal)))
               (%compile (lambda (f) (compile-method f cache)) (getf spec :methods)))
             (%compile #'compile-function (getf spec :functions)))))

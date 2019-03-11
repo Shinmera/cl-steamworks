@@ -20,9 +20,18 @@
     (dotimes (i (* count (cffi:foreign-type-size type)) ptr)
       (setf (cffi:mem-aref ptr :uchar i) 0))))
 
+(defun warn* (datum &rest args)
+  (let ((condition (etypecase datum
+                     (string (make-condition 'simple-warning :format-control datum :format-arguments args))
+                     (symbol (apply #'make-condition 'datum args))
+                     (condition datum))))
+    (format *error-output* "~&WARNING: ~a~%" condition)
+    (warn condition)))
+
 ;; This fucking sucks man
 (defun foreign-type-p (type)
-  (not (null (ignore-errors (cffi:foreign-type-size type)))))
+  (handler-bind ((warning #'muffle-warning))
+    (not (null (ignore-errors (cffi:foreign-type-size type))))))
 
 (defun maybe-load-low-level (&optional file)
   (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults steam::*this*))))

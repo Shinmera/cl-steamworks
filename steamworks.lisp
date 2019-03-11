@@ -8,7 +8,7 @@
 
 (defvar *steamworks* NIL)
 (defvar *default-interfaces*
-  '(steamclient steamutils steamuser))
+  '(steamclient steamutils steamuser steamfriends))
 
 (defun steamworks (&optional container)
   (if container
@@ -69,6 +69,9 @@
 
 (defmethod interface ((name symbol) (steamworks steamworks))
   (gethash name (interfaces steamworks)))
+
+(defmethod interface (name (steamworks (eql T)))
+  (interface name (steamworks)))
 
 (defmethod list-interfaces ((steamworks steamworks))
   (alexandria:hash-table-values (interfaces steamworks)))

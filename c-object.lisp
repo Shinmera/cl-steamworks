@@ -40,7 +40,7 @@
 (defmethod initialize-instance :around ((object c-managed-object) &key handle)
   (if handle
       (call-next-method)
-      (with-cleanup-on-error (free object)
+      (with-cleanup-on-failure (free object)
         (call-next-method))))
 
 (defgeneric allocate-handle (c-managed-object))

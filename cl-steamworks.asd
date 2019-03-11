@@ -21,6 +21,7 @@
                (:file "steamclient")
                (:file "steamutils")
                (:file "steamuser")
+               (:file "steamfriends")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

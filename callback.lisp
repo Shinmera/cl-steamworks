@@ -41,19 +41,19 @@
   (let ((callback (pointer->object this)))
     (if callback
         (callback callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))))
-        (warn "Callback for unregistered pointer ~a" this))))
+        (warn* "Callback for unregistered pointer ~a" this))))
 
 (cffi:defcallback callback-with-info :void ((this :pointer) (parameter :pointer) (failed :bool) (api-call :uint64))
   (let ((callback (pointer->object this)))
     (if callback
         (callback callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))) failed api-call)
-        (warn "Callback for unregistered pointer ~a" this))))
+        (warn* "Callback for unregistered pointer ~a" this))))
 
 (cffi:defcallback size :int ((this :pointer))
   (let ((callback (pointer->object this)))
     (if callback
         (cffi:foreign-type-size `(:struct ,(struct-type callback)))
-        (warn "Callback for unregistered pointer ~a" this))))
+        (warn* "Callback for unregistered pointer ~a" this))))
 
 (defclass callresult (callback)
   ())
@@ -65,6 +65,11 @@
     (setf (steam::callback-function handle) (cffi:callback result))
     (steam::register-call-result handle call-id)))
 
+(defmethod free-handle-function ((callresult callresult) handle)
+  (lambda ()
+    (steam::unregister-call-result handle call-id)
+    (cffi:foreign-free handle)))
+
 (defmethod maybe-result ((callresult callresult))
   (let ((utils (handle (utils (steamworks)))))
     (cffi:with-foreign-object (failed :bool)
@@ -72,16 +77,25 @@
         (result callresult)))))
 
 (defmethod result ((callresult callresult))
-  (let ((utils (handle (utils (steamworks))))
+  (let ((utils (handle (interface 'steamutils T)))
+        (token (steam::callback-token (handle callresult)))
         (result-type `(:struct ,(struct-type callresult))))
-    (cffi:with-foreign-object (result result-type)
+    (cffi:with-foreign-objects ((failed :bool)
+                                (result result-type))
       (if (steam::utils-get-apicall-result
-           utils id result (cffi:foreign-type-size result-type) (symbol-value (struct-type callresult)) failed)
+           utils token result (cffi:foreign-type-size result-type) (symbol-value (struct-type callresult)) failed)
           (cffi:mem-ref result result-type)
-          (error "FIXME: call failed: ~a" (steam::utils-get-apicall-failure-reason utils id))))))
+          (error "FIXME: call failed: ~a" (steam::utils-get-apicall-failure-reason utils token))))))
 
 (cffi:defcallback result :void ((this :pointer) (parameter :pointer) (failed :bool))
   (let ((callback (pointer->object this)))
     (if callback
-        (callback callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))))
-        (warn "Callback for unregistered pointer ~a" this))))
+        (callback callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))) failed)
+        (warn* "Callback for unregistered pointer ~a" this))))
+
+(defclass closure-callresult (callresult)
+  ((closure :initarg :closure :initform (error "CLOSURE required.") :reader closure)))
+
+(defmethod callback ((callresult closure-callresult) parameter &optional failed api-call)
+  (declare (ignore api-call))
+  (funcall (closure callresult) (if failed NIL parameter)))

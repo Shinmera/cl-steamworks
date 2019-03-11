@@ -116,9 +116,13 @@
           while part
           do (case (char part 0)
                (#\*
+                ;;;; Can't do the following as (for some reason) cffi tries to resolve the
+                ;;;; wrapped type, resulting in dependence ordering problems.
                 ;; (loop repeat (length part)
                 ;;       do (setf type `(:pointer ,type)))
-                (setf type :pointer))
+                (if (eql type :char)
+                    (setf type :string)
+                    (setf type :pointer)))
                (#\&
                 (setf type :pointer))
                (#\[
@@ -147,7 +151,6 @@
                                 (name (format NIL "~{~a~^ ~}" parts)))
                            (setf type (or (gethash name *c-type-map*)
                                           (name name)))))))))
-    (when (equal type '(:pointer :char)) (setf type :string))
     (values type count)))
 
 (defun compile-typedef (def)

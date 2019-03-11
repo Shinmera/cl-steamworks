@@ -25,7 +25,10 @@
 (defclass c-object ()
   ((handle :initarg :handle :initform NIL :accessor handle)))
 
-(defmethod initialize-instance ((object c-object) &key free-on-gc)
+(defclass c-managed-object (c-object)
+  ())
+
+(defmethod initialize-instance ((object c-managed-object) &key free-on-gc)
   (call-next-method)
   (unless (handle object)
     (let ((handle (allocate-handle object)))
@@ -34,16 +37,16 @@
       (setf (handle object) handle)
       (setf (pointer->object handle) object))))
 
-(defmethod initialize-instance :around ((object c-object) &key handle)
+(defmethod initialize-instance :around ((object c-managed-object) &key handle)
   (if handle
       (call-next-method)
       (with-cleanup-on-error (free object)
         (call-next-method))))
 
-(defgeneric allocate-handle (c-object))
-(defgeneric free-handle-function (c-object handle))
+(defgeneric allocate-handle (c-managed-object))
+(defgeneric free-handle-function (c-managed-object handle))
 
-(defmethod free ((object c-object))
+(defmethod free ((object c-managed-object))
   (let ((handle (when (slot-boundp object 'handle) (handle object))))
     (when handle
       (tg:cancel-finalization object)

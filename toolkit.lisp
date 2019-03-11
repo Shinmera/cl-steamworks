@@ -42,3 +42,42 @@
 (or (maybe-load-low-level)
     (alexandria:simple-style-warning "No low-level file present. Please install the SteamWorks SDK:
 Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)"))
+
+(defun env-var (x)
+  #+(or abcl clasp clisp ecl xcl) (ext:getenv x)
+  #+allegro (sys:getenv x)
+  #+clozure (ccl:getenv x)
+  #+cmucl (unix:unix-getenv x)
+  #+scl (cdr (assoc x ext:*environment-list* :test #'string=))
+  #+gcl (system:getenv x)
+  #+lispworks (lispworks:environment-variable x)
+  #+mkcl (#.(or (find-symbol* 'getenv :si nil) (find-symbol* 'getenv :mk-ext nil)) x)
+  #+sbcl (sb-ext:posix-getenv x))
+
+(defun chdir (x)
+  #+(or abcl xcl) (setf *default-pathname-defaults* (truename x))
+  #+allegro (excl:chdir x)
+  #+clisp (ext:cd x)
+  #+clozure (setf (ccl:current-directory) x)
+  #+(or cmucl scl) (unix:unix-chdir (ext:unix-namestring x))
+  #+(or clasp ecl) (ext:chdir x)
+  #+gcl (system:chdir x)
+  #+lispworks (hcl:change-directory x)
+  #+mkcl (mk-ext:chdir x)
+  #+sbcl (sb-posix:chdir (sb-ext:native-namestring x)))
+
+(defun temp-directory ()
+  #+windows (parse-namestring (env-var "TEMP"))
+  #-windows #p"/tmp/")
+
+(defun setup-app-id (app-id)
+  (let ((directory (merge-pathnames "cl-steamworks/" (temp-directory))))
+    (chdir (ensure-directories-exist directory))
+    (with-open-file (stream (merge-pathnames #p"steam_appid.txt" directory)
+                            :direction :output
+                            :if-exists :supersede
+                            :element-type 'character)
+      (format stream "~a~%" app-id))))
+
+(defun enlist (a &rest items)
+  (if (listp a) a (list* a items)))

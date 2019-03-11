@@ -18,9 +18,13 @@
                (:file "c-object")
                (:file "callback")
                (:file "steamworks")
+               (:file "steamclient")
+               (:file "steamutils")
+               (:file "steamuser")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria
                :trivial-features
                :trivial-garbage
-               :cffi))
+               :cffi
+               (:feature :sbcl (:require :sb-posix))))

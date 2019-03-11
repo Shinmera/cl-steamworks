@@ -6,7 +6,7 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
-(defclass callback (c-object)
+(defclass callback (c-managed-object)
   ((struct-type :initarg :struct-type :accessor struct-type)))
 
 (defmethod initialize-instance :before ((callback callback) &key struct-type)

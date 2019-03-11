@@ -7,13 +7,17 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defvar *steamworks* NIL)
+(defvar *default-interfaces*
+  '(steamclient steamutils steamuser))
 
-(defun steamworks ()
-  (or *steamworks*
-      (error "FIXME: steamworks is not initialised.")))
+(defun steamworks (&optional container)
+  (if container
+      (%steamworks container)
+      (or *steamworks*
+          (error "FIXME: steamworks is not initialised."))))
 
 (defun most-recent-interface-version (interface)
-  (let ((name (format NIL "~:@(steam~a-interface-version~)" (remove #\- (string interface)))))
+  (let ((name (format NIL "~a~a" (remove #\- (string interface)) '#:-interface-version)))
     (symbol-value (or (find-symbol name '#:org.shirakumo.fraf.steamworks.cffi)
                       (error "FIXME: No such interface ~s" interface)))))
 
@@ -23,10 +27,17 @@
    (user :initform NIL :reader user)
    (pipe :initform NIL :reader pipe)))
 
-(defmethod initialize-instance :after ((steamworks steamworks) &key (interfaces '(:client T)))
+(defmethod initialize-instance :before ((steamworks steamworks) &key)
+  (when *steamworks*
+    (cerror "Replace the previous steamworks instance."
+            "FIXME: Steamworks is already initialized.")))
+
+(defmethod initialize-instance :after ((steamworks steamworks) &key (interfaces *default-interfaces*) app-id)
+  (when app-id
+    (setup-app-id app-id))
   (unless (cl-steamworks-cffi::init)
-    (error "FIXME: Failed to call INIT."))
-  (tg:finalize steamworks (free-handle-function steamworks))
+    (error "FIXME: Failed to call INIT. Did you set up the app-id correctly?"))
+  (tg:finalize steamworks (free-handle-function steamworks NIL))
   (setf (slot-value steamworks 'user) (cl-steamworks-cffi::get-hsteam-user))
   (setf (slot-value steamworks 'pipe) (cl-steamworks-cffi::get-hsteam-pipe))
   (when (= 0 (pipe steamworks))
@@ -50,19 +61,23 @@
       (cl-steamworks-cffi::shutdown)
       (setf *steamworks* NIL))))
 
-(defmethod create-interfaces ((steamworks steamworks) &rest interfaces &key (client T) &allow-other-keys)
-  (unless client
-    (error "FIXME: must create at least the client interface."))
-  (flet ((maybe-create (interface version)
-           (unless (gethash (interfaces steamworks) interface)
-             (when (eql T version)
-               (setf version (most-recent-interface-version interface)))
-             (setf (gethash (interfaces steamworks) interface)
-                   (make-instance interface :version version :steamworks steamworks)))))
-    (maybe-create 'client client)
-    (loop for (interface version) on interfaces by #'cddr
-          do (maybe-create interface version))
-    (alexandria:hash-table-values (interfaces steamworks))))
+(defmethod create-interfaces ((steamworks steamworks) interfaces)
+  (flet ((maybe-create (interface)
+           (destructuring-bind (interface &optional (version T)) (enlist interface)
+             (unless (interface interface steamworks)
+               (when (eql T version)
+                 (setf version (most-recent-interface-version interface)))
+               (setf (gethash interface (interfaces steamworks))
+                     (make-instance interface :version version :steamworks steamworks))))))
+    (maybe-create 'steamclient)
+    (mapc #'maybe-create interfaces)
+    (list-interfaces steamworks)))
+
+(defmethod interface ((name symbol) (steamworks steamworks))
+  (gethash name (interfaces steamworks)))
+
+(defmethod list-interfaces ((steamworks steamworks))
+  (alexandria:hash-table-values (interfaces steamworks)))
 
 (defclass steamworks-server (steamworks)
   ((ip-address :initarg :ip-address :reader ip-address)

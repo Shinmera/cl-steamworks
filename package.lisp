@@ -4,13 +4,12 @@
  Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
-(defpackage #:cl-steamworks-cffi
-  (:nicknames #:org.shirakumo.fraf.steamworks.cffi)
-  (:use)
-  (:export
-   #:steamworks))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (unless (find-package '#:org.shirakumo.fraf.steamworks.cffi)
+    (make-package '#:org.shirakumo.fraf.steamworks.cffi :use ())))
 
 (defpackage #:cl-steamworks
   (:nicknames #:org.shirakumo.fraf.steamworks)
+  (:local-nicknames (#:steam #:org.shirakumo.fraf.steamworks.cffi))
   (:use #:cl)
   (:export))

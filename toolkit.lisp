@@ -25,9 +25,9 @@
   (not (null (ignore-errors (cffi:foreign-type-size type)))))
 
 (defun maybe-load-low-level (&optional file)
-  (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults cl-steamworks-cffi::*this*))))
+  (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults steam::*this*))))
     (when (probe-file file)
-      (cffi:load-foreign-library 'cl-steamworks-cffi::steamworks)
+      (cffi:load-foreign-library 'steam::steamworks)
       #+asdf
       (let ((component (make-instance 'asdf:cl-source-file
                                       :parent (asdf:find-system :cl-steamworks)

@@ -13,22 +13,24 @@
   (unless (and struct-type (boundp struct-type) (foreign-type-p struct-type))
     (error "~s is not a valid callback struct type." struct-type)))
 
+(defmethod initialize-instance :after ((callback callback) &key)
+  (steam::register-callback (handle callback) (steam::callback-id (handle callback))))
+
 (defgeneric callback (callback parameter &optional failed api-call))
 
 (defmethod allocate-handle ((callback callback))
-  (let* ((handle (calloc '(:struct cl-steamworks-cffi::callback)))
-         (vtable (cffi:foreign-slot-pointer handle '(:struct cl-steamworks-cffi::callback)
-                                            'cl-steamworks-cffi::vtable)))
-    (setf (cl-steamworks-cffi::callback-vtable-ptr handle) vtable)
-    (setf (cl-steamworks-cffi::callback-id handle) (symbol-value (struct-type callback)))
-    (setf (cl-steamworks-cffi::callback-flags handle) (if (server-p (steamworks)) 2 0))
-    (setf (cl-steamworks-cffi::vtable-result vtable) (cffi:callback callback))
-    (setf (cl-steamworks-cffi::vtable-result-with-info vtable) (cffi:callback callback-with-info))
-    (setf (cl-steamworks-cffi::vtable-size vtable) (cffi:callback size))))
+  (let* ((handle (calloc '(:struct steam::callback)))
+         (vtable (cffi:foreign-slot-pointer handle '(:struct steam::callback) 'steam::vtable)))
+    (setf (steam::callback-vtable-ptr handle) vtable)
+    (setf (steam::callback-id handle) (symbol-value (struct-type callback)))
+    (setf (steam::callback-flags handle) (if (server-p (steamworks)) 2 0))
+    (setf (steam::vtable-result vtable) (cffi:callback callback))
+    (setf (steam::vtable-result-with-info vtable) (cffi:callback callback-with-info))
+    (setf (steam::vtable-size vtable) (cffi:callback size))))
 
 (defmethod free-handle-function ((callback callback) handle)
   (lambda ()
-    (cl-steamworks-cffi::unregister-callback handle)
+    (steam::unregister-callback handle)
     (cffi:foreign-free handle)))
 
 ;; FIXME: supposedly on x86 Windows it does not use thiscall
@@ -58,25 +60,25 @@
 
 (defmethod initialize-instance :after ((callresult callresult) &key call-id)
   (let ((handle (handle callresult)))
-    (setf (cl-steamworks-cffi::callback-token handle) call-id)
-    (setf (cl-steamworks-cffi::callback-this handle) handle)
-    (setf (cl-steamworks-cffi::callback-function handle) (cffi:callback result))
-    (cl-steamworks-cffi::register-call-result handle call-id)))
+    (setf (steam::callback-token handle) call-id)
+    (setf (steam::callback-this handle) handle)
+    (setf (steam::callback-function handle) (cffi:callback result))
+    (steam::register-call-result handle call-id)))
 
 (defmethod maybe-result ((callresult callresult))
   (let ((utils (handle (utils (steamworks)))))
     (cffi:with-foreign-object (failed :bool)
-      (when (cl-steamworks-cffi::utils-is-apicall-completed utils (call-id callresult) failed)
+      (when (steam::utils-is-apicall-completed utils (call-id callresult) failed)
         (result callresult)))))
 
 (defmethod result ((callresult callresult))
   (let ((utils (handle (utils (steamworks))))
         (result-type `(:struct ,(struct-type callresult))))
     (cffi:with-foreign-object (result result-type)
-      (if (cl-steamworks-cffi::utils-get-apicall-result
+      (if (steam::utils-get-apicall-result
            utils id result (cffi:foreign-type-size result-type) (symbol-value (struct-type callresult)) failed)
           (cffi:mem-ref result result-type)
-          (error "FIXME: call failed: ~a" (cl-steamworks-cffi::utils-get-apicall-failure-reason utils id))))))
+          (error "FIXME: call failed: ~a" (steam::utils-get-apicall-failure-reason utils id))))))
 
 (cffi:defcallback result :void ((this :pointer) (parameter :pointer) (failed :bool))
   (let ((callback (pointer->object this)))

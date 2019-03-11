@@ -35,11 +35,11 @@
 (defmethod initialize-instance :after ((steamworks steamworks) &key (interfaces *default-interfaces*) app-id)
   (when app-id
     (setup-app-id app-id))
-  (unless (cl-steamworks-cffi::init)
+  (unless (steam::init)
     (error "FIXME: Failed to call INIT. Did you set up the app-id correctly?"))
   (tg:finalize steamworks (free-handle-function steamworks NIL))
-  (setf (slot-value steamworks 'user) (cl-steamworks-cffi::get-hsteam-user))
-  (setf (slot-value steamworks 'pipe) (cl-steamworks-cffi::get-hsteam-pipe))
+  (setf (slot-value steamworks 'user) (steam::get-hsteam-user))
+  (setf (slot-value steamworks 'pipe) (steam::get-hsteam-pipe))
   (when (= 0 (pipe steamworks))
     (error "FIXME: could not retrieve valid steam pipe."))
   (create-interfaces steamworks interfaces)
@@ -49,17 +49,11 @@
   (funcall (free-handle-function steamworks NIL)))
 
 (defmethod free-handle-function ((steamworks steamworks) handle)
-  (let ((interfaces (interfaces steamworks)))
-    (lambda ()
-      (loop for key being the hash-keys of interfaces
-            for val being the hash-values of interfaces
-            do (with-simple-restart (continue "Ignore the failure and carry on freeing.")
-                 (free val))
-               (remhash val interfaces))
-      (setf (slot-value steamworks 'user) NIL)
-      (setf (slot-value steamworks 'pipe) NIL)
-      (cl-steamworks-cffi::shutdown)
-      (setf *steamworks* NIL))))
+  (lambda ()
+    (setf (slot-value steamworks 'user) NIL)
+    (setf (slot-value steamworks 'pipe) NIL)
+    (steam::shutdown)
+    (setf *steamworks* NIL)))
 
 (defmethod create-interfaces ((steamworks steamworks) interfaces)
   (flet ((maybe-create (interface)
@@ -79,6 +73,9 @@
 (defmethod list-interfaces ((steamworks steamworks))
   (alexandria:hash-table-values (interfaces steamworks)))
 
+(defmethod run-callbacks ((steamworks steamworks))
+  (steam::run-callbacks))
+
 (defclass steamworks-server (steamworks)
   ((ip-address :initarg :ip-address :reader ip-address)
    (port :initarg :port :reader port)
@@ -88,7 +85,7 @@
    (version-string :initarg :version-string :reader version-string)))
 
 (defmethod initialize-instance :after ((steamworks steamworks-server) &key)
-  (unless (cl-steamworks-cffi::steam-internal-game-server-init
+  (unless (steam::steam-internal-game-server-init
            (ip-address steamworks) (port steamworks) (game-port steamworks)
            (query-port steamworks) (server-mode steamworks) (version-string steamworks))
     (error "FIXME: failed to init game server."))
@@ -104,5 +101,5 @@
                (remhash val interfaces))
       (setf (slot-value steamworks 'user) NIL)
       (setf (slot-value steamworks 'pipe) NIL)
-      (cl-steamworks-cffi::steam-game-server-shutdown)
+      (steam::steam-game-server-shutdown)
       (setf *steamworks* NIL))))

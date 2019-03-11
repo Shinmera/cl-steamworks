@@ -19,13 +19,18 @@
   (apply function (handle interface) args))
 
 (defmethod call-with (function (interface symbol) &rest args)
-  (call-with function (interface interface (steamworks)) args))
+  (apply #'call-with function (interface interface (steamworks)) args))
 
 (defclass steamclient (interface)
   ())
 
 (defmethod initialize-instance :after ((client steamclient) &key version)
-  (let ((handle (cl-steamworks-cffi::steam-internal-create-interface version)))
+  (let ((handle (steam::steam-internal-create-interface version)))
     (when (cffi:null-pointer-p handle)
       (error "FIXME: failed to create steam client handle."))
-    (setf (handle client) handle)))
+    (setf (handle client) handle)
+    (steam::client-set-warning-message-hook handle (cffi:callback warning-message))))
+
+(cffi:defcallback warning-message :void ((severity :int) (debug-text :string))
+  (format *error-output* "~&[~[INFO~;WARN~;ERR ~]] Steam: ~a~%"
+          severity debug-text))

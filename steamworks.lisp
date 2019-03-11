@@ -88,7 +88,7 @@
    (version-string :initarg :version-string :reader version-string)))
 
 (defmethod initialize-instance :after ((steamworks steamworks-server) &key)
-  (unless (steam::steam-internal-game-server-init
+  (unless (steam::game-server-init
            (ip-address steamworks) (port steamworks) (game-port steamworks)
            (query-port steamworks) (server-mode steamworks) (version-string steamworks))
     (error "FIXME: failed to init game server."))
@@ -104,5 +104,5 @@
                (remhash val interfaces))
       (setf (slot-value steamworks 'user) NIL)
       (setf (slot-value steamworks 'pipe) NIL)
-      (steam::steam-game-server-shutdown)
+      (steam::game-server-shutdown)
       (setf *steamworks* NIL))))

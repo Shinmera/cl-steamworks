@@ -6,19 +6,14 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
-(defclass callback (c-managed-object)
+(defclass %callback (c-managed-object)
   ((struct-type :initarg :struct-type :accessor struct-type)))
 
-(defmethod initialize-instance :before ((callback callback) &key struct-type)
+(defmethod initialize-instance :before ((callback %callback) &key struct-type)
   (unless (and struct-type (boundp struct-type) (foreign-type-p struct-type))
     (error "~s is not a valid callback struct type." struct-type)))
 
-(defmethod initialize-instance :after ((callback callback) &key)
-  (steam::register-callback (handle callback) (steam::callback-id (handle callback))))
-
-(defgeneric callback (callback parameter &optional failed api-call))
-
-(defmethod allocate-handle ((callback callback))
+(defmethod allocate-handle ((callback %callback))
   (let* ((handle (calloc '(:struct steam::callback)))
          (vtable (cffi:foreign-slot-pointer handle '(:struct steam::callback) 'steam::vtable)))
     (setf (steam::callback-vtable-ptr handle) vtable)
@@ -26,12 +21,10 @@
     (setf (steam::callback-flags handle) (if (server-p (steamworks)) 2 0))
     (setf (steam::vtable-result vtable) (cffi:callback callback))
     (setf (steam::vtable-result-with-info vtable) (cffi:callback callback-with-info))
-    (setf (steam::vtable-size vtable) (cffi:callback size))))
+    (setf (steam::vtable-size vtable) (cffi:callback size))
+    handle))
 
-(defmethod free-handle-function ((callback callback) handle)
-  (lambda ()
-    (steam::unregister-callback handle)
-    (cffi:foreign-free handle)))
+(defgeneric callback (callback parameter &optional failed api-call))
 
 ;; FIXME: supposedly on x86 Windows it does not use thiscall
 ;; FIXME: thiscall does /not/ work via a this pointer as the first arg on the stack
@@ -55,30 +48,44 @@
         (cffi:foreign-type-size `(:struct ,(struct-type callback)))
         (warn* "Callback for unregistered pointer ~a" this))))
 
-(defclass callresult (callback)
+(defclass callback (%callback)
   ())
 
-(defmethod initialize-instance :after ((callresult callresult) &key call-id)
-  (let ((handle (handle callresult)))
-    (setf (steam::callback-token handle) call-id)
+(defmethod initialize-instance :after ((callback callback) &key)
+  (steam::register-callback (handle callback) (steam::callback-id (handle callback))))
+
+(defmethod free-handle-function ((callback callback) handle)
+  (lambda ()
+    (steam::unregister-callback handle)
+    (cffi:foreign-free handle)))
+
+(defclass callresult (%callback)
+  ((token :initarg :token :reader token)))
+
+(defmethod initialize-instance :after ((callresult callresult) &key token)
+  (steam::register-call-result (handle callresult) token))
+
+(defmethod allocate-handle ((callresult callresult))
+  (let ((handle (call-next-method)))
+    (setf (steam::callback-token handle) (token callresult))
     (setf (steam::callback-this handle) handle)
     (setf (steam::callback-function handle) (cffi:callback result))
-    (steam::register-call-result handle call-id)))
+    handle))
 
 (defmethod free-handle-function ((callresult callresult) handle)
   (lambda ()
-    (steam::unregister-call-result handle call-id)
+    (steam::unregister-call-result handle (token callresult))
     (cffi:foreign-free handle)))
 
 (defmethod maybe-result ((callresult callresult))
-  (let ((utils (handle (utils (steamworks)))))
+  (let ((utils (handle (interface 'steamutils T))))
     (cffi:with-foreign-object (failed :bool)
-      (when (steam::utils-is-apicall-completed utils (call-id callresult) failed)
+      (when (steam::utils-is-apicall-completed utils (token callresult) failed)
         (result callresult)))))
 
 (defmethod result ((callresult callresult))
   (let ((utils (handle (interface 'steamutils T)))
-        (token (steam::callback-token (handle callresult)))
+        (token (token callresult))
         (result-type `(:struct ,(struct-type callresult))))
     (cffi:with-foreign-objects ((failed :bool)
                                 (result result-type))

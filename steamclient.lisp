@@ -15,17 +15,17 @@
       (error "FIXME: failed to create steam utils handle."))
     handle))
 
-(defmethod call-with (function (interface interface) &rest args)
+(defmethod call-with ((interface interface) function &rest args)
   (apply function (handle interface) args))
 
-(defmethod call-with (function (interface symbol) &rest args)
-  (apply #'call-with function (interface interface (steamworks)) args))
+(defmethod call-with ((interface symbol) function &rest args)
+  (apply #'call-with (interface interface (steamworks)) function args))
 
 (defclass steamclient (interface)
   ())
 
 (defmethod initialize-instance :after ((client steamclient) &key version)
-  (let ((handle (steam::steam-internal-create-interface version)))
+  (let ((handle (steam::create-interface version)))
     (when (cffi:null-pointer-p handle)
       (error "FIXME: failed to create steam client handle."))
     (setf (handle client) handle)

@@ -219,6 +219,9 @@
         (loop for param in (getf method :params)
               thereis (struct-type-p (getf param :paramtype))))))
 
+(defun strip-function-name (name)
+  (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_" "SteamInternal_" "Steam"))
+
 (defun compile-method (def cache)
   (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
     (when (<= 0 (incf (gethash name cache -2)))
@@ -226,7 +229,7 @@
     (if (and (%structure-types-p def)
              (not (find-symbol (string '#:libffi) '#:cffi)))
         (values NIL (format NIL "Ignored method definition ~s due to missing libffi." name))
-        `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name
+        `(cffi:defcfun (,(name (strip-function-name name)) ,name
                         :library org.shirakumo.fraf.steamworks.cffi::steamworks)
              ,(parse-typespec (getf def :returntype))
            ,@(when (getf def :desc) (list (getf def :desc)))
@@ -237,7 +240,7 @@
 
 (defun compile-function (def)
   (let ((name (getf def :functionname)))
-    `(cffi:defcfun (,(name (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_")) ,name
+    `(cffi:defcfun (,(name (strip-function-name name)) ,name
                     :library org.shirakumo.fraf.steamworks.cffi::steamworks)
          ,(parse-typespec (getf def :returntype))
        ,@(when (getf def :desc) (list (getf def :desc)))
@@ -263,7 +266,6 @@
     (flet ((add-constant (name value)
              (push (list :constname name :constval value)
                    results)))
-      ;; #define STEAMCLIENT_INTERFACE_VERSION		"SteamClient018"
       (cl-ppcre:do-register-groups (name value) ("#define ([\\w_]+)\\s+\"([^\"]+?)\"" content)
         (add-constant name value)))
     results))
@@ -378,6 +380,6 @@
      (pathname-utils:subdirectory sdk-directory "redistributable_bin")
      (ensure-directories-exist (pathname-utils:subdirectory *this* "static")))
     (format *query-io* "~&Generating bindings...")
-    (cffi:load-foreign-library 'cl-steamworks-cffi:steamworks)
+    (cffi:load-foreign-library 'org.shirakumo.fraf.steamworks.cffi::steamworks)
     (generate sdk-directory)
     (format *query-io* "~&Done. You can now use cl-steamworks!~%")))

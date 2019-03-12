@@ -50,6 +50,25 @@
 (defmethod show-text-input ((utils steamutils) &key (mode :normal) (line-mode :single-line) (description "") (max 32) (default ""))
   (steam::utils-show-gamepad-text-input (handle utils) mode line-mode description max default))
 
+(defmethod input-text ((utils steamutils))
+  (let ((length (steam::utils-get-entered-gamepad-text-length (handle utils))))
+    (cffi:with-foreign-object (data :char length)
+      (unless (steam::utils-get-entered-gamepad-text-input (handle utils) data length)
+        (error "FIXME: failed to retrieve entered text. Was there any text to receive and are you in the callback?"))
+      (cffi:foreign-string-to-lisp data :count length :encoding :utf-8))))
+
+(defmacro with-input-text ((text utils &rest args) &body body)
+  (let ((utilsg (gensym "UTILS"))
+        (struct (gensym "STRUCT")))
+    `(let ((,utilsg ,utils))
+       (flet ((,thunk (,struct)
+                (when (steam::gamepad-text-input-dismissed-submitted ,struct)
+                  (let ((,text (input-text ,utils)))
+                    ,@body))))
+         (make-instance 'closure-callback
+                        :closure #',thunk
+                        :struct-type 'steam::gamepad-text-input-dismissed-t)))))
+
 (defmethod start-virtual-reality-dashboard ((utils steamutils))
   (steam::utils-start-vrdashboard (handle utils)))
 
@@ -58,8 +77,6 @@
     (steam::utils-set-overlay-notification-position (handle utils) position)
     (steam::utils-set-overlay-notification-inset (handle utils) x y)
     value))
-
-;; GamepadTextInputDismissed_t handling
 
 (defclass image (c-object)
   ((width :reader width)

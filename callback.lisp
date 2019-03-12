@@ -18,7 +18,7 @@
          (vtable (cffi:foreign-slot-pointer handle '(:struct steam::callback) 'steam::vtable)))
     (setf (steam::callback-vtable-ptr handle) vtable)
     (setf (steam::callback-id handle) (symbol-value (struct-type callback)))
-    (setf (steam::callback-flags handle) (if (server-p (steamworks)) 2 0))
+    (setf (steam::callback-flags handle) (if (typep (steamworks) 'steamworks-server) 2 0))
     (setf (steam::vtable-result vtable) (cffi:callback callback))
     (setf (steam::vtable-result-with-info vtable) (cffi:callback callback-with-info))
     (setf (steam::vtable-size vtable) (cffi:callback size))

@@ -1,4 +1,15 @@
 {
+    "enums":[
+        {
+            "enumname": "EServerMode",
+            "values": [
+                {"name": "k_eServerModeInvalid", "value": "0"},
+                {"name": "k_eServerModeNoAuthentication", "value": "1"},
+                {"name": "k_eServerModeAuthentication", "value": "2"},
+                {"name": "k_eServerModeAuthenticationAndSecure", "value": "3"},
+            ]
+        },
+    ],
     "structs":[
         {
             "struct": "InputAnalogActionData_t",
@@ -85,7 +96,7 @@
                 {"paramname": "usPort", "paramtype": "uint16"},
                 {"paramname": "usGamePort", "paramtype": "uint16"},
                 {"paramname": "usQueryPort", "paramtype": "uint16"},
-                {"paramname": "eServerMode", "paramtype": "int"},
+                {"paramname": "eServerMode", "paramtype": "enum EServerMode"},
                 {"paramname": "pchVersionString", "paramtype": "const char *"}
             ]
         },

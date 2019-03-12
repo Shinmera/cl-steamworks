@@ -122,18 +122,3 @@
 
 (defmethod run-callbacks ((steamworks steamworks-server))
   (steam::game-server-run-callbacks))
-
-(defclass interface (c-object)
-  ((steamworks :initarg :steamworks :initform (error "STEAMWORKS required.") :reader %steamworks)))
-
-(defun get-interface-handle (steamworks function &rest args)
-  (let ((handle (apply function (handle (interface 'steamclient steamworks)) args)))
-    (when (cffi:null-pointer-p handle)
-      (error "FIXME: failed to create steam utils handle."))
-    handle))
-
-(defmethod call-with ((interface interface) function &rest args)
-  (apply function (handle interface) args))
-
-(defmethod call-with ((interface symbol) function &rest args)
-  (apply #'call-with (interface interface (steamworks)) function args))

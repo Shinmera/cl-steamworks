@@ -104,3 +104,17 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)"))
 
 (defun enlist (a &rest items)
   (if (listp a) a (list* a items)))
+
+(defun delist (a)
+  (if (listp a) (first a) a))
+
+(defun ipv4->int (ipstring)
+  (let* ((d1 (position #\. ipstring))
+         (d2 (position #\. ipstring :start (1+ d1)))
+         (d3 (position #\. ipstring :start (1+ d2)))
+         (x 0))
+    (setf (ldb (byte 8 24) x) (parse-integer ipstring :start 0 :end d1))
+    (setf (ldb (byte 8 16) x) (parse-integer ipstring :start (1+ d1) :end d2))
+    (setf (ldb (byte 8  8) x) (parse-integer ipstring :start (1+ d2) :end d3))
+    (setf (ldb (byte 8  0) x) (parse-integer ipstring :start (1+ d3)))
+    x))

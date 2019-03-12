@@ -18,6 +18,7 @@
                (:file "c-object")
                (:file "callback")
                (:file "steamworks")
+               (:file "interface")
                (:file "steamclient")
                (:file "steamutils")
                (:file "steamuser")

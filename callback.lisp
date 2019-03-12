@@ -70,8 +70,9 @@
 (defclass callresult (%callback)
   ((token :initarg :token :reader token)))
 
-(defmethod initialize-instance :after ((callresult callresult) &key token)
-  (steam::register-call-result (handle callresult) token))
+(defmethod initialize-instance :after ((callresult callresult) &key token (register T))
+  (when register
+    (steam::register-call-result (handle callresult) token)))
 
 (defmethod allocate-handle ((callresult callresult))
   (let ((handle (call-next-method)))
@@ -116,19 +117,31 @@
   (unwind-protect (funcall (closure callresult) (if failed NIL parameter))
     (free callresult)))
 
-(defmacro with-call-result ((result) (method interface &rest args) &body body &environment env)
+(defmacro with-call-result ((result &key poll) (method interface &rest args) &body body &environment env)
   ;; KLUDGE: in order to infer the struct-type we need access to the method name
   ;;         which extends the macro to the call and disallows passing a token
   ;;         directly.
   (let ((thunk (gensym "THUNK"))
+        (instance (gensym "INSTANCE"))
         (callresult (or (find-symbol (format NIL "~a-CALLRESULT" method) '#:steam)
                         (error "No call result known for method ~a" method)))
         (interface (if (constantp interface env)
                        `(interface ,interface T)
-                       interface)))
+                       interface))
+        (poll (etypecase poll
+                (null)
+                ((eql T) 0.01)
+                (integer poll))))
     `(flet ((,thunk (,result)
               ,@body))
-       (make-instance 'closure-callresult
-                      :token (call-with #',method ,interface ,@args)
-                      :struct-type ,callresult
-                      :closure #',thunk))))
+       (let ((,instance (make-instance 'closure-callresult
+                                       :token (call-with #',method ,interface ,@args)
+                                       :struct-type ,callresult
+                                       :closure #',thunk
+                                       :register ,(null poll))))
+         ,(if poll
+              `(loop for ,result = (maybe-result ,instance)
+                     do (if ,result
+                            (,thunk ,result)
+                            (sleep ,poll)))
+              instance)))))

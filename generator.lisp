@@ -197,12 +197,16 @@
                          :test #'search)
                    (not (find (getf def :name) *large-structs* :test #'string=)))
           (setf align 4))
-        `(cffi:defcstruct ,(name (getf def :struct))
+        `(org.shirakumo.fraf.steamworks.cffi::defcstruct* ,(name (getf def :struct))
            ,@(when (getf def :desc) (list (getf def :desc)))
            ,@(loop with offset = 0
+                   with cache = (make-hash-table :test 'equalp)
                    for field in (getf def :fields)
+                   for name = (strip-hungarian (getf field :fieldname))
                    collect (multiple-value-bind (type count) (parse-typespec (getf field :fieldtype))
-                             (prog1 (list (name (strip-hungarian (getf field :fieldname)))
+                             (when (<= 1 (incf (gethash name cache -1)))
+                               (setf name (format NIL "~a~d" name (gethash name cache))))
+                             (prog1 (list (name name)
                                           type
                                           :count count
                                           :offset offset)

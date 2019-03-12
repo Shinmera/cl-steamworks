@@ -13,6 +13,19 @@
     (cl:make-pathname :name cl:NIL :type cl:NIL
                       :defaults (cl:merge-pathnames "static/" *this*))))
 
+(cl:defmacro defcstruct* (name cl:&body slots)
+  (cl:let ((name-class (cl:intern (cl:format cl:NIL "~a-TCLASS" name) #.cl:*package*))
+           (constructor (cl:intern (cl:format cl:NIL "MAKE-~a" name) #.cl:*package*)))
+    `(cl:progn
+       (cffi:defcstruct (,name :class ,name-class)
+         ,@slots)
+       (cl:defstruct (,name (:constructor ,constructor ,(cl:mapcar #'cl:first slots)))
+         ,@(cl:mapcar #'cl:first slots))
+       (cl:defmethod cffi:translate-from-foreign (value (type ,name-class))
+         (,constructor
+          ,@(cl:loop for slot in slots
+                  collect `(cffi:foreign-slot-value value '(:struct ,name) ',(cl:first slot))))))))
+
 (cffi:define-foreign-library steamworks
   ((:and :darwin :x86)
    "libsteam_api.dylib"

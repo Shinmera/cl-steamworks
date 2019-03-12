@@ -62,7 +62,7 @@
         (struct (gensym "STRUCT")))
     `(let ((,utilsg ,utils))
        (flet ((,thunk (,struct)
-                (when (steam::gamepad-text-input-dismissed-submitted ,struct)
+                (when (steam::gamepad-text-input-dismissed-t-submitted ,struct)
                   (let ((,text (input-text ,utils)))
                     ,@body))))
          (make-instance 'closure-callback

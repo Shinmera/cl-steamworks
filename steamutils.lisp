@@ -23,16 +23,13 @@
 (define-interface-method steamutils virtual-reality-p (steam::utils-is-steam-running-in-vr))
 (define-interface-method steamutils virtual-reality-streaming-p (steam::utils-is-vrheadset-streaming-enabled))
 (define-interface-method steamutils start-virtual-reality-dashboard (steam::utils-start-vrdashboard))
+(define-interface-method steamutils (setf virtual-reality-streaming-p) (value steam::utils-set-vrheadset-streaming-enabled))
+(define-interface-method steamutils show-text-input
+    (steam::utils-show-gamepad-text-input &key (mode :normal) (line-mode :single-line) (description "") (max 32) (default "")))
 
 (defmethod battery-power ((utils steamutils))
   (let ((res (steam::utils-get-current-battery-power (handle utils))))
     (if (= 255 res) (values) res)))
-
-(defmethod (setf virtual-reality-streaming-p) (value (utils steamutils))
-  (steam::utils-set-vrheadset-streaming-enabled (handle utils) value))
-
-(defmethod show-text-input ((utils steamutils) &key (mode :normal) (line-mode :single-line) (description "") (max 32) (default ""))
-  (steam::utils-show-gamepad-text-input (handle utils) mode line-mode description max default))
 
 (defmethod input-text ((utils steamutils))
   (let ((length (steam::utils-get-entered-gamepad-text-length (handle utils))))

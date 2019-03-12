@@ -118,3 +118,6 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)"))
     (setf (ldb (byte 8  8) x) (parse-integer ipstring :start (1+ d2) :end d3))
     (setf (ldb (byte 8  0) x) (parse-integer ipstring :start (1+ d3)))
     x))
+
+(defun remove-all (sequence &rest items)
+  (remove-if (lambda (i) (find i items)) sequence))

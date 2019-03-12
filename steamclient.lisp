@@ -6,21 +6,6 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
-(defclass interface (c-object)
-  ((steamworks :initarg :steamworks :initform (error "STEAMWORKS required.") :reader %steamworks)))
-
-(defun get-interface-handle (steamworks function &rest args)
-  (let ((handle (apply function (handle (interface 'steamclient steamworks)) args)))
-    (when (cffi:null-pointer-p handle)
-      (error "FIXME: failed to create steam utils handle."))
-    handle))
-
-(defmethod call-with ((interface interface) function &rest args)
-  (apply function (handle interface) args))
-
-(defmethod call-with ((interface symbol) function &rest args)
-  (apply #'call-with (interface interface (steamworks)) function args))
-
 (defclass steamclient (interface)
   ())
 
@@ -34,3 +19,42 @@
 (cffi:defcallback warning-message :void ((severity :int) (debug-text :string))
   (format *error-output* "~&[~[INFO~;WARN~;ERR ~]] Steam: ~a~%"
           severity debug-text))
+
+(defmethod ipc-call-count ((client steamclient))
+  (steam::client-get-ipccall-count (handle client)))
+
+(defmethod make-pipe ((client steamclient))
+  (make-instance 'client-pipe :steamclient client))
+
+(defmethod make-user ((client steamclient) (pipe pipe) &key (account-type :global))
+  (make-instance 'client-user :steamclient client :pipe pipe :account-type account-type))
+
+(defclass client-pipe (pipe c-managed-object)
+  ((steamclient :initarg :steamclient :reader steamclient))
+  (:default-initargs :free-on-gc T))
+
+(defmethod allocate-handle ((pipe client-pipe))
+  (steam::client-create-steam-pipe (handle (steamclient pipe))))
+
+(defmethod free-handle-function ((pipe client-pipe) handle)
+  (let ((client (handle (steamclient pipe))))
+    (lambda ()
+      (steam::client-brelease-steam-pipe client handle))))
+
+(defclass client-user (user c-managed-object)
+  ((steamclient :initarg :steamclient :reader steamclient)
+   (account-type :initarg :account-type :initform :global :reader account-type))
+  (:default-initargs :free-on-gc T))
+
+(defmethod allocate-handle ((user client-user))
+  (if (eql :global (account-type user))
+      (steam::client-connect-to-global-user (handle (steamclient pipe)) (handle (pipe user)))
+      (cffi:with-foreign-object (var 'steam::hsteam-pipe)
+        (setf (cffi:mem-ref var 'steam::hsteam-pipe) (handle (pipe user)))
+        (steam::client-create-local-user (handle (steamclient pipe)) var (account-type user)))))
+
+(defmethod free-handle-function ((user client-user) handle)
+  (let ((client (handle (steamclient user)))
+        (pipe (handle (pipe user))))
+    (lambda ()
+      (steam::client-release-user client pipe handle))))

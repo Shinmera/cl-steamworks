@@ -21,6 +21,12 @@
     (symbol-value (or (find-symbol name '#:org.shirakumo.fraf.steamworks.cffi)
                       (error "FIXME: No such interface ~s" interface)))))
 
+(defclass pipe (c-object)
+  ())
+
+(defclass user (c-object)
+  ((pipe :initarg :pipe :reader pipe)))
+
 (defclass steamworks ()
   ((interfaces :initform (make-hash-table :test 'eq) :reader interfaces)
    (user :initform NIL :reader user)
@@ -76,8 +82,9 @@
         :report "Restart the application through Steam."
         (when (steam::restart-app-if-necessary app-id)
           (quit exit-code)))))
-  (setf (slot-value steamworks 'user) (steam::get-hsteam-user))
-  (setf (slot-value steamworks 'pipe) (steam::get-hsteam-pipe)))
+  (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (steam::get-hsteam-pipe)))
+  (setf (slot-value steamworks 'user) (make-instance 'user :handle (steam::get-hsteam-user)
+                                                           :pipe (pipe steamworks))))
 
 (defmethod free-handle-function ((steamworks steamworks-client) handle)
   (lambda ()
@@ -101,8 +108,9 @@
   (call-next-method)
   (unless (steam::game-server-init ip-address port game-port query-port server-mode version-string)
     (error "FIXME: failed to init game server."))
-  (setf (slot-value steamworks 'user) (steam::game-server-get-hsteam-user))
-  (setf (slot-value steamworks 'pipe) (steam::game-server-get-hsteam-pipe)))
+  (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (steam::game-server-get-hsteam-pipe)))
+  (setf (slot-value steamworks 'user) (make-instance 'user :handle (steam::game-server-get-hsteam-user)
+                                                           :pipe (pipe steamworks))))
 
 (defmethod free-handle-function ((steamworks steamworks-server) handle)
   (let ((interfaces (interfaces steamworks)))
@@ -114,3 +122,18 @@
 
 (defmethod run-callbacks ((steamworks steamworks-server))
   (steam::game-server-run-callbacks))
+
+(defclass interface (c-object)
+  ((steamworks :initarg :steamworks :initform (error "STEAMWORKS required.") :reader %steamworks)))
+
+(defun get-interface-handle (steamworks function &rest args)
+  (let ((handle (apply function (handle (interface 'steamclient steamworks)) args)))
+    (when (cffi:null-pointer-p handle)
+      (error "FIXME: failed to create steam utils handle."))
+    handle))
+
+(defmethod call-with ((interface interface) function &rest args)
+  (apply function (handle interface) args))
+
+(defmethod call-with ((interface symbol) function &rest args)
+  (apply #'call-with (interface interface (steamworks)) function args))

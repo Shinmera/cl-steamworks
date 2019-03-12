@@ -11,4 +11,4 @@
 
 (defmethod initialize-instance :after ((interface steamuser) &key version steamworks)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-user
-                                                 (user steamworks) (pipe steamworks) version)))
+                                                 (handle (user steamworks)) (handle (pipe steamworks)) version)))

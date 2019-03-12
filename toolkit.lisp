@@ -15,6 +15,12 @@
          (when ,err
            ,cleanup)))))
 
+(defmacro with-error-on-failure (form)
+  (let ((result (gensym "RESULT")))
+    `(let ((,result ,form))
+       (unless (eql :ok ,result)
+         (error "FIXME: failed ~a" ,result)))))
+
 (defun calloc (type &optional (count 1))
   (let ((ptr (cffi:foreign-alloc type :count count)))
     (dotimes (i (* count (cffi:foreign-type-size type)) ptr)

@@ -15,7 +15,6 @@
 
 (define-interface-method steamfriends clear-rich-presence (steam::friends-clear-rich-presence))
 (define-interface-method steamfriends close-clan-chat-window (steam::friends-close-clan-chat-window-in-steam chat-id))
-(define-interface-method steamfriends follower-count (steam::friends-get-follower-count))
 
 (defmethod activate-overlay ((friends steamfriends) &key (dialog :friends) user lobby app url)
   (let ((type (ecase dialog
@@ -53,6 +52,11 @@
 (defmethod list-coplay-friends ((friends steamfriends))
   (loop for i from 0 below (steam::friends-get-coplay-friend-count (handle friends))
         collect (coplay-friend friends i)))
+
+(defmethod follower-count ((friends steamfriends) (user integer))
+  (with-call-result (result :poll T) (steam::friends-get-follower-count (handle friends) user)
+    (with-error-on-failure (steam::friends-get-follower-count-t-result result))
+    (steam::friends-get-follower-count-t-count result)))
 
 (defclass clan (c-object)
   ((steamfriends :initarg :steamfriends :reader steamfriends)))

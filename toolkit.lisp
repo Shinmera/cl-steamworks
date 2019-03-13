@@ -127,3 +127,16 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)"))
 
 (defun remove-all (sequence &rest items)
   (remove-if (lambda (i) (find i items)) sequence))
+
+(defun flags (enum &rest flags)
+  (flet ((flag-value (flag)
+           (if (integerp flag)
+               flag
+               (cffi:foreign-enum-value enum flag))))
+    (reduce #'logior flags :key #'flag-value)))
+
+(defun unix->universal (unix)
+  (+ unix (encode-universal-time 0 0 0 1 1 1970 0)))
+
+(defun universal->unix (universal)
+  (- universal (encode-universal-time 0 0 0 1 1 1970 0)))

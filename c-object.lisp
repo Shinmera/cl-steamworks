@@ -25,6 +25,11 @@
 (defclass c-object ()
   ((handle :initarg :handle :initform NIL :accessor handle)))
 
+(defmethod handle (thing)
+  (etypecase thing
+    (integer thing)
+    (cffi:foreign-pointer thing)))
+
 (defclass c-managed-object (c-object)
   ())
 

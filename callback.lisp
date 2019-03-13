@@ -64,7 +64,7 @@
 
 (defmethod callback ((callresult closure-callback) parameter &optional failed api-call)
   (declare (ignore api-call))
-  (unwind-protect (funcall (closure callback) (if failed NIL parameter))
+  (when (funcall (closure callback) (if failed NIL parameter))
     (free callback)))
 
 (defclass callresult (%callback)

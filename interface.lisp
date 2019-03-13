@@ -21,13 +21,14 @@
 (defmethod call-with ((interface symbol) function &rest args)
   (apply #'call-with (interface interface (steamworks)) function args))
 
-(defmacro define-interface-method (interface method call)
+(defmacro define-interface-method (interface method call &body transform)
   (let ((function (find-if (lambda (a) (eq (symbol-package a) (find-package '#:steam))) call))
         (method-args (copy-list call)))
     (setf (nth (position function method-args) method-args) (list interface interface))
     `(defmethod ,method ,method-args
-       (,function (handle ,interface) ,@(apply #'remove-all (mapcar #'delist call)
-                                               function LAMBDA-LIST-KEYWORDS)))))
+       (let ((result (,function (handle ,interface) ,@(apply #'remove-all (mapcar #'delist call)
+                                                             function LAMBDA-LIST-KEYWORDS))))
+         ,@(or transform `(result))))))
 
 (defmacro define-interface-submethod (interface sub method call)
   (let ((function (find-if (lambda (a) (eq (symbol-package a) (find-package '#:steam))) call))

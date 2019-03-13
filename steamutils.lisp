@@ -44,13 +44,13 @@
         (struct (gensym "STRUCT")))
     `(let ((,utilsg ,utils))
        (flet ((,thunk (,struct)
-                (when (steam::gamepad-text-input-dismissed-t-submitted ,struct)
+                (when (steam::gamepad-text-input-dismissed-submitted ,struct)
                   (let ((,text (input-text ,utils)))
                     ,@body))
                 T))
          (make-instance 'closure-callback
                         :closure #',thunk
-                        :struct-type 'steam::gamepad-text-input-dismissed-t)))))
+                        :struct-type 'steam::gamepad-text-input-dismissed)))))
 
 (defmethod (setf overlay-notification-location) ((value cons) (utils steamutils))
   (destructuring-bind (position x y) value

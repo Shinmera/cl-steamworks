@@ -40,7 +40,7 @@
     (not (null (ignore-errors (cffi:foreign-type-size type))))))
 
 (defun maybe-load-low-level (&optional file)
-  (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults steam::*this*))))
+  (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
     (when (probe-file file)
       (cffi:load-foreign-library 'steam::steamworks)
       #+asdf

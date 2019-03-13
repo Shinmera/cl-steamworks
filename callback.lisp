@@ -17,7 +17,7 @@
   (let* ((handle (calloc '(:struct steam::callback)))
          (vtable (cffi:foreign-slot-pointer handle '(:struct steam::callback) 'steam::vtable)))
     (setf (steam::callback-vtable-ptr handle) vtable)
-    (setf (steam::callback-id handle) (symbol-value (struct-type callback)))
+    (setf (steam::callback-id handle) (callback-id (struct-type callback)))
     (setf (steam::callback-flags handle) (if (typep (steamworks) 'steamworks-server) 2 0))
     (setf (steam::vtable-result vtable) (cffi:callback callback))
     (setf (steam::vtable-result-with-info vtable) (cffi:callback callback-with-info))
@@ -99,7 +99,7 @@
     (cffi:with-foreign-objects ((failed :bool)
                                 (result result-type))
       (if (steam::utils-get-apicall-result
-           utils token result (cffi:foreign-type-size result-type) (symbol-value (struct-type callresult)) failed)
+           utils token result (cffi:foreign-type-size result-type) (callback-id (struct-type callresult)) failed)
           (cffi:mem-ref result result-type)
           (error "FIXME: call failed: ~a" (steam::utils-get-apicall-failure-reason utils token))))))
 
@@ -123,25 +123,25 @@
   ;;         directly.
   (let ((thunk (gensym "THUNK"))
         (instance (gensym "INSTANCE"))
-        (callresult (or (find-symbol (format NIL "~a-CALLRESULT" method) '#:steam)
-                        (error "No call result known for method ~a" method)))
+        (interval (gensym "INTERVAL"))
         (interface (if (constantp interface env)
                        `(interface ,interface T)
-                       interface))
-        (poll (etypecase poll
-                (null)
-                ((eql T) 0.01)
-                (integer poll))))
+                       interface)))
     `(flet ((,thunk (,result)
               ,@body))
        (let ((,instance (make-instance 'closure-callresult
                                        :token (call-with #',method ,interface ,@args)
-                                       :struct-type ,callresult
+                                       :struct-type (function-callresult ',method)
                                        :closure #',thunk
-                                       :register ,(null poll))))
-         ,(if poll
-              `(loop for ,result = (maybe-result ,instance)
-                     do (if ,result
-                            (,thunk ,result)
-                            (sleep ,poll)))
-              instance)))))
+                                       :register ,(null poll)))
+             (,interval (let ((,interval ,poll))
+                          (etypecase ,interval
+                            
+                            ((eql T) 0.01)
+                            (integer ,interval)))))
+         (if ,interval
+             (loop for ,result = (maybe-result ,instance)
+                   do (if ,result
+                          (,thunk ,result)
+                          (sleep ,interval)))
+             ,instance)))))

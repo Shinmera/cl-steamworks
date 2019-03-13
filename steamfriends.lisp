@@ -53,8 +53,8 @@
 
 (defmethod follower-count ((friends steamfriends) (user integer))
   (with-call-result (result :poll T) (steam::friends-get-follower-count (handle friends) user)
-    (with-error-on-failure (steam::friends-get-follower-count-t-result result))
-    (steam::friends-get-follower-count-t-count result)))
+    (with-error-on-failure (steam::friends-get-follower-count-result result))
+    (steam::friends-get-follower-count-count result)))
 
 (defmethod list-friend-groups ((friends steamfriends))
   (loop for i from 0 below (steam::friends-get-friends-group-count (handle friends))
@@ -142,7 +142,7 @@
         collect name))
 
 (defmethod current-game ((friend friend))
-  (cffi:with-foreign-object (info '(:struct steam::friend-game-info-t))
+  (cffi:with-foreign-object (info '(:struct steam::friend-game-info))
     (when (steam::friends-get-friend-game-played (handle (steamfriends friend)) (handle friend) info)
       info)))
 
@@ -158,14 +158,14 @@
        (unless callback (error "CALLBACK required for large avatar requests."))
        (let ((handle (steam::friends-get-large-friend-avatar (handle (steamfriends friend)) (handle friend))))
          (flet ((thunk (parameter)
-                  (when (and parameter (= (handle friend) (steam::avatar-image-loaded-t-id parameter)))
-                    (funcall callback (make-image (steam::avatar-image-loaded-t-image parameter)))
+                  (when (and parameter (= (handle friend) (steam::avatar-image-loaded-id parameter)))
+                    (funcall callback (make-image (steam::avatar-image-loaded-image parameter)))
                     T)))
            (if (/= -1 handle)
                (funcall callback (make-image handle))
                (make-instance 'closure-callback
                               :closure #'thunk
-                              :struct-type 'steam::avatar-image-loaded-t))))))))
+                              :struct-type 'steam::avatar-image-loaded))))))))
 
 (defmethod kind-p ((friend friend) flags)
   (steam::friends-has-friend (handle (steamfriends friend)) (handle friend) (apply #'flags 'steam::efriend-flags flags)))
@@ -224,7 +224,7 @@
       (cffi:with-foreign-object (list :unsigned-long)
         (setf (cffi:mem-ref list :unsigned-long) (handle clan))
         (with-call-result (result) (steam::friends-download-clan-activity-counts (handle friends) list 1)
-          (when (steam::download-clan-activity-counts-t-success result)
+          (when (steam::download-clan-activity-counts-success result)
             (funcall callback (activity clan)))))
       (cffi:with-foreign-objects ((online :int)
                                   (in-game :int)
@@ -244,7 +244,8 @@
 
 (defmethod refresh-clan ((clan clan) &key (block T))
   (with-call-result (result :poll block)
-      (steam::friends-request-clan-officer-list (handle (steamfriends clan)) (handle clan))))
+      (steam::friends-request-clan-officer-list (handle (steamfriends clan)) (handle clan))
+    (declare (ignore result))))
 
 (defmethod officer ((clan clan) (index integer))
   (let ((result (steam::friends-get-clan-officer-by-index (handle (steamfriends clan)) (handle clan) index)))

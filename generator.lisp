@@ -7,6 +7,7 @@
 (defpackage #:cl-steamworks-generator
   (:nicknames #:org.shirakumo.fraf.steamworks.generator)
   (:use #:cl #:cffi)
+  (:local-nicknames (#:steam #:org.shirakumo.fraf.steamworks.cffi))
   (:export
    #:*standard-low-level-file*
    #:*extras-file*
@@ -56,10 +57,20 @@
   (and (<= (length prefix) (length string))
        (string-equal string prefix :end1 (length prefix))))
 
+(defun suffix-p (suffix string)
+  (and (<= (length suffix) (length string))
+       (string-equal string suffix :start1 (- (length string) (length suffix)))))
+
 (defun strip-prefixes (string &rest prefixes)
   (loop for prefix in prefixes
         when (prefix-p prefix string)
         do (return (subseq string (length prefix)))
+        finally (return string)))
+
+(defun strip-suffixes (string &rest suffixes)
+  (loop for suffix in suffixes
+        when (suffix-p suffix string)
+        do (return (subseq string 0 (- (length string) (length suffix))))
         finally (return string)))
 
 (defun strip-hungarian (string)
@@ -108,6 +119,15 @@
             finally (commit)))
     (nreverse parts)))
 
+(defun strip-function-name (name)
+  (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_" "SteamInternal_" "Steam"))
+
+(defun strip-struct-name (name)
+  (strip-suffixes name "Result_t" "Response_t" "_t"))
+
+(defun strip-constant-name (name)
+  (strip-prefixes name "k_cch" "k_cwch" "k_c" "k_i"))
+
 (defun parse-typespec (specstring)
   (let ((parts (split #\Space specstring))
         (type ())
@@ -139,9 +159,9 @@
                          (let ((name (pop parts)))
                            (cond ((string= name "CSteamID") (setf type :unsigned-long))
                                  ((string= name "CGameID") (setf type :unsigned-long))
-                                 (T (setf type `(:struct ,(name name)))))))
+                                 (T (setf type `(:struct ,(name (strip-struct-name name))))))))
                         ((string= part "struct")
-                         (setf type `(:struct ,(name (pop parts)))))
+                         (setf type `(:struct ,(name (strip-struct-name (pop parts))))))
                         ((string= "_Bool" specstring)
                          (setf type :bool))
                         (T
@@ -173,7 +193,7 @@
 (defun compile-const (def)
   (if (or (find (getf def :constname) *bad-consts* :test #'string=))
       (values NIL (format NIL "Ignored const definition ~s" (getf def :constname)))
-      (let ((name (name (strip-prefixes (getf def :constname) "k_cch" "k_cwch" "k_c" "k_i"))))
+      (let ((name (name (strip-constant-name (getf def :constname)))))
         `(cl:defconstant ,name
            ,(or (ignore-errors (parse-integer (getf def :constval)))
                 `(if (boundp ',name) (symbol-value ',name) ,(getf def :constval)))
@@ -183,10 +203,19 @@
   (if (and (string= (getf def :struct) "callbackname")
            (string= (getf def :constname) "callbackid"))
       (values NIL "Ignored callback definition scanned from preprocessor directive.")
-      `(cl:defconstant ,(name (getf def :struct))
-         (+ ,(name (strip-prefixes (getf def :constname) "k_cch" "k_cwch" "k_c" "k_i"))
-            ,(parse-integer (getf def :offset)))
-         ,@(when (getf def :desc) (list (getf def :desc))))))
+      `(cl:setf (cl:gethash ',(name (strip-struct-name (getf def :struct))) steam::*callback-id-map*)
+                (+ ,(name (strip-constant-name (getf def :constname)))
+                   ,(parse-integer (getf def :offset))))))
+
+(defun compile-callresult (def)
+  (cond ((and (equal "SteamAPICall_t" (getf def :returntype))
+              (null (getf def :callresult)))
+         (values NIL (format NIL "Missing callresult declaration for method ~a::~a"
+                             (getf def :classname) (getf def :methodname))))
+        ((getf def :callresult)
+         (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
+           `(cl:setf (cl:gethash ',(name (strip-function-name name)) steam::*function-callresult-map*)
+                     ',(name (strip-struct-name (getf def :callresult))))))))
 
 (defun compile-struct (def)
   (if (or (find (getf def :struct) *bad-structs* :test #'string=)
@@ -199,7 +228,7 @@
                          :test #'search)
                    (not (find (getf def :name) *large-structs* :test #'string=)))
           (setf align 4))
-        `(org.shirakumo.fraf.steamworks.cffi::defcstruct* ,(name (getf def :struct))
+        `(steam::defcstruct* ,(name (strip-struct-name (getf def :struct)))
            ,@(when (getf def :desc) (list (getf def :desc)))
            ,@(loop with offset = 0
                    with cache = (make-hash-table :test 'equalp)
@@ -224,9 +253,6 @@
     (or (struct-type-p (getf method :returntype))
         (loop for param in (getf method :params)
               thereis (struct-type-p (getf param :paramtype))))))
-
-(defun strip-function-name (name)
-  (strip-prefixes name "SteamAPI_ISteam" "SteamAPI_" "SteamInternal_" "Steam"))
 
 (defun compile-method (def cache)
   (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
@@ -253,16 +279,6 @@
        ,@(loop for arg in (getf def :params)
                collect (list (name (getf arg :paramname))
                              (parse-typespec (getf arg :paramtype)))))))
-
-(defun compile-callresult (def)
-  (cond ((and (equal "SteamAPICall_t" (getf def :returntype))
-              (null (getf def :callresult)))
-         (values NIL (format NIL "Missing callresult declaration for method ~a::~a"
-                             (getf def :classname) (getf def :methodname))))
-        ((getf def :callresult)
-         (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
-           `(cl:defconstant ,(name (format NIL "~a-callresult" (strip-function-name name)))
-              ',(name (getf def :callresult)))))))
 
 (defun scan-for-callbacks (content)
   (let ((results ()))
@@ -330,7 +346,7 @@
 
 (defun write-form (form &optional (stream *standard-output*))
   (with-standard-io-syntax
-    (let ((*package* #.(find-package '#:org.shirakumo.fraf.steamworks.cffi)))
+    (let ((*package* #.(find-package '#:steam)))
       (fresh-line stream)
       (terpri stream)
       (write form :stream stream
@@ -356,7 +372,7 @@
        The generation occurs via the machinery from generator.lisp
        You should not edit this file manually.
 |#~%")
-      (write-form `(in-package #:org.shirakumo.fraf.steamworks.cffi) stream)
+      (write-form `(in-package #:steam) stream)
       (loop for form in forms
             do (write-form form stream)))))
 
@@ -399,6 +415,6 @@
      (pathname-utils:subdirectory sdk-directory "redistributable_bin")
      (ensure-directories-exist (pathname-utils:subdirectory *this* "static")))
     (format *query-io* "~&Generating bindings...")
-    (cffi:load-foreign-library 'org.shirakumo.fraf.steamworks.cffi::steamworks)
+    (cffi:load-foreign-library 'steam::steamworks)
     (generate sdk-directory)
     (format *query-io* "~&Done. You can now use cl-steamworks!~%")))

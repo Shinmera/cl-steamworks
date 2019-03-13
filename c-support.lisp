@@ -4,53 +4,66 @@
  Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
-(in-package #:org.shirakumo.fraf.steamworks.cffi)
+(in-package #:org.shirakumo.fraf.steamworks)
 
-(cl:eval-when (:compile-toplevel :load-toplevel :execute)
-  (cl:defvar *this* #.(cl:or cl:*compile-file-pathname* cl:*load-pathname*
-                             (cl:error "COMPILE-FILE or LOAD this file.")))
-  (cl:defvar *static*
-    (cl:make-pathname :name cl:NIL :type cl:NIL
-                      :defaults (cl:merge-pathnames "static/" *this*))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *this* #.(or *compile-file-pathname* *load-pathname*
+                       (error "COMPILE-FILE or LOAD this file.")))
+  (defvar *static*
+    (make-pathname :name NIL :type NIL
+                   :defaults (merge-pathnames "static/" *this*))))
 
-(cl:defmacro defcstruct* (name cl:&body slots)
-  (cl:let ((name-class (cl:intern (cl:format cl:NIL "~a-TCLASS" name) #.cl:*package*))
-           (constructor (cl:intern (cl:format cl:NIL "MAKE-~a" name) #.cl:*package*)))
-    `(cl:progn
+(defvar steam::*callback-id-map* (make-hash-table :test 'eq))
+(defvar steam::*function-callresult-map* (make-hash-table :test 'eq))
+
+(defun callback-id (callback)
+  (or (gethash callback steam::*callback-id-map*)
+      (error "Not a callback: ~s" callback)))
+
+(defun function-callresult (function)
+  (or (gethash function steam::*function-callresult-map*)
+      (error "Not a callresult function: ~s" function)))
+
+;; TODO: optimise above access through compiler-macros
+
+(defmacro steam::defcstruct* (name &body slots)
+  (let ((name-class (intern (format NIL "~a-TCLASS" name) '#:org.shirakumo.fraf.steamworks.cffi))
+        (constructor (intern (format NIL "MAKE-~a" name) '#:org.shirakumo.fraf.steamworks.cffi)))
+    `(progn
        (cffi:defcstruct (,name :class ,name-class)
          ,@slots)
-       (cl:defstruct (,name (:constructor ,constructor ,(cl:mapcar #'cl:first slots)))
-         ,@(cl:mapcar #'cl:first slots))
-       (cl:defmethod cffi:translate-from-foreign (value (type ,name-class))
+       (defstruct (,name (:constructor ,constructor ,(mapcar #'first slots)))
+         ,@(mapcar #'first slots))
+       (defmethod cffi:translate-from-foreign (value (type ,name-class))
          (,constructor
-          ,@(cl:loop for slot in slots
-                  collect `(cffi:foreign-slot-value value '(:struct ,name) ',(cl:first slot))))))))
+          ,@(loop for slot in slots
+                  collect `(cffi:foreign-slot-value value '(:struct ,name) ',(first slot))))))))
 
-(cffi:define-foreign-library steamworks
+(cffi:define-foreign-library steam::steamworks
   ((:and :darwin :x86)
    "libsteam_api.dylib"
-   :search-path #.(cl:merge-pathnames "osx32/" *static*))
+   :search-path #.(merge-pathnames "osx32/" *static*))
   ((:and :unix :x86)
    "libsteam_api.so"
-   :search-path #.(cl:merge-pathnames "linux32/" *static*))
+   :search-path #.(merge-pathnames "linux32/" *static*))
   ((:and :unix :x86-64)
    "libsteam_api.so"
-   :search-path #.(cl:merge-pathnames "linux64/" *static*))
+   :search-path #.(merge-pathnames "linux64/" *static*))
   ((:and :windows :x86)
    "steam_api.dll"
-   :search-path #.(cl:merge-pathnames "/" *static*))
+   :search-path #.(merge-pathnames "/" *static*))
   ((:and :windows :x86-64)
    "steam_api.dll"
-   :search-path #.(cl:merge-pathnames "win64/" *static*)))
+   :search-path #.(merge-pathnames "win64/" *static*)))
 
 #+windows
-(cffi:defcstruct (vtable :class vtable :conc-name vtable-)
+(cffi:defcstruct (steam::vtable :class steam::vtable :conc-name steam::vtable-)
   (result-with-info :pointer)
   (result :pointer)
   (size :pointer))
 
 #-windows
-(cffi:defcstruct (vtable :class vtable :conc-name vtable-)
+(cffi:defcstruct (steam::vtable :class steam::vtable :conc-name steam::vtable-)
   ;; void (pointer this, pointer param)
   (result :pointer)
   ;; void (pointer this, pointer param, bool failed, steam-apicall-t api-call)
@@ -58,7 +71,7 @@
   ;; int (pointer this)
   (size :pointer))
 
-(cffi:defcstruct (callback :class callback :conc-name callback-)
+(cffi:defcstruct (steam::callback :class steam::callback :conc-name steam::callback-)
   ;; Pointer to vtable instance.
   (vtable-ptr :pointer)
   ;; Should be 2 on a game server, 0 otherwise?
@@ -72,4 +85,4 @@
   ;; Function pointer to call for callresult
   (function :pointer)
   ;; vtable alloc
-  (vtable (:struct vtable)))
+  (vtable (:struct steam::vtable)))

@@ -24,6 +24,10 @@
 (defclass pipe (c-object)
   ())
 
+(defmethod initialize-instance :after ((pipe pipe) &key)
+  (when (= 0 (handle pipe))
+    (error "FIXME: Pipe creation failed.")))
+
 (defclass user (c-object)
   ((pipe :initarg :pipe :reader pipe)))
 
@@ -41,8 +45,6 @@
 
 (defmethod initialize-instance :after ((steamworks steamworks) &key (interfaces *default-interfaces*))
   (tg:finalize steamworks (free-handle-function steamworks NIL))
-  (when (= 0 (pipe steamworks))
-    (error "FIXME: could not retrieve valid steam pipe."))
   (create-interfaces steamworks interfaces)
   (setf *steamworks* steamworks))
 

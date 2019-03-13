@@ -25,6 +25,10 @@
 (defclass c-object ()
   ((handle :initarg :handle :initform NIL :accessor handle)))
 
+(defmethod print-object ((c-object c-object) stream)
+  (print-unreadable-object (c-object stream :type T)
+    (format stream "@~d" (handle c-object))))
+
 (defmethod handle (thing)
   (etypecase thing
     (integer thing)

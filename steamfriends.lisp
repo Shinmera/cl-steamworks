@@ -60,7 +60,7 @@
   (loop for i from 0 below (steam::friends-get-friends-group-count (handle friends))
         collect (make-instance 'friend-group :steamfriends friends :index i)))
 
-(defmethod list-friends ((friends steamfriends) &key flags source coplay)
+(defmethod list-friends ((friends steamfriends) &key (flags '(:all)) source coplay)
   (cond (source
          (let ((source (handle source)))
            (loop for i from 0 below (steam::friends-get-friend-count-from-source (handle friends) source)
@@ -95,14 +95,20 @@
 (defclass friend (c-object)
   ((steamfriends :initarg :steamfriends :reader steamfriends)))
 
-(defmethod initialize-instance :after ((friend friend) &key steamfriends index flags source coplay)
+(defmethod initialize-instance :after ((friend friend) &key steamfriends index flags source coplay handle)
   (cond (source
          (setf (handle friend) (steam::friends-get-friend-from-source-by-index (handle steamfriends) source index)))
         (flags
          (setf (handle friend) (steam::friends-get-friend-by-index (handle steamfriends) index flags)))
         (coplay
-         (setf (handle friend) (steam::friends-get-coplay-friend (handle friends) index))))
+         (setf (handle friend) (steam::friends-get-coplay-friend (handle steamfriends) index)))
+        ((null handle)
+         (setf (handle friend) (steam-id (interface 'steamuser (steamworks steamfriends))))))
   (steam::friends-request-user-information (handle steamfriends) (handle friend) T))
+
+(defmethod print-object ((friend friend) stream)
+  (print-unreadable-object (friend stream :type T)
+    (format stream "~s @~d" (display-name friend) (handle friend))))
 
 ;; FIXME: game representation
 (define-interface-submethod steamfriends friend coplay-game (steam::friends-get-friend-coplay-game))
@@ -116,6 +122,9 @@
 (define-interface-submethod steamfriends friend in-source-p (steam::friends-is-user-in-source (source integer)))
 (define-interface-submethod steamfriends friend send-message ((message string) steam::friends-reply-to-friend-message))
 (define-interface-submethod steamfriends friend request-rich-presence (steam::friends-request-friend-rich-presence))
+
+(defmethod steam-id ((friend friend))
+  (handle friend))
 
 (defmethod in-source-p ((friend friend) (source c-object))
   (in-source-p friend (handle source)))
@@ -186,6 +195,10 @@
   (when index
     (setf (handle group) (steam::friends-get-friends-group-idby-index (handle steamfriends) index))))
 
+(defmethod print-object ((group friend-group) stream)
+  (print-unreadable-object (group stream :type T)
+    (format stream "~s @~d" (display-name group) (handle group))))
+
 (define-interface-submethod steamfriends friend-group display-name (steam::friends-get-friends-group-name))
 
 (defmethod members ((group friend-group))
@@ -205,6 +218,10 @@
 (defmethod initialize-instance :after ((clan clan) &key steamfriends index)
   (when index
     (setf (handle clan) (steam::friends-get-clan-by-index (handle friends) index))))
+
+(defmethod print-object ((clan clan) stream)
+  (print-unreadable-object (clan stream :type T)
+    (format stream "~s @~d" (display-name clan) (handle clan))))
 
 (define-interface-submethod steamfriends clan member-count (steam::friends-get-clan-chat-member-count))
 (define-interface-submethod steamfriends clan admin-p (steam::friends-is-clan-chat-admin (user integer)))

@@ -10,6 +10,18 @@
             ]
         },
     ],
+    "callresults":[
+        {
+	        "classname": "ISteamFriends",
+	        "methodname": "DownloadClanActivityCounts",
+            "callresult": "DownloadClanActivityCountsResult_t"
+        },
+        {
+	        "classname": "ISteamUGC",
+	        "methodname": "RequestUGCDetails",
+            "callresult": "SteamUGCRequestUGCDetailsResult_t"
+        }
+    ],
     "structs":[
         {
             "struct": "InputAnalogActionData_t",

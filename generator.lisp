@@ -253,10 +253,14 @@
                              (parse-typespec (getf arg :paramtype)))))))
 
 (defun compile-callresult (def)
-  (when (getf def :callresult)
-    (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
-      `(cl:defconstant ,(name (format NIL "~a-callresult" (strip-function-name name)))
-           ',(name (getf def :callresult))))))
+  (cond ((and (equal "SteamAPICall_t" (getf def :returntype))
+              (null (getf def :callresult)))
+         (values NIL (format NIL "Missing callresult declaration for method ~a::~a"
+                             (getf def :classname) (getf def :methodname))))
+        ((getf def :callresult)
+         (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
+           `(cl:defconstant ,(name (format NIL "~a-callresult" (strip-function-name name)))
+              ',(name (getf def :callresult)))))))
 
 (defun scan-for-callbacks (content)
   (let ((results ()))
@@ -317,6 +321,7 @@
             (%compile #'compile-typedef (getf spec :typedefs))
             (%compile #'compile-struct (getf spec :structs))
             (%compile #'compile-callresult (getf spec :methods))
+            (%compile #'compile-callresult (getf spec :callresults))
             (let ((cache (make-hash-table :test 'equal)))
               (%compile (lambda (f) (compile-method f cache)) (getf spec :methods)))
             (%compile #'compile-function (getf spec :functions)))))

@@ -32,10 +32,11 @@
     `(progn
        (cffi:defcstruct (,name :class ,name-class)
          ,@slots)
-       (defstruct (,name (:constructor ,constructor ,(mapcar #'first slots)))
-         ,@(mapcar #'first slots))
+       (defstruct (,name (:constructor ,constructor (_handle ,@(mapcar #'first slots))))
+         _handle ,@(mapcar #'first slots))
        (defmethod cffi:translate-from-foreign (value (type ,name-class))
          (,constructor
+          value
           ,@(loop for slot in slots
                   collect `(cffi:foreign-slot-value value '(:struct ,name) ',(first slot))))))))
 

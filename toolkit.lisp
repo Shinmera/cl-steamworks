@@ -129,3 +129,6 @@
 
 (defun universal->unix (universal)
   (- universal (encode-universal-time 0 0 0 1 1 1970 0)))
+
+(defun account-id (id)
+  (logand id #xFFFFFFFF))

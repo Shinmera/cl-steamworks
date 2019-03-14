@@ -23,6 +23,7 @@
                (:file "steamutils")
                (:file "steamuser")
                (:file "steamfriends")
+               (:file "steamworkshop")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

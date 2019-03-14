@@ -372,7 +372,7 @@
        The generation occurs via the machinery from generator.lisp
        You should not edit this file manually.
 |#~%")
-      (write-form `(in-package #:steam) stream)
+      (write-form `(in-package #:org.shirakumo.fraf.steamworks.cffi) stream)
       (loop for form in forms
             do (write-form form stream)))))
 

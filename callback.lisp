@@ -17,7 +17,7 @@
   (let* ((handle (calloc '(:struct steam::callback)))
          (vtable (cffi:foreign-slot-pointer handle '(:struct steam::callback) 'steam::vtable)))
     (setf (steam::callback-vtable-ptr handle) vtable)
-    (setf (steam::callback-id handle) (callback-id (struct-type callback)))
+    (setf (steam::callback-id handle) (callback-type-id (struct-type callback)))
     (setf (steam::callback-flags handle) (if (typep (steamworks) 'steamworks-server) 2 0))
     (setf (steam::vtable-result vtable) (cffi:callback callback))
     (setf (steam::vtable-result-with-info vtable) (cffi:callback callback-with-info))
@@ -62,7 +62,7 @@
 (defclass closure-callback (callback)
   ((closure :initarg :closure :initform (error "CLOSURE required.") :reader closure)))
 
-(defmethod callback ((callresult closure-callback) parameter &optional failed api-call)
+(defmethod callback ((callback closure-callback) parameter &optional failed api-call)
   (declare (ignore api-call))
   (when (funcall (closure callback) (if failed NIL parameter))
     (free callback)))
@@ -99,7 +99,7 @@
     (cffi:with-foreign-objects ((failed :bool)
                                 (result result-type))
       (if (steam::utils-get-apicall-result
-           utils token result (cffi:foreign-type-size result-type) (callback-id (struct-type callresult)) failed)
+           utils token result (cffi:foreign-type-size result-type) (callback-type-id (struct-type callresult)) failed)
           (cffi:mem-ref result result-type)
           (error "FIXME: call failed: ~a" (steam::utils-get-apicall-failure-reason utils token))))))
 

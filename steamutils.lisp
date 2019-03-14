@@ -11,7 +11,8 @@
 
 (defmethod initialize-instance :after ((interface steamutils) &key version steamworks)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-utils
-                                                 (handle (pipe steamworks)) version)))
+                                                 (handle (pipe steamworks))
+                                                 (t-or version steam::steamutils-interface-version))))
 
 (define-interface-method steamutils app-id (steam::utils-get-app-id))
 (define-interface-method steamutils ipc-call-count (steam::utils-get-ipccall-count))
@@ -41,7 +42,8 @@
 
 (defmacro with-input-text ((text utils &rest args) &body body)
   (let ((utilsg (gensym "UTILS"))
-        (struct (gensym "STRUCT")))
+        (struct (gensym "STRUCT"))
+        (thunk (gensym "THUNK")))
     `(let ((,utilsg ,utils))
        (flet ((,thunk (,struct)
                 (when (steam::gamepad-text-input-dismissed-submitted ,struct)
@@ -50,7 +52,8 @@
                 T))
          (make-instance 'closure-callback
                         :closure #',thunk
-                        :struct-type 'steam::gamepad-text-input-dismissed)))))
+                        :struct-type 'steam::gamepad-text-input-dismissed)
+         (show-text-input utils ,@args)))))
 
 (defmethod (setf overlay-notification-location) ((value cons) (utils steamutils))
   (destructuring-bind (position x y) value
@@ -74,7 +77,7 @@
 
 (defmethod print-object ((image image) stream)
   (print-unreadable-object (image stream :type T)
-    (format stream "~dx~d @~d" (width image) (height image) (handle clan))))
+    (format stream "~dx~d @~d" (width image) (height image) (handle image))))
 
 ;; Lazy load and cache
 (defmethod rgba ((image image))

@@ -11,7 +11,8 @@
 
 (defmethod initialize-instance :after ((interface steamuser) &key version steamworks)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-user
-                                                 (handle (user steamworks)) (handle (pipe steamworks)) version)))
+                                                 (handle (user steamworks)) (handle (pipe steamworks))
+                                                 (t-or version steam::steamuser-interface-version))))
 
 (defmethod advertise-game (user server (ip string) port)
   (advertise-game user server (ipv4->int ip) port))
@@ -48,7 +49,7 @@
             (:ok
              (steam::user-decompress-voice (handle user) buffer (cffi:mem-ref compressed-written :uint32)
                                            dest (length destination) destination-written samplerate)
-             (cffi:mem-ref destination-written))
+             (cffi:mem-ref destination-written :uint32))
             (:no-data
              0)
             (:data-corrupted

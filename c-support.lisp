@@ -16,7 +16,7 @@
 (defvar steam::*callback-id-map* (make-hash-table :test 'eq))
 (defvar steam::*function-callresult-map* (make-hash-table :test 'eq))
 
-(defun callback-id (callback)
+(defun callback-type-id (callback)
   (or (gethash callback steam::*callback-id-map*)
       (error "Not a callback: ~s" callback)))
 
@@ -56,14 +56,44 @@
    "steam_api.dll"
    :search-path #.(merge-pathnames "win64/" *static*)))
 
+(defun maybe-load-low-level (&optional file)
+  (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
+    (when (probe-file file)
+      (cffi:load-foreign-library 'steam::steamworks)
+      #+asdf
+      (let ((component (make-instance 'asdf:cl-source-file
+                                      :parent (asdf:find-system :cl-steamworks)
+                                      :name "low-level"
+                                      :pathname file))
+            (compile (asdf:find-operation NIL 'asdf:compile-op))
+            (load (asdf:find-operation NIL 'asdf:load-op)))
+        (when (asdf:needed-in-image-p compile component)
+          (asdf:perform compile component))
+        (when (asdf:needed-in-image-p load component)
+          (asdf:perform load component)))
+      #-asdf
+      (let ((fasl (compile-file-pathname file)))
+        (unless (probe-file fasl)
+          (compile-file file :verbose NIL :print NIL :output-file fasl))
+        (load fasl :verbose NIL :print NIL))
+      T)))
+
+(or (maybe-load-low-level)
+    (alexandria:simple-style-warning "No low-level file present. Please install the SteamWorks SDK:
+Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)"))
+
+;; DEFCSTRUCT interns its accessors in *PACKAGE* rather than using the package
+;; of either CONC-NAME or the slot name, so we have to switch packages here.
+(in-package #:org.shirakumo.fraf.steamworks.cffi)
+
 #+windows
-(cffi:defcstruct (steam::vtable :class steam::vtable :conc-name steam::vtable-)
+(cffi:defcstruct (vtable :class vtable :conc-name vtable-)
   (result-with-info :pointer)
   (result :pointer)
   (size :pointer))
 
 #-windows
-(cffi:defcstruct (steam::vtable :class steam::vtable :conc-name steam::vtable-)
+(cffi:defcstruct (vtable :class vtable :conc-name vtable-)
   ;; void (pointer this, pointer param)
   (result :pointer)
   ;; void (pointer this, pointer param, bool failed, steam-apicall-t api-call)
@@ -71,7 +101,7 @@
   ;; int (pointer this)
   (size :pointer))
 
-(cffi:defcstruct (steam::callback :class steam::callback :conc-name steam::callback-)
+(cffi:defcstruct (callback :class callback :conc-name callback-)
   ;; Pointer to vtable instance.
   (vtable-ptr :pointer)
   ;; Should be 2 on a game server, 0 otherwise?
@@ -85,4 +115,4 @@
   ;; Function pointer to call for callresult
   (function :pointer)
   ;; vtable alloc
-  (vtable (:struct steam::vtable)))
+  (vtable (:struct vtable)))

@@ -39,25 +39,6 @@
   (handler-bind ((warning #'muffle-warning))
     (not (null (ignore-errors (cffi:foreign-type-size type))))))
 
-(defun maybe-load-low-level (&optional file)
-  (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
-    (when (probe-file file)
-      (cffi:load-foreign-library 'steam::steamworks)
-      #+asdf
-      (let ((component (make-instance 'asdf:cl-source-file
-                                      :parent (asdf:find-system :cl-steamworks)
-                                      :name "low-level"
-                                      :pathname file)))
-        (asdf:perform 'asdf:compile-op component)
-        (asdf:perform 'asdf:load-op component))
-      #-asdf
-      (load (compile-file file :verbose NIL :print NIL) :verbose NIL :print NIL)
-      T)))
-
-(or (maybe-load-low-level)
-    (alexandria:simple-style-warning "No low-level file present. Please install the SteamWorks SDK:
-Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)"))
-
 (defun env-var (x)
   #+(or abcl clasp clisp ecl xcl) (ext:getenv x)
   #+allegro (sys:getenv x)
@@ -113,6 +94,14 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)"))
 
 (defun delist (a)
   (if (listp a) (first a) a))
+
+(defmacro t-or (&rest clauses)
+  (when clauses
+    (let ((result (gensym "RESULT")))
+      `(let ((,result ,(first clauses)))
+         (if (eql T ,result)
+             (t-or ,@(rest clauses))
+             ,result)))))
 
 (defun ipv4->int (ipstring)
   (let* ((d1 (position #\. ipstring))

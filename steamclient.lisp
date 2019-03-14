@@ -10,7 +10,7 @@
   ())
 
 (defmethod initialize-instance :after ((client steamclient) &key version)
-  (let ((handle (steam::create-interface version)))
+  (let ((handle (steam::create-interface (t-or version steam::steamclient-interface-version))))
     (when (cffi:null-pointer-p handle)
       (error "FIXME: failed to create steam client handle."))
     (setf (handle client) handle)
@@ -48,10 +48,10 @@
 
 (defmethod allocate-handle ((user client-user))
   (if (eql :global (account-type user))
-      (steam::client-connect-to-global-user (handle (steamclient pipe)) (handle (pipe user)))
+      (steam::client-connect-to-global-user (handle (steamclient user)) (handle (pipe user)))
       (cffi:with-foreign-object (var 'steam::hsteam-pipe)
         (setf (cffi:mem-ref var 'steam::hsteam-pipe) (handle (pipe user)))
-        (steam::client-create-local-user (handle (steamclient pipe)) var (account-type user)))))
+        (steam::client-create-local-user (handle (steamclient user)) var (account-type user)))))
 
 (defmethod free-handle-function ((user client-user) handle)
   (let ((client (handle (steamclient user)))

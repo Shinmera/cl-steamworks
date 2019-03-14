@@ -11,7 +11,8 @@
 
 (defmethod initialize-instance :after ((interface steamfriends) &key version steamworks)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-friends
-                                                 (handle (user steamworks)) (handle (pipe steamworks)) version)))
+                                                 (handle (user steamworks)) (handle (pipe steamworks))
+                                                 (t-or version steam::steamfriends-interface-version))))
 
 (define-interface-method steamfriends clear-rich-presence (steam::friends-clear-rich-presence))
 (define-interface-method steamfriends close-clan-chat-window (steam::friends-close-clan-chat-window-in-steam chat-id))
@@ -23,14 +24,14 @@
   (< 0 (steam::friends-get-user-restrictions (handle friends))))
 
 (defmethod activate-overlay ((friends steamfriends) &key (dialog :friends) user lobby app url)
-  (let ((type (ecase dialog
-                (:friends "friends")
-                (:community "community")
-                (:players "players")
-                (:settings "settings")
-                (:game-group "officialgamegroup")
-                (:stats "stats")
-                (:achievements "achievements"))))
+  (let ((dialog (ecase dialog
+                  (:friends "friends")
+                  (:community "community")
+                  (:players "players")
+                  (:settings "settings")
+                  (:game-group "officialgamegroup")
+                  (:stats "stats")
+                  (:achievements "achievements"))))
     (when (< 1 (+ (if user 1 0) (if lobby 1 0) (if app 1 0) (if url 1 0)))
       (error "FIXME: Can't display more than one dialog at the same time."))
     (cond (lobby
@@ -83,7 +84,7 @@
                (T (let ((*print-case* :downcase))
                     (princ-to-string key)))))
         (value (let ((*print-case* :downcase))
-                 (pring-to-string value))))
+                 (princ-to-string value))))
     (when (< steam::max-rich-presence-key-length (length key))
       (error "FIXME: key too long"))
     (when (< steam::max-rich-presence-value-length (length value))
@@ -217,7 +218,7 @@
 
 (defmethod initialize-instance :after ((clan clan) &key steamfriends index)
   (when index
-    (setf (handle clan) (steam::friends-get-clan-by-index (handle friends) index))))
+    (setf (handle clan) (steam::friends-get-clan-by-index (handle steamfriends) index))))
 
 (defmethod print-object ((clan clan) stream)
   (print-unreadable-object (clan stream :type T)
@@ -237,19 +238,20 @@
   (admin-p clan (handle user)))
 
 (defmethod activity ((clan clan) &key callback)
-  (if callback
-      (cffi:with-foreign-object (list :unsigned-long)
-        (setf (cffi:mem-ref list :unsigned-long) (handle clan))
-        (with-call-result (result) (steam::friends-download-clan-activity-counts (handle friends) list 1)
-          (when (steam::download-clan-activity-counts-success result)
-            (funcall callback (activity clan)))))
-      (cffi:with-foreign-objects ((online :int)
-                                  (in-game :int)
-                                  (chatting :int))
-        (steam::friends-get-clan-activity-counts (handle friends) (handle clan) online in-game chatting)
-        (list :online (cffi:mem-ref online :int)
-              :in-game (cffi:mem-ref in-game :int)
-              :chatting (cffi:mem-ref chatting :int)))))
+  (let ((friends (steamfriends clan)))
+    (if callback
+        (cffi:with-foreign-object (list :unsigned-long)
+          (setf (cffi:mem-ref list :unsigned-long) (handle clan))
+          (with-call-result (result) (steam::friends-download-clan-activity-counts (handle friends) list 1)
+            (when (steam::download-clan-activity-counts-success result)
+              (funcall callback (activity clan)))))
+        (cffi:with-foreign-objects ((online :int)
+                                    (in-game :int)
+                                    (chatting :int))
+          (steam::friends-get-clan-activity-counts (handle friends) (handle clan) online in-game chatting)
+          (list :online (cffi:mem-ref online :int)
+                :in-game (cffi:mem-ref in-game :int)
+                :chatting (cffi:mem-ref chatting :int))))))
 
 (defmethod display-name ((clan clan))
   (let ((name (steam::friends-get-clan-name (handle (steamfriends clan)) (handle clan))))

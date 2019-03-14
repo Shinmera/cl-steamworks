@@ -16,11 +16,6 @@
       (or *steamworks*
           (error "FIXME: steamworks is not initialised."))))
 
-(defun most-recent-interface-version (interface)
-  (let ((name (format NIL "~a~a" (remove #\- (string interface)) '#:-interface-version)))
-    (symbol-value (or (find-symbol name '#:org.shirakumo.fraf.steamworks.cffi)
-                      (error "FIXME: No such interface ~s" interface)))))
-
 (defclass pipe (c-object)
   ())
 
@@ -55,8 +50,6 @@
   (flet ((maybe-create (interface)
            (destructuring-bind (interface &optional (version T)) (enlist interface)
              (unless (interface interface steamworks)
-               (when (eql T version)
-                 (setf version (most-recent-interface-version interface)))
                (setf (gethash interface (interfaces steamworks))
                      (make-instance interface :version version :steamworks steamworks))))))
     (maybe-create 'steamclient)
@@ -115,12 +108,11 @@
                                                            :pipe (pipe steamworks))))
 
 (defmethod free-handle-function ((steamworks steamworks-server) handle)
-  (let ((interfaces (interfaces steamworks)))
-    (lambda ()
-      (setf (slot-value steamworks 'user) NIL)
-      (setf (slot-value steamworks 'pipe) NIL)
-      (steam::game-server-shutdown)
-      (setf *steamworks* NIL))))
+  (lambda ()
+    (setf (slot-value steamworks 'user) NIL)
+    (setf (slot-value steamworks 'pipe) NIL)
+    (steam::game-server-shutdown)
+    (setf *steamworks* NIL)))
 
 (defmethod run-callbacks ((steamworks steamworks-server))
   (steam::game-server-run-callbacks))

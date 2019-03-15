@@ -43,7 +43,7 @@
                (error "FIXME: could not add required tag.")))))
 
 (defclass workshop-file (c-object)
-  ((workshop :initarg :steamworkshop :reader workshop)))
+  ((steamworkshop :initarg :steamworkshop :reader steamworkshop)))
 
 (defmethod initialize-instance :after ((file workshop-file) &key steamworkshop app type)
 
@@ -64,13 +64,14 @@
     ;; TODO: there's a "total num" field. Does this mean it can return less than
     ;;       everything? If so, how do I get the rest? There's no explicit pagination.
     ;;       does it split it across multiple call results? If so that's real bad...
-    (loop with ptr = (cffi:foreign-slot-pointer (steam::_handle result) 'steam::get-app-dependencies 'steam::app-ids)
+    (loop with ptr = (cffi:foreign-slot-pointer (steam::_handle result) '(:struct steam::get-app-dependencies) 'steam::app-ids)
           for i from 0 below (steam::get-app-dependencies-num-app-dependencies result)
           collect (make-instance 'app :steamapps (interface 'steamapps (steamworks (steamworkshop file)))
                                       :handle (cffi:mem-aref ptr 'steam::app-id-t i)))))
 
 (defmethod (setf dependencies) (values (file workshop-file))
-  (let ((workshop (handle workshop)))
+  (let ((workshop (handle (steamworkshop file)))
+        (to-add ()))
     ;; FIXME...
     (dolist (dependency to-add)
       (etypecase dependency
@@ -80,7 +81,7 @@
          (steam::ugc-add-dependency workshop (handle file) (handle dependency)))))))
 
 (defmethod update ((file workshop-file) &key values previews)
-  (let ((workshop (handle workshop)))
+  (let ((workshop (handle (steamworkshop file))))
     ;; FIXME...
     (loop for (type . value) in previews
           do (case type
@@ -91,7 +92,7 @@
                (T
                 (steam::ugc-add-item-preview-file workshop handle (princ-to-string value) type))))
     
-    (loop for (key . val) in values
+    (loop for (key . value) in values
           do (when (< 255 (length key))
                (error "FIXME: key too long."))
              (when (< 255 (length value))
@@ -100,7 +101,7 @@
                          thereis (not (or (alphanumericp c)
                                           (char= #\_ c))))
                (error "FIXME: invalid key"))
-             (steam::ugc-add-item-key-value-tag workshop handle key val))))
+             (steam::ugc-add-item-key-value-tag workshop handle key value))))
 
 (defmethod favorite ((file workshop-file))
   (steam::ugc-add-item-to-favorites (handle (steamworkshop file)) (app-id file) (handle file)))

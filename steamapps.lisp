@@ -10,7 +10,7 @@
   ())
 
 (defmethod initialize-instance :after ((interface steamapps) &key version steamworks)
-  (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-ugc
+  (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-apps
                                                  (handle (user steamworks)) (handle (pipe steamworks))
                                                  (t-or version steam::steamapps-interface-version))))
 

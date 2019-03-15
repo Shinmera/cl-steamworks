@@ -8,7 +8,7 @@
 
 (defvar *steamworks* NIL)
 (defvar *default-interfaces*
-  '(steamclient steamutils steamuser steamfriends steamworkshop))
+  '(steamclient steamutils steamuser steamfriends steamapps steamworkshop))
 
 (defun steamworks (&optional container)
   (if container

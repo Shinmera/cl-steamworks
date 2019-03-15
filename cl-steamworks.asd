@@ -23,6 +23,7 @@
                (:file "steamutils")
                (:file "steamuser")
                (:file "steamfriends")
+               (:file "steamapps")
                (:file "steamworkshop")
                (:file "documentation"))
   :depends-on (:documentation-utils

@@ -5,3 +5,7 @@ This is a wrapper library to allow you to interface with the Valve SteamWorks AP
 This library does //not// ship the SteamWorks and SteamClient binaries. You must get your own copy from "Valve"(https://partner.steamgames.com/). Once you have the SDK, load ``cl-steamworks-generator`` and run the ``setup`` function.
 
 # DON'T LOOK AAAAAAAAAAAAAAAAAAAAAAAAA
+
+
+## Acknowledgements
+Thanks to Garry Newman's "blog entry"(https://garry.tv/2016/11/01/steamworks-sdk/) and the "Facepunch.Steamworks"(https://github.com/Facepunch/Facepunch.Steamworks) effort in general. It helped tremendously in figuring out some of the very obscure and annoying bits of the API.

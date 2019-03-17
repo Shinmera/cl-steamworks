@@ -7,12 +7,15 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defclass steamapps (interface)
-  ())
+  ((applist-handle :initarg :applist-handle :accessor applist-handle)))
 
 (defmethod initialize-instance :after ((interface steamapps) &key version steamworks)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-apps
                                                  (handle (user steamworks)) (handle (pipe steamworks))
-                                                 (t-or version steam::steamapps-interface-version))))
+                                                 (t-or version steam::steamapps-interface-version)))
+  (setf (applist-handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-app-list
+                                                         (handle (user steamworks)) (handle (pipe steamworks))
+                                                         (t-or version steam::steamapplist-interface-version))))
 
 (define-interface-method steamapps low-violence-p (steam::apps-bis-low-violence))
 (define-interface-method steamapps subscribed-p (steam::apps-bis-subscribed))
@@ -24,7 +27,7 @@
 (define-interface-method steamapps owner (steam::apps-get-app-owner)
   (make-instance 'friend :steamfriends (interface 'steamfriends (steamworks steamapps)) :handle result))
 (define-interface-method steamapps languages (steam::apps-get-available-game-languages)
-  (cl-ppcre:split " *,+ *" result))
+  (split-string result #\,))
 (define-interface-method steamapps language (steam::apps-get-current-game-language))
 (define-interface-method steamapps launch-parameter (parameter steam::apps-get-launch-query-param)
   (when (string/= "" result) result))
@@ -54,20 +57,32 @@
     (let ((count (steam::apps-get-launch-command-line (handle apps) buffer 256)))
       (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8))))
 
+(defmethod list-apps ((apps steamapps))
+  (let ((count (steam::app-list-get-num-installed-apps (applist-handle apps))))
+    (cffi:with-foreign-object (buffer 'steam::app-id-t count)
+      (loop for i from 0 below (steam::app-list-get-installed-apps (applist-handle apps) buffer count)
+            collect (make-instance 'app :steamapps apps :handle (cffi:mem-aref buffer 'steam:app-id-t i))))))
+
+(defmethod app ((apps steamapps) (handle integer))
+  (make-instance 'app :steamapps apps :handle handle))
+
+(defmethod app ((apps steamapss) (handle (eql T)))
+  (app apps (app-id (interface 'steamutils (steamworks apps)))))
+
 (defclass app (c-object)
   ((steamapps :initarg :steamapps :reader steamapps)))
-
-(defmethod initialize-instance :after ((app app) &key steamapps)
-  )
 
 (define-interface-submethod steamapps app installed-p (steam::apps-bis-app-installed))
 (define-interface-submethod steamapps app subscribed-p (steam::apps-bis-subscribed-app))
 (define-interface-submethod steamapps app purchase-time (steam::apps-get-earliest-purchase-unix-time)
   (unix->universal result))
 
+(defmethod app-id ((app app))
+  (handle app))
+
 (defmethod install-directory ((app app))
   (cffi:with-foreign-object (buffer :char 256)
-    (let ((count (steam::apps-get-app-install-dir (handle (stamapps app)) (handle app) buffer 256)))
+    (let ((count (steam::apps-get-app-install-dir (handle (steamapps app)) (handle app) buffer 256)))
       ;; KLUDGE: I'm actually unsure that parsing with UTF-8 is correct here.
       ;;         The code page on windows might be different for the FS...
       (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8))))

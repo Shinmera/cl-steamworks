@@ -37,10 +37,10 @@
 (defclass c-managed-object (c-object)
   ())
 
-(defmethod initialize-instance ((object c-managed-object) &key free-on-gc)
+(defmethod initialize-instance ((object c-managed-object) &rest initargs &key free-on-gc)
   (call-next-method)
   (unless (handle object)
-    (let ((handle (allocate-handle object)))
+    (let ((handle (apply #'allocate-handle object initargs)))
       (when free-on-gc
         (tg:finalize object (free-handle-function object handle)))
       (setf (handle object) handle)
@@ -52,7 +52,7 @@
       (with-cleanup-on-failure (free object)
         (call-next-method))))
 
-(defgeneric allocate-handle (c-managed-object))
+(defgeneric allocate-handle (c-managed-object &key &allow-other-keys))
 (defgeneric free-handle-function (c-managed-object handle))
 
 (defmethod free ((object c-managed-object))

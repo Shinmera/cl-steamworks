@@ -33,7 +33,7 @@
   ((steamclient :initarg :steamclient :reader steamclient))
   (:default-initargs :free-on-gc T))
 
-(defmethod allocate-handle ((pipe client-pipe))
+(defmethod allocate-handle ((pipe client-pipe) &key)
   (steam::client-create-steam-pipe (handle (steamclient pipe))))
 
 (defmethod free-handle-function ((pipe client-pipe) handle)
@@ -46,7 +46,7 @@
    (account-type :initarg :account-type :initform :global :reader account-type))
   (:default-initargs :free-on-gc T))
 
-(defmethod allocate-handle ((user client-user))
+(defmethod allocate-handle ((user client-user) &key)
   (if (eql :global (account-type user))
       (steam::client-connect-to-global-user (handle (steamclient user)) (handle (pipe user)))
       (cffi:with-foreign-object (var 'steam::hsteam-pipe)

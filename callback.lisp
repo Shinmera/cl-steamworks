@@ -13,7 +13,7 @@
   (unless (and struct-type (boundp struct-type) (foreign-type-p struct-type))
     (error "~s is not a valid callback struct type." struct-type)))
 
-(defmethod allocate-handle ((callback %callback))
+(defmethod allocate-handle ((callback %callback) &key)
   (let* ((handle (calloc '(:struct steam::callback)))
          (vtable (cffi:foreign-slot-pointer handle '(:struct steam::callback) 'steam::vtable)))
     (setf (steam::callback-vtable-ptr handle) vtable)
@@ -74,7 +74,7 @@
   (when register
     (steam::register-call-result (handle callresult) token)))
 
-(defmethod allocate-handle ((callresult callresult))
+(defmethod allocate-handle ((callresult callresult) &key)
   (let ((handle (call-next-method)))
     (setf (steam::callback-token handle) (token callresult))
     (setf (steam::callback-this handle) handle)

@@ -124,6 +124,11 @@
                (cffi:foreign-enum-value enum flag))))
     (reduce #'logior flags :key #'flag-value)))
 
+(defun decode-flags (enum flags)
+  (loop for flag in (cffi:foreign-enum-keyword-list enum)
+        when (< 0 (logand flags (cffi:foreign-enum-value enum flag)))
+        collect flag))
+
 (defun unix->universal (unix)
   (+ unix (encode-universal-time 0 0 0 1 1 1970 0)))
 
@@ -132,3 +137,18 @@
 
 (defun account-id (id)
   (logand id #xFFFFFFFF))
+
+(defun split-string (string split &optional (start 0))
+  (let ((parts ())
+        (buffer (make-string-output-stream)))
+    (flet ((commit ()
+             (let ((string (get-output-stream-string buffer)))
+               (when (string/= "" string)
+                 (push string parts)))))
+      (loop for i from start below (length string)
+            for char = (aref string i)
+            do (if (char= char split)
+                   (commit)
+                   (write-char char buffer))
+            finally (commit))
+      (nreverse parts))))

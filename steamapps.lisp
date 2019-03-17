@@ -61,13 +61,16 @@
   (let ((count (steam::app-list-get-num-installed-apps (applist-handle apps))))
     (cffi:with-foreign-object (buffer 'steam::app-id-t count)
       (loop for i from 0 below (steam::app-list-get-installed-apps (applist-handle apps) buffer count)
-            collect (make-instance 'app :steamapps apps :handle (cffi:mem-aref buffer 'steam:app-id-t i))))))
+            collect (make-instance 'app :steamapps apps :handle (cffi:mem-aref buffer 'steam::app-id-t i))))))
 
-(defmethod app ((apps steamapps) (handle integer))
+(defmethod find-app ((apps steamapps) (handle integer))
   (make-instance 'app :steamapps apps :handle handle))
 
-(defmethod app ((apps steamapss) (handle (eql T)))
+(defmethod find-app ((apps steamapps) (handle (eql T)))
   (app apps (app-id (interface 'steamutils (steamworks apps)))))
+
+(defmethod app ((apps steamapps))
+  (find-app apps T))
 
 (defclass app (c-object)
   ((steamapps :initarg :steamapps :reader steamapps)))

@@ -24,25 +24,27 @@
       (loop for i from 0 below (steam::ugc-get-subscribed-items (handle workshop) buffer count)
             for handle = (cffi:mem-aref buffer 'steam::published-file-id-t i)
             collect (make-instance 'workshop-file :steamworkshop workshop
-                                                  :app (app (interface 'steamapps (steamworks workshop)) T)
+                                                  :app (app (interface 'steamapps (steamworks workshop)))
                                                   :handle handle)))))
 
-(defmethod query ((workshop steamworkshop) app &rest args &key user list type sort on page exclude require key-value-tags request search any-tay rank-by-trend-days)
-  (declare (ignore list type sort on page exclude require key-value-tags search any-tay rank-by-trend-days))
+(defmethod query ((workshop steamworkshop) (app app) &rest args &key user list type sort on page exclude require key-value-tags request search any-tay rank-by-trend-days)
+  (declare (ignore list type sort on page exclude require key-value-tags request search any-tay rank-by-trend-days))
   (let ((query (apply #'make-instance
                       (if user
                           'workshop-user-query
                           'workshop-global-query)
                       :steamworkshop workshop
+                      :app app
                       args)))
-    (execute query)))
-
-;; GetQueryUGCAdditionalPreview
+    (multiple-value-bind (count total) (execute query)
+      (loop for i from 0 below count
+            collect (make-instance )))))
 
 (defclass workshop-query (c-managed-object)
-  ((steamworkshop :initarg :steamworkshop :reader steamworkshop)))
+  ((steamworkshop :initarg :steamworkshop :reader steamworkshop)
+   (app :initarg app :reader app)))
 
-(defmethod initialize-instance :after ((query workshop-query) &key steamworkshop exclude require key-value-tags request search any-tag rank-by-trend-days)
+(defmethod initialize-instance :after ((query workshop-query) &key app exclude require key-value-tags request search any-tag rank-by-trend-days)
   (dolist (tag exclude)
     (unless (add-excluded-tag tag query)
       (error "FIXME: could not add excluded tag.")))
@@ -53,7 +55,7 @@
         do (unless (add-key-value-tag key value query)
              (error "FIXME: could not add required tag.")))
   (set-match-any-tag query any-tag)
-  (set-match-ranked-by-trend-days query rank-by-trend-days)
+  (set-ranked-by-trend-days query rank-by-trend-days)
   (set-request-all-previews query (find :all-previews request))
   (set-request-children query (find :children request))
   (set-request-key-value-tags query (find :key-value-tags request))
@@ -94,6 +96,65 @@
         (steam::ugc-send-query-ugcrequest (handle (steamworkshop query)) (handle query))
       (funcall (or callback #'default-callback) result))))
 
+(defmethod get-previews ((query workshop-query) (index integer))
+  (cffi:with-foreign-objects ((source :char 256)
+                              (original :char 256)
+                              (kind 'steam::eitem-preview-type))
+    (loop with workshop = (handle (steamworkshop query))
+          with handle = (handle query)
+          for i from 0 below (steam::ugc-get-query-ugcnum-additional-previews workshop handle index)
+          when (steam::ugc-get-query-ugcadditional-preview workshop handle index i source 256 original 256 kind)
+          collect (list :kind (cffi:mem-ref kind 'steam::eitem-preview-type)
+                        :source (cffi:foreign-string-to-lisp source :count 256 :encoding :utf-8)
+                        :original (cffi:foreign-string-to-lisp original :count 256 :encoding :utf-8)))))
+
+(defmethod get-children ((query workshop-query) (index integer) count)
+  (cffi:with-foreign-object (buffer 'steam::published-file-id-t count)
+    (unless (steam::ugc-get-query-ugcchildren (handle (steamworkshop query)) (handle query) index buffer count)
+      (error "FIXME: failed to get children."))
+    (loop for i from 0 below count
+          collect (make-instance 'workshop-file :steamworkshop (steamworkshop query)
+                                                :handle (cffi:mem-aref buffer 'steam::published-file-id-t i)
+                                                :app (app query)))))
+
+(defmethod get-key-value-tags ((query workshop-query) (index integer))
+  (cffi:with-foreign-objects ((key :char 256)
+                              (value :char 256))
+    (loop with workshop = (handle (steamworkshop query))
+          with handle = (handle query)
+          for i from 0 below (steam::ugc-get-query-ugcnum-key-value-tags workshop handle index)
+          when (steam::ugc-get-query-ugckey-value-tag workshop handle index i key 256 value 256)
+          collect (cons (cffi:foreign-string-to-lisp key :count 256 :encoding :utf-8)
+                        (cffi:foreign-string-to-lisp value :count 256 :encoding :utf-8)))))
+
+(defmethod get-metadata ((query workshop-query) (index integer))
+  (cffi:with-foreign-object (buffer :char 256)
+    (unless (steam::ugc-get-query-ugcmetadata (handle (steamworkshop query)) (handle query) index buffer 256)
+      (error "FIXME: failed to get metadata."))
+    (cffi:foreign-string-to-lisp buffer :count 256 :encoding :utf-8)))
+
+(defmethod get-statistics ((query workshop-query) (index integer))
+  (cffi:with-foreign-object (buffer :uint64)
+    (loop with workshop = (handle (steamworkshop query))
+          with handle = (handle query)
+          for type in (cffi:foreign-enum-keyword-list 'steam::eitem-statistic)
+          when (steam::ugc-get-query-ugcstatistic workshop handle index type buffer)
+          collect type and collect (cffi:mem-ref buffer :uint64))))
+
+(defmethod get-details ((query workshop-query) (index integer))
+  (cffi:with-foreign-object (buffer 'cffi:steam-ugcdetails)
+    (unless (steam::ugc-get-query-ugcresult (handle (steamworkshop query)) (handle query) index buffer)
+      (error "FIXME: failed to get details."))
+    (cffi:mem-ref buffer 'cffi:steam-ugcdetails)))
+
+(defmethod get-workshop-file ((query workshop-query) (index integer))
+  (let* ((id (steam::steam-ugcdetails-published-file-id (get-details query index)))
+         (file (make-instance 'workshop-file :steamworkshop (steamworkshop query)
+                                             :app (app query)
+                                             :handle id)))
+    (complete-from-query file query)
+    file))
+
 (defclass workshop-global-query (workshop-query)
   ())
 
@@ -126,12 +187,11 @@
 ;; details-request
 
 (defclass workshop-file (c-object)
-  ((app-id :reader app-id)
+  ((app :initarg :app :reader app)
    (steamworkshop :initarg :steamworkshop :reader steamworkshop)))
 
 (defmethod initialize-instance :after ((file workshop-file) &key steamworkshop app type)
   (unless app (error "APP required."))
-  (setf (app-id file) (handle app))
   (unless (handle file)
     (with-call-result (result :poll T) (steam::ugc-create-item (handle steamworkshop) (handle app) type)
       (when (steam::create-item-user-needs-to-accept-workshop-legal-agreement result)
@@ -143,9 +203,23 @@
 (define-interface-submethod steamworkshop workshop-file state (steam::ugc-get-item-state)
   (decode-flags 'steam::eitem-state result))
 
-(defmethod dependencies ((file workshop-file))
-  ;; FIXME: should cache
+(defmethod file-dependencies ((file workshop-file))
   ;; FIXME...
+  )
+
+(defmethod (setf file-dependencies) (values (file workshop-file))
+  (let ((workshop (handle (steamworkshop file)))
+        (previous (dependencies file))
+        (to-add (set-difference values previous))
+        (to-remove (set-difference previous values))))
+  (dolist (dependency to-add)
+    (steam::ugc-add-dependency workshop (handle file) (handle dependency)))
+  (dolist (dependency to-remove)
+    (steam::ugc-remove-dependency workshop (handle file) (handle dependency)))
+  values)
+
+(defmethod app-dependencies ((file workshop-file))
+  ;; FIXME: cache
   (with-call-result (result :poll T) (steam::ugc-get-app-dependencies (handle (steamworkshop file)) (handle file))
     (with-error-on-failure (steam::get-app-dependencies-result result))
     ;; TODO: there's a "total num" field. Does this mean it can return less than
@@ -156,23 +230,17 @@
           collect (make-instance 'app :steamapps (interface 'steamapps (steamworks (steamworkshop file)))
                                       :handle (cffi:mem-aref ptr 'steam::app-id-t i)))))
 
-(defmethod (setf dependencies) (values (file workshop-file))
+(defmethod (setf app-dependencies) (values (file workshop-file))
   (let ((workshop (handle (steamworkshop file)))
-        (to-add ())
-        (to-remove ()))
+        (previous (app-dependencies file))
+        (to-add (set-difference values previous))
+        (to-remove (set-difference previous values)))
     ;; FIXME...
     (dolist (dependency to-add)
-      (etypecase dependency
-        (app
-         (steam::ugc-add-app-dependency workshop (handle file) (handle dependency)))
-        (workshop-file
-         (steam::ugc-add-dependency workshop (handle file) (handle dependency)))))
+      (steam::ugc-add-app-dependency workshop (handle file) (handle dependency)))
     (dolist (dependency to-remove)
-      (etypecase dependency
-        (app
-         (steam::ugc-remove-app-dependency workshop (handle file) (handle dependency)))
-        (workshop-file
-         (steam::ugc-remove-dependency workshop (handle file) (handle dependency)))))))
+      (steam::ugc-remove-app-dependency workshop (handle file) (handle dependency)))
+    values))
 
 (defmethod update ((file workshop-file) &key values previews)
   (let ((workshop (handle (steamworkshop file))))
@@ -200,10 +268,10 @@
 ;; get-item-update-status
 
 (defmethod favorite ((file workshop-file))
-  (steam::ugc-add-item-to-favorites (handle (steamworkshop file)) (app-id file) (handle file)))
+  (steam::ugc-add-item-to-favorites (handle (steamworkshop file)) (app-id (app file)) (handle file)))
 
 (defmethod unfavorite ((file workshop-file))
-  (steam::ugc-remove-item-from-favorites (handle (steamworkshop file)) (app-id file) (handle file)))
+  (steam::ugc-remove-item-from-favorites (handle (steamworkshop file)) (app-id (app file)) (handle file)))
 
 (defmethod destroy ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-delete-item (handle (steamworkshop file)) (handle file))
@@ -234,3 +302,7 @@
           ((steam::get-user-item-vote-voted-down result) :down)
           ((steam::get-user-item-vote-voted-skipped result) :skipped)
           (T :unknown))))
+
+(defmethod complete-from-query ((file workshop-file) (query workshop-query))
+  ;; FIXME...
+  )

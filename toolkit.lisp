@@ -129,6 +129,12 @@
         when (< 0 (logand flags (cffi:foreign-enum-value enum flag)))
         collect flag))
 
+(defun struct-slot-ptr (struct slot)
+  (cffi:foreign-slot-pointer (steam::_handle struct) (list :struct (type-of struct)) slot))
+
+(defun struct-string (struct slot count)
+  (cffi:foreign-string-to-lisp (struct-slot-ptr struct slot) :count count :encoding :utf-8))
+
 (defun unix->universal (unix)
   (+ unix (encode-universal-time 0 0 0 1 1 1970 0)))
 

@@ -37,14 +37,19 @@
                       :app app
                       args)))
     (multiple-value-bind (count total) (execute query)
+      (declare (ignore total))
       (loop for i from 0 below count
-            collect (make-instance )))))
+            collect (complete-from-query
+                     (make-instance 'workshop-file :steamworkshop workshop
+                                                   :app app
+                                                   :handle T)
+                     query)))))
 
 (defclass workshop-query (c-managed-object)
   ((steamworkshop :initarg :steamworkshop :reader steamworkshop)
    (app :initarg app :reader app)))
 
-(defmethod initialize-instance :after ((query workshop-query) &key app exclude require key-value-tags request search any-tag rank-by-trend-days)
+(defmethod initialize-instance :after ((query workshop-query) &key exclude require key-value-tags request search any-tag rank-by-trend-days)
   (dolist (tag exclude)
     (unless (add-excluded-tag tag query)
       (error "FIXME: could not add excluded tag.")))
@@ -85,7 +90,7 @@
 (define-interface-submethod steamworkshop workshop-query set-request-ids-only (steam::ugc-set-return-only-ids value))
 (define-interface-submethod steamworkshop workshop-query set-request-playtime-stats (steam::ugc-set-return-playtime-stats value))
 (define-interface-submethod steamworkshop workshop-query set-request-total-only (steam::ugc-set-return-total-only value))
-(define-interface-submethod steamworkshop workshop-query set-search-text (steam::ugc-set-return-search-text value))
+(define-interface-submethod steamworkshop workshop-query set-search-text (steam::ugc-set-search-text value))
 
 (defmethod execute ((query workshop-query) &key callback)
   (flet ((default-callback (result)
@@ -142,17 +147,17 @@
           collect type and collect (cffi:mem-ref buffer :uint64))))
 
 (defmethod get-details ((query workshop-query) (index integer))
-  (cffi:with-foreign-object (buffer 'cffi:steam-ugcdetails)
+  (cffi:with-foreign-object (buffer '(:struct steam::steam-ugcdetails))
     (unless (steam::ugc-get-query-ugcresult (handle (steamworkshop query)) (handle query) index buffer)
       (error "FIXME: failed to get details."))
-    (cffi:mem-ref buffer 'cffi:steam-ugcdetails)))
+    (cffi:mem-ref buffer '(:struct steam::steam-ugcdetails))))
 
 (defmethod get-workshop-file ((query workshop-query) (index integer))
   (let* ((id (steam::steam-ugcdetails-published-file-id (get-details query index)))
          (file (make-instance 'workshop-file :steamworkshop (steamworkshop query)
                                              :app (app query)
                                              :handle id)))
-    (complete-from-query file query)
+    (complete-from-query file query index)
     file))
 
 (defclass workshop-global-query (workshop-query)
@@ -184,38 +189,100 @@
    (ecase on (:creator 0) (:target (handle app)))
    page))
 
-;; details-request
+(defclass workshop-detail-query (workshop-query)
+  ())
+
+(defmethod allocate-handle ((query workshop-detail-query) &key steamworkshop files)
+  (cffi:with-foreign-object (buffer 'steam::published-file-id-t (length files))
+    (loop for file in files
+          for i from 0
+          do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
+    (steam::ugc-create-query-ugcdetails-request
+     (handle steamworkshop) buffer (length files))))
+
+(defclass file (c-object)
+  (display-name
+   size))
 
 (defclass workshop-file (c-object)
   ((app :initarg :app :reader app)
-   (steamworkshop :initarg :steamworkshop :reader steamworkshop)))
+   (steamworkshop :initarg :steamworkshop :reader steamworkshop)
+   ;; caches
+   (kind :reader kind)
+   (consumer :reader consumer)
+   (display-name :reader display-name)
+   (description :reader description)
+   (owner :reader owner)
+   (created :reader created)
+   (updated :reader updated)
+   (added :reader added)
+   (visibility :reader visibility)
+   (banned-p :reader banned-p)
+   (accepted-for-use-p :reader accepted-for-use-p)
+   (tags :reader tags)
+   (file :reader file)
+   (preview :reader preview)
+   (url :reader url)
+   (votes-up :reader votes-up)
+   (votes-down :reader votes-down)
+   (score :reader score)
+   (metadata :reader metadata)
+   (statistics :reader statistics)
+   (app-dependencies :reader app-dependencies)
+   (file-dependencies :reader file-dependencies)
+   (key-value-tags :reader key-value-tags)))
 
-(defmethod initialize-instance :after ((file workshop-file) &key steamworkshop app type)
+(defmethod initialize-instance :after ((file workshop-file) &key steamworkshop app kind)
   (unless app (error "APP required."))
   (unless (handle file)
-    (with-call-result (result :poll T) (steam::ugc-create-item (handle steamworkshop) (handle app) type)
+    (with-call-result (result :poll T) (steam::ugc-create-item (handle steamworkshop) (handle app) kind)
       (when (steam::create-item-user-needs-to-accept-workshop-legal-agreement result)
         (warn "FIXME: user needs to accept agreement."))
       (with-error-on-failure (steam::create-item-result result))
       (setf (handle file) (steam::create-item-published-file-id result)))))
 
+(macrolet ((make-cache-filled (slot)
+             `(defmethod ,slot ((file workshop-file))
+                (unless (slot-boundp file ',slot)
+                  (complete-from-query file T))
+                (slot-value file ',slot))))
+  (make-cache-filled kind)
+  (make-cache-filled consumer)
+  (make-cache-filled display-name)
+  (make-cache-filled description)
+  (make-cache-filled owner)
+  (make-cache-filled created)
+  (make-cache-filled updated)
+  (make-cache-filled added)
+  (make-cache-filled visibility)
+  (make-cache-filled banned-p)
+  (make-cache-filled accepted-for-use-p)
+  (make-cache-filled tags)
+  (make-cache-filled file)
+  (make-cache-filled preview)
+  (make-cache-filled url)
+  (make-cache-filled votes-up)
+  (make-cache-filled votes-down)
+  (make-cache-filled score)
+  (make-cache-filled metadata)
+  (make-cache-filled statistics)
+  (make-cache-filled app-dependencies)
+  (make-cache-filled file-dependencies)
+  (make-cache-filled key-value-tags))
+
 (define-interface-submethod steamworkshop workshop-file download (steam::ugc-download-item &key high-priority))
 (define-interface-submethod steamworkshop workshop-file state (steam::ugc-get-item-state)
   (decode-flags 'steam::eitem-state result))
 
-(defmethod file-dependencies ((file workshop-file))
-  ;; FIXME...
-  )
-
 (defmethod (setf file-dependencies) (values (file workshop-file))
-  (let ((workshop (handle (steamworkshop file)))
-        (previous (dependencies file))
-        (to-add (set-difference values previous))
-        (to-remove (set-difference previous values))))
-  (dolist (dependency to-add)
-    (steam::ugc-add-dependency workshop (handle file) (handle dependency)))
-  (dolist (dependency to-remove)
-    (steam::ugc-remove-dependency workshop (handle file) (handle dependency)))
+  (let* ((workshop (handle (steamworkshop file)))
+         (previous (file-dependencies file))
+         (to-add (set-difference values previous))
+         (to-remove (set-difference previous values)))
+    (dolist (dependency to-add)
+      (steam::ugc-add-dependency workshop (handle file) (handle dependency)))
+    (dolist (dependency to-remove)
+      (steam::ugc-remove-dependency workshop (handle file) (handle dependency))))
   values)
 
 (defmethod app-dependencies ((file workshop-file))
@@ -225,16 +292,16 @@
     ;; TODO: there's a "total num" field. Does this mean it can return less than
     ;;       everything? If so, how do I get the rest? There's no explicit pagination.
     ;;       does it split it across multiple call results? If so that's real bad...
-    (loop with ptr = (cffi:foreign-slot-pointer (steam::_handle result) '(:struct steam::get-app-dependencies) 'steam::app-ids)
+    (loop with ptr = (struct-slot-ptr result 'steam::app-ids)
           for i from 0 below (steam::get-app-dependencies-num-app-dependencies result)
           collect (make-instance 'app :steamapps (interface 'steamapps (steamworks (steamworkshop file)))
                                       :handle (cffi:mem-aref ptr 'steam::app-id-t i)))))
 
 (defmethod (setf app-dependencies) (values (file workshop-file))
-  (let ((workshop (handle (steamworkshop file)))
-        (previous (app-dependencies file))
-        (to-add (set-difference values previous))
-        (to-remove (set-difference previous values)))
+  (let* ((workshop (handle (steamworkshop file)))
+         (previous (app-dependencies file))
+         (to-add (set-difference values previous))
+         (to-remove (set-difference previous values)))
     ;; FIXME...
     (dolist (dependency to-add)
       (steam::ugc-add-app-dependency workshop (handle file) (handle dependency)))
@@ -243,7 +310,8 @@
     values))
 
 (defmethod update ((file workshop-file) &key values previews)
-  (let ((workshop (handle (steamworkshop file))))
+  (let ((workshop (handle (steamworkshop file)))
+        (handle (handle file)))
     ;; FIXME...
     (loop for (type . value) in previews
           do (case type
@@ -300,9 +368,63 @@
     (with-error-on-failure (steam::get-user-item-vote-result result))
     (cond ((steam::get-user-item-vote-voted-up result) :up)
           ((steam::get-user-item-vote-voted-down result) :down)
-          ((steam::get-user-item-vote-voted-skipped result) :skipped)
+          ((steam::get-user-item-vote-vote-skipped result) :skipped)
           (T :unknown))))
 
-(defmethod complete-from-query ((file workshop-file) (query workshop-query))
-  ;; FIXME...
-  )
+(defmethod complete-from-query ((file workshop-file) (query workshop-query) &optional (index 0))
+  (let ((steamapps (interface 'steamapps (steamworks (steamworkshop file))))
+        (steamfriends (interface 'steamfriends (steamworks (steamworkshop file)))))
+    (let ((details (get-details query index)))
+      (macrolet ((sets (slot function &optional (transform 'result))
+                   `(setf (slot-value file ',slot)
+                          (let ((result (,function details)))
+                            ,transform))))
+        (sets handle steam::steam-ugcdetails-published-file-id)
+        (sets kind steam::steam-ugcdetails-file-type)
+        (sets consumer steam::steam-ugcdetails-consumer-app-id
+              (make-instance 'app :steamapps steamapps :handle result))
+        (sets display-name steam::steam-ugcdetails-title)
+        (sets description steam::steam-ugcdetails-description)
+        (sets owner steam::steam-ugcdetails-steam-idowner
+              (make-instance 'friend :steamfriends steamfriends :handle result))
+        (sets created steam::steam-ugcdetails-created
+              (unix->universal result))
+        (sets updated steam::steam-ugcdetails-updated
+              (unix->universal result))
+        (sets added steam::steam-ugcdetails-added-to-user-list
+              (unix->universal result))
+        (sets visibility steam::steam-ugcdetails-visibility)
+        (sets banned-p steam::steam-ugcdetails-banned)
+        (sets accepted-for-use-p steam::steam-ugcdetails-accepted-for-use)
+        (sets tags steam::steam-ugcdetails-tags
+              (split-string result #\,))
+        (sets file steam::steam-ugcdetails-file
+              (make-instance 'file :handle result
+                                   :name (steam::steam-ugcdetails-file-name details)
+                                   :size (steam::steam-ugcdetails-file-size details)))
+        (sets preview steam::steam-ugcdetails-preview-file
+              (make-instance 'file :handle result
+                                   :size (steam::steam-ugcdetails-preview-file-size details)))
+        (sets url steam::steam-ugcdetails-url)
+        (sets votes-up steam::steam-ugcdetails-votes-up)
+        (sets votes-down steam::steam-ugcdetails-votes-down)
+        (sets score steam::steam-ugcdetails-score))
+      (let ((previews (get-previews query index)))
+        (setf (slot-value file 'previews) previews))
+      (let ((children (get-children query index (steam::steam-ugcdetails-num-children details))))
+        (setf (slot-value file 'file-dependencies) children))
+      (let ((key-value-tags (get-key-value-tags query index)))
+        (setf (slot-value file 'key-value-tags) key-value-tags))
+      (let ((metadata (get-metadata query index)))
+        (setf (slot-value file 'metadata) metadata))
+      (let ((statistics (get-statistics query index)))
+        (setf (slot-value file 'statistics) statistics))))
+  file)
+
+(defmethod complete-from-query ((file workshop-file) (query (eql T)) &optional (index 0))
+  (declare (ignore index))
+  (let ((query (make-instance 'workshop-detail-query :steamworkshop (steamworkshop file)
+                                                     :app (app file)
+                                                     :files (list file))))
+    (execute query)
+    (complete-from-query file query)))

@@ -26,9 +26,24 @@
 
 ;; TODO: optimise above access through compiler-macros
 
+(defun c-slot-value-extractor (struct slotdef)
+  (destructuring-bind (name type &key count offset) slotdef
+    (declare (ignore offset))
+    (cond ((= 1 count)
+           `(cffi:foreign-slot-value value '(:struct ,struct) ',name))
+          ((eql type :char)
+           `(cffi:foreign-string-to-lisp
+             (cffi:foreign-slot-pointer value '(:struct ,struct) ',name)
+             :count ,count :encoding :utf-8))
+          (T
+           `(loop with ptr = (cffi:foreign-slot-pointer value '(:struct ,struct) ',name)
+                  for i from 0 below ,count
+                  collect (cffi:mem-aref ptr ',type i))))))
+
 (defmacro steam::defcstruct* (name &body slots)
   (let ((name-class (intern (format NIL "~a-TCLASS" name) '#:org.shirakumo.fraf.steamworks.cffi))
-        (constructor (intern (format NIL "MAKE-~a" name) '#:org.shirakumo.fraf.steamworks.cffi)))
+        (constructor (intern (format NIL "MAKE-~a" name) '#:org.shirakumo.fraf.steamworks.cffi))
+        (handle (intern (format NIL "~a-_HANDLE" name) '#:org.shirakumo.fraf.steamworks.cffi)))
     `(progn
        (cffi:defcstruct (,name :class ,name-class)
          ,@slots)
@@ -38,7 +53,9 @@
          (,constructor
           value
           ,@(loop for slot in slots
-                  collect `(cffi:foreign-slot-value value '(:struct ,name) ',(first slot))))))))
+                  collect (c-slot-value-extractor name slot))))
+       (defmethod steam::_handle ((,name ,name))
+         (,handle ,name)))))
 
 (cffi:define-foreign-library steam::steamworks
   ((:and :darwin :x86)

@@ -41,21 +41,24 @@
                   collect (cffi:mem-aref ptr ',type i))))))
 
 (defmacro steam::defcstruct* (name &body slots)
-  (let ((name-class (intern (format NIL "~a-TCLASS" name) '#:org.shirakumo.fraf.steamworks.cffi))
-        (constructor (intern (format NIL "MAKE-~a" name) '#:org.shirakumo.fraf.steamworks.cffi))
-        (handle (intern (format NIL "~a-_HANDLE" name) '#:org.shirakumo.fraf.steamworks.cffi)))
-    `(progn
-       (cffi:defcstruct (,name :class ,name-class)
-         ,@slots)
-       (defstruct (,name (:constructor ,constructor (_handle ,@(mapcar #'first slots))))
-         _handle ,@(mapcar #'first slots))
-       (defmethod cffi:translate-from-foreign (value (type ,name-class))
-         (,constructor
-          value
-          ,@(loop for slot in slots
-                  collect (c-slot-value-extractor name slot))))
-       (defmethod steam::_handle ((,name ,name))
-         (,handle ,name)))))
+  (flet ((name (format &rest args)
+           (intern (format NIL "~?" format args) '#:org.shirakumo.fraf.steamworks.cffi)))
+    (let ((name-class (name "~a-TCLASS" name))
+          (constructor (name "MAKE-~a" name))
+          (handle (name "_HANDLE"))
+          (handle-accessor (name "~a-_HANDLE" name)))
+      `(progn
+         (cffi:defcstruct (,name :class ,name-class)
+           ,@slots)
+         (defstruct (,name (:constructor ,constructor (,handle ,@(mapcar #'first slots))))
+           ,handle ,@(mapcar #'first slots))
+         (defmethod cffi:translate-from-foreign (value (type ,name-class))
+           (,constructor
+            value
+            ,@(loop for slot in slots
+                    collect (c-slot-value-extractor name slot))))
+         (defmethod steam::_handle ((,name ,name))
+           (,handle-accessor ,name))))))
 
 (cffi:define-foreign-library steam::steamworks
   ((:and :darwin :x86)
@@ -95,10 +98,6 @@
           (compile-file file :verbose NIL :print NIL :output-file fasl))
         (load fasl :verbose NIL :print NIL))
       T)))
-
-(or (maybe-load-low-level)
-    (alexandria:simple-style-warning "No low-level file present. Please install the SteamWorks SDK:
-Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)"))
 
 ;; DEFCSTRUCT interns its accessors in *PACKAGE* rather than using the package
 ;; of either CONC-NAME or the slot name, so we have to switch packages here.

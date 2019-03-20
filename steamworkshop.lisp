@@ -18,6 +18,8 @@
                                                        (namestring content-directory))
       (error "FIXME: failed to set workshop content folder."))))
 
+(define-interface-method steamworkshop (setf downloads-suspended-p) (value steam::ugc-suspend-downloads))
+
 (defmethod list-subscribed-files ((workshop steamworkshop))
   (let ((count (steam::ugc-get-num-subscribed-items (handle workshop))))
     (cffi:with-foreign-object (buffer 'steam::published-file-id-t count)
@@ -44,6 +46,10 @@
                                                    :app app
                                                    :handle T)
                      query)))))
+
+(defmethod stop-tracking ((workshop steamworkshop))
+  (with-call-result (result :poll T) (steam::ugc-stop-playtime-tracking-for-all-items (handle workshop))
+    (with-error-on-failure (steam::stop-playtime-tracking-result result))))
 
 (defclass workshop-query (c-managed-object)
   ((steamworkshop :initarg :steamworkshop :reader steamworkshop)
@@ -80,6 +86,8 @@
 (define-interface-submethod steamworkshop workshop-query add-excluded-tag ((tag string) steam::ugc-add-excluded-tag))
 (define-interface-submethod steamworkshop workshop-query add-required-tag ((tag string) steam::ugc-add-required-tag))
 (define-interface-submethod steamworkshop workshop-query add-key-value-tag ((key string) (value string) steam::ugc-add-required-key-value-tag))
+(define-interface-submethod steamworkshop workshop-query set-allow-cached-response (steam::ugc-set-allow-cached-response max-age-in-seconds))
+(define-interface-submethod steamworkshop workshop-query set-cloud-file-name-filter (steam::ugc-set-cloud-file-name-filter file-name))
 (define-interface-submethod steamworkshop workshop-query set-match-any-tag (steam::ugc-set-match-any-tag value))
 (define-interface-submethod steamworkshop workshop-query set-ranked-by-trend-days (steam::ugc-set-ranked-by-trend-days value))
 (define-interface-submethod steamworkshop workshop-query set-request-all-previews (steam::ugc-set-return-additional-previews value))
@@ -91,6 +99,7 @@
 (define-interface-submethod steamworkshop workshop-query set-request-playtime-stats (steam::ugc-set-return-playtime-stats value))
 (define-interface-submethod steamworkshop workshop-query set-request-total-only (steam::ugc-set-return-total-only value))
 (define-interface-submethod steamworkshop workshop-query set-search-text (steam::ugc-set-search-text value))
+(define-interface-submethod steamworkshop workshop-query set-language (steam::ugc-set-language language))
 
 (defmethod execute ((query workshop-query) &key callback)
   (flet ((default-callback (result)
@@ -109,7 +118,8 @@
           with handle = (handle query)
           for i from 0 below (steam::ugc-get-query-ugcnum-additional-previews workshop handle index)
           when (steam::ugc-get-query-ugcadditional-preview workshop handle index i source 256 original 256 kind)
-          collect (list :kind (cffi:mem-ref kind 'steam::eitem-preview-type)
+          collect (list :index i
+                        :kind (cffi:mem-ref kind 'steam::eitem-preview-type)
                         :source (cffi:foreign-string-to-lisp source :count 256 :encoding :utf-8)
                         :original (cffi:foreign-string-to-lisp original :count 256 :encoding :utf-8)))))
 
@@ -200,9 +210,125 @@
     (steam::ugc-create-query-ugcdetails-request
      (handle steamworkshop) buffer (length files))))
 
+(defclass workshop-update (c-managed-object)
+  ((steamworkshop :initarg :steamworkshop :reader steamworkshop)
+   (workshop-file :initarg :workshop-file :reader workshop-file)
+   (change-note :initarg :change-node :reader change-note :writer set-change-note)))
+
+(defmethod allocate-handle ((update workshop-update) &key steamworkshop workshop-file)
+  (steam::ugc-start-item-update (handle steamworkshop) (handle (app workshop-file)) (handle workshop-file)))
+
+(defmethod free-handle-function ((update workshop-update) handle)
+  (let ((workshop (steamworkshop update)))
+    (lambda () ;; WTF: There seems to be no equivalent release function?
+      )))
+
+(define-interface-submethod steamworkshop workshop-update set-description (steam::ugc-set-item-description description))
+(define-interface-submethod steamworkshop workshop-update set-metadata (steam::ugc-set-item-metadata metadata))
+;; FIXME: length constraint...
+(define-interface-submethod steamworkshop workshop-update set-display-name (steam::ugc-set-item-title display-name))
+;; FIXME: check language code
+(define-interface-submethod steamworkshop workshop-update set-language (steam::ugc-set-item-update-language language))
+(define-interface-submethod steamworkshop workshop-update set-visibility (steam::ugc-set-item-visibility visibility))
+
+(defmethod set-preview ((update workshop-update) file)
+  (unless (find (pathname-type file) '("png" "jpg" "jpeg" "gif" "svg") :test #'string=)
+    (error "FIXME: preview file must be an image."))
+  (steam::ugc-set-item-preview (handle (steamworkshop update)) (handle update) file))
+
+(defmethod set-tags ((update workshop-update) tags)
+  (let ((tagcount (length thags)))
+    ;; FIXME: check tags for validity
+    (cffi:with-foreign-objects ((stringptr :pointer tagcount)
+                                (strings :char (* 255 tagcount))
+                                (struct '(:struct steam::steam-param-string-array)))
+      (setf (cffi:foreign-slot-value struct '(:struct steam::steam-param-string-array) 'steam::strings) strings)
+      (setf (cffi:foreign-slot-value struct '(:struct steam::steam-param-string-array) 'steam::num-strings) tagcount)
+      (loop for tag in tags
+            for i from 0
+            for foreign-string = (cffi:inc-pointer strings (* i 255))
+            do (cffi:lisp-string-to-foreign tag foreign-string 255 :encoding :utf-8)
+               (setf (cffi:mem-aref stringptr :pointer i) foreign-string))
+      (steam::ugc-set-item-tags (handle (steamworkshop update)) (handle update) struct))))
+
+(defmethod set-content ((update workshop-update) directory)
+  (let ((directory (pathname directory)))
+    (when (or (pathname-name directory) (pathname-type directory))
+      (error "FIXME: need to pass a directory."))
+    (steam::ugc-set-item-content (handle (steamworkshop update)) (handle update) (namestring directory))))
+
+(defmethod set-previews ((update workshop-update) previews)
+  (let* ((workshop (handle (steamworkshop update)))
+         (handle (handle update))
+         (previous-previews (previews (workshop-file update))))
+    (flet ((index (list) (getf list :index)))
+      (loop for preview in previews
+            for value = (getf preview :source)
+            unless (getf preview :index)
+            do (case type
+                 (:you-tube-video
+                  (steam::ugc-add-item-preview-video workshop handle value))
+                 (:image
+                  (steam::ugc-add-item-preview-file workshop handle (namestring value) :image))
+                 (T
+                  (steam::ugc-add-item-preview-file workshop handle (princ-to-string value) type))))
+      (loop for preview in previews
+            for index = (getf preview :index)
+            for value = (getf preview :source)
+            when (and (getf preview :index)
+                      (not (equal value (getf (find index previous-previews :key #'index) :source))))
+            do (case type
+                 (:you-tube-video
+                  (steam::ugc-update-item-preview-video workshop handle index value))
+                 (T
+                  (steam::ugc-update-item-preview-file workshop handle index (namestring value)))))
+      (loop for preview in previous-previews
+            for index = (getf preview :index)
+            when (not (find index previews :key #'index))
+            do (steam::ugc-remove-item-preview workshop handle (getf preview :index))))))
+
+(defmethod set-key-value-tags ((update workshop-update) key-value-tags)
+  (let* ((workshop (handle (steamworkshop update)))
+         (handle (handle update))
+         (previous (key-value-tags (workshop-file update)))
+         (to-add (set-difference key-value-tags previous :test #'equal))
+         (to-remove (set-difference previous key-value-tags :test #'equal)))
+    (when (< 100 (length to-remove))
+      (error "FIXME: cannot remove more than 100 in one update."))
+    (loop for (key . value) in to-add
+          do (when (< 255 (length key))
+               (error "FIXME: key too long."))
+             (when (< 255 (length value))
+               (error "FIXME: value too long."))
+             (when (loop for c across key
+                         thereis (not (or (alphanumericp c)
+                                          (char= #\_ c))))
+               (error "FIXME: invalid key"))
+             (steam::ugc-add-item-key-value-tag workshop handle key value))
+    (loop for (key . value) in to-remove
+          do (steam::ugc-remove-item-key-value-tags workshop handle key))))
+
+(defmethod execute ((update workshop-update) &key callback)
+  (flet ((complete (result)
+           (with-error-on-failure (steam::submit-item-update-result result))
+           (steam::submit-item-update-user-needs-to-accept-workshop-legal-agreement result)))
+    (with-call-result (result :poll (null callback))
+        (steam::ugc-submit-item-update (handle (steamworkshop update)) (handle update)
+                                       (or (change-note update) (cffi:null-pointer)))
+      (funcall (or callback #'complete) result))))
+
+(defmethod update-status ((update workshop-update))
+  (cffi:with-foreign-objects ((processed :uint64)
+                              (total :uint64))
+    (when (steam::ugc-get-item-update-progress (handle (steamworkshop update)) (handle update) processed total)
+      (list :processed (cffi:mem-ref processed :uint64)
+            :total (cffi:mem-ref total :uint64)))))
+
+;; get-item-update-status
+
 (defclass file (c-object)
-  (display-name
-   size))
+  ((display-name :initarg :display-name :reader display-name)
+   (size :initarg :size :reader size)))
 
 (defclass workshop-file (c-object)
   ((app :initarg :app :reader app)
@@ -245,34 +371,50 @@
              `(defmethod ,slot ((file workshop-file))
                 (unless (slot-boundp file ',slot)
                   (complete-from-query file T))
-                (slot-value file ',slot))))
-  (make-cache-filled kind)
-  (make-cache-filled consumer)
-  (make-cache-filled display-name)
-  (make-cache-filled description)
-  (make-cache-filled owner)
-  (make-cache-filled created)
-  (make-cache-filled updated)
-  (make-cache-filled added)
-  (make-cache-filled visibility)
-  (make-cache-filled banned-p)
-  (make-cache-filled accepted-for-use-p)
-  (make-cache-filled tags)
-  (make-cache-filled file)
-  (make-cache-filled preview)
-  (make-cache-filled url)
-  (make-cache-filled votes-up)
-  (make-cache-filled votes-down)
-  (make-cache-filled score)
-  (make-cache-filled metadata)
-  (make-cache-filled statistics)
-  (make-cache-filled app-dependencies)
-  (make-cache-filled file-dependencies)
-  (make-cache-filled key-value-tags))
+                (slot-value file ',slot)))
+           (make-all-cache-filled (&rest slots)
+             `(progn ,@(loop for slot in slots collect `(make-cache-filled ,slot)))))
+  (make-all-cache-filled kind consumer display-name description owner created updated added visibility
+                         banned-p accepted-for-use-p tags file preview url votes-up votes-down score
+                         metadata statistics file-dependencies key-value-tags))
+
+(defmethod clear-cache ((file workshop-file))
+  (dolist (slot '(kind consumer display-name description owner created updated added visibility
+                  banned-p accepted-for-use-p tags file preview url votes-up votes-down score
+                  metadata statistics app-dependencies file-dependencies key-value-tags))
+    (slot-makunbound file slot)))
 
 (define-interface-submethod steamworkshop workshop-file download (steam::ugc-download-item &key high-priority))
 (define-interface-submethod steamworkshop workshop-file state (steam::ugc-get-item-state)
   (decode-flags 'steam::eitem-state result))
+
+(defmethod start-tracking ((files list))
+  (cffi:with-foreign-object (buffer 'steam::published-file-id-t 100)
+    (loop while files
+          for batch = (min 100 (length files))
+          for workshop = (handle (steamworkshop (first files)))
+          do (loop for i from 0 below batch
+                   for file = (pop files)
+                   do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
+             (with-call-result (result :poll T) (steam::ugc-start-playtime-tracking workshop buffer batch)
+               (with-error-on-failure (steam::start-playtime-tracking-result result))))))
+
+(defmethod stop-tracking ((files list))
+  (cffi:with-foreign-object (buffer 'steam::published-file-id-t 100)
+    (loop while files
+          for batch = (min 100 (length files))
+          for workshop = (handle (steamworkshop (first files)))
+          do (loop for i from 0 below batch
+                   for file = (pop files)
+                   do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
+             (with-call-result (result :poll T) (steam::ugc-stop-playtime-tracking workshop buffer batch)
+               (with-error-on-failure (steam::stop-playtime-tracking-result result))))))
+
+(defmethod start-tracking ((file workshop-file))
+  (start-tracking (list file)))
+
+(defmethod stop-tracking ((file workshop-file))
+  (stop-tracking (list file)))
 
 (defmethod (setf file-dependencies) (values (file workshop-file))
   (let* ((workshop (handle (steamworkshop file)))
@@ -282,68 +424,58 @@
     (dolist (dependency to-add)
       (steam::ugc-add-dependency workshop (handle file) (handle dependency)))
     (dolist (dependency to-remove)
-      (steam::ugc-remove-dependency workshop (handle file) (handle dependency))))
-  values)
+      (steam::ugc-remove-dependency workshop (handle file) (handle dependency)))
+    (setf (slot-value file 'file-dependencies) values)))
 
 (defmethod app-dependencies ((file workshop-file))
-  ;; FIXME: cache
-  (with-call-result (result :poll T) (steam::ugc-get-app-dependencies (handle (steamworkshop file)) (handle file))
-    (with-error-on-failure (steam::get-app-dependencies-result result))
-    ;; TODO: there's a "total num" field. Does this mean it can return less than
-    ;;       everything? If so, how do I get the rest? There's no explicit pagination.
-    ;;       does it split it across multiple call results? If so that's real bad...
-    (loop with ptr = (struct-slot-ptr result 'steam::app-ids)
-          for i from 0 below (steam::get-app-dependencies-num-app-dependencies result)
-          collect (make-instance 'app :steamapps (interface 'steamapps (steamworks (steamworkshop file)))
-                                      :handle (cffi:mem-aref ptr 'steam::app-id-t i)))))
+  (unless (slot-boundp file 'app-dependencies)
+    (with-call-result (result :poll T) (steam::ugc-get-app-dependencies (handle (steamworkshop file)) (handle file))
+      (with-error-on-failure (steam::get-app-dependencies-result result))
+      ;; TODO: there's a "total num" field. Does this mean it can return less than
+      ;;       everything? If so, how do I get the rest? There's no explicit pagination.
+      ;;       does it split it across multiple call results? If so that's real bad...
+      (loop with ptr = (struct-slot-ptr result 'steam::app-ids)
+            for i from 0 below (steam::get-app-dependencies-num-app-dependencies result)
+            collect (make-instance 'app :steamapps (interface 'steamapps (steamworks (steamworkshop file)))
+                                        :handle (cffi:mem-aref ptr 'steam::app-id-t i))
+            into results
+            finally (setf (slot-value file 'app-dependencies) results))))
+  (slot-value file 'app-dependencies))
 
 (defmethod (setf app-dependencies) (values (file workshop-file))
   (let* ((workshop (handle (steamworkshop file)))
          (previous (app-dependencies file))
          (to-add (set-difference values previous))
          (to-remove (set-difference previous values)))
-    ;; FIXME...
     (dolist (dependency to-add)
       (steam::ugc-add-app-dependency workshop (handle file) (handle dependency)))
     (dolist (dependency to-remove)
       (steam::ugc-remove-app-dependency workshop (handle file) (handle dependency)))
-    values))
+    (setf (slot-value file 'app-dependencies) values)))
 
 (defmethod update ((file workshop-file) &key values previews)
-  (let ((workshop (handle (steamworkshop file)))
-        (handle (handle file)))
-    ;; FIXME...
-    (loop for (type . value) in previews
-          do (case type
-               (:you-tube-video
-                (steam::ugc-add-item-preview-video workshop handle value))
-               (:image
-                (steam::ugc-add-item-preview-file workshop handle (namestring value) :image))
-               (T
-                (steam::ugc-add-item-preview-file workshop handle (princ-to-string value) type))))
-    
-    (loop for (key . value) in values
-          do (when (< 255 (length key))
-               (error "FIXME: key too long."))
-             (when (< 255 (length value))
-               (error "FIXME: value too long."))
-             (when (loop for c across key
-                         thereis (not (or (alphanumericp c)
-                                          (char= #\_ c))))
-               (error "FIXME: invalid key"))
-             (steam::ugc-add-item-key-value-tag workshop handle key value))))
-
-;; get-item-update-status
+  ;; FIXME: do
+  )
 
 (defmethod favorite ((file workshop-file))
-  (steam::ugc-add-item-to-favorites (handle (steamworkshop file)) (app-id (app file)) (handle file)))
+  (with-call-result (result :poll T) (steam::ugc-add-item-to-favorites (handle (steamworkshop file)) (app-id (app file)) (handle file))
+    (with-error-on-failure (steam::user-favorite-items-list-changed-result result))))
 
 (defmethod unfavorite ((file workshop-file))
-  (steam::ugc-remove-item-from-favorites (handle (steamworkshop file)) (app-id (app file)) (handle file)))
+  (with-call-result (result :poll T) (steam::ugc-remove-item-from-favorites (handle (steamworkshop file)) (app-id (app file)) (handle file))
+    (with-error-on-failure (steam::user-favorite-items-list-changed-result result))))
 
 (defmethod destroy ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-delete-item (handle (steamworkshop file)) (handle file))
     (with-error-on-failure (steam::delete-item-result result))))
+
+(defmethod subscribe ((file workshop-file))
+  (with-call-result (result :poll T) (steam::ugc-subscribe-item (handle (steamworkshop file)) (handle file))
+    (with-error-on-failure (steam::remote-storage-subscribe-published-file-result result))))
+
+(defmethod unsubscribe ((file workshop-file))
+  (with-call-result (result :poll T) (steam::ugc-unsubscribe-item (handle (steamworkshop file)) (handle file))
+    (with-error-on-failure (steam::remote-storage-unsubscribe-published-file-result result))))
 
 (defmethod download-status ((file workshop-file))
   (cffi:with-foreign-objects ((downloaded :uint64)

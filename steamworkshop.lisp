@@ -215,6 +215,19 @@
    (workshop-file :initarg :workshop-file :reader workshop-file)
    (change-note :initarg :change-node :reader change-note :writer set-change-note)))
 
+(defmethod initialize-instance :after ((update workshop-update) &key description metadata display-name language visibility preview content
+                                                                     (previews () previews-p) (tags () tags-p) (key-value-tags () key-value-tags-p))
+  (when description (set-description update description))
+  (when metadata (set-metadata update metadata))
+  (when display-name (set-display-name update display-name))
+  (when language (set-language update language))
+  (when visibility (set-visibility update visibility))
+  (when preview (set-preview update preview))
+  (when content (set-content update content))
+  (when previews-p (set-previews update previews))
+  (when tags-p (set-tags udpate tags))
+  (when key-value-tags-p (set-key-value-tags udpate key-value-tags)))
+
 (defmethod allocate-handle ((update workshop-update) &key steamworkshop workshop-file)
   (steam::ugc-start-item-update (handle steamworkshop) (handle (app workshop-file)) (handle workshop-file)))
 
@@ -223,13 +236,19 @@
     (lambda () ;; WTF: There seems to be no equivalent release function?
       )))
 
-(define-interface-submethod steamworkshop workshop-update set-description (steam::ugc-set-item-description description))
 (define-interface-submethod steamworkshop workshop-update set-metadata (steam::ugc-set-item-metadata metadata))
-;; FIXME: length constraint...
-(define-interface-submethod steamworkshop workshop-update set-display-name (steam::ugc-set-item-title display-name))
-;; FIXME: check language code
 (define-interface-submethod steamworkshop workshop-update set-language (steam::ugc-set-item-update-language language))
 (define-interface-submethod steamworkshop workshop-update set-visibility (steam::ugc-set-item-visibility visibility))
+
+(defmethod set-display-name ((update workshop-update) display-name)
+  (when (< steam::published-document-title-max (length display-name))
+    (error "FIXME: new display name is too long."))
+  (steam::ugc-set-item-title (handle (steamworkshop update)) (handle update) display-name))
+
+(defmethod set-description ((update workshop-update) description)
+  (when (< steam::published-document-description-max (length description))
+    (error "FIXME: new description is too long."))
+  (steam::ugc-set-item-description (handle (steamworkshop update)) (handle update) description))
 
 (defmethod set-preview ((update workshop-update) file)
   (unless (find (pathname-type file) '("png" "jpg" "jpeg" "gif" "svg") :test #'string=)
@@ -238,7 +257,13 @@
 
 (defmethod set-tags ((update workshop-update) tags)
   (let ((tagcount (length thags)))
-    ;; FIXME: check tags for validity
+    (dolist (tag tags)
+      (when (< 255 (length tag))
+        (error "FIXME: The tag ~s is too long." tag))
+      (when (loop for char across tag
+                  thereis (or (char= char #\,)
+                              (not (printable-char-p char))))
+        (error "FIXME: The tag ~s contains prohibited characters." tag)))
     (cffi:with-foreign-objects ((stringptr :pointer tagcount)
                                 (strings :char (* 255 tagcount))
                                 (struct '(:struct steam::steam-param-string-array)))
@@ -324,8 +349,6 @@
       (list :processed (cffi:mem-ref processed :uint64)
             :total (cffi:mem-ref total :uint64)))))
 
-;; get-item-update-status
-
 (defclass file (c-object)
   ((display-name :initarg :display-name :reader display-name)
    (size :initarg :size :reader size)))
@@ -334,29 +357,9 @@
   ((app :initarg :app :reader app)
    (steamworkshop :initarg :steamworkshop :reader steamworkshop)
    ;; caches
-   (kind :reader kind)
-   (consumer :reader consumer)
-   (display-name :reader display-name)
-   (description :reader description)
-   (owner :reader owner)
-   (created :reader created)
-   (updated :reader updated)
-   (added :reader added)
-   (visibility :reader visibility)
-   (banned-p :reader banned-p)
-   (accepted-for-use-p :reader accepted-for-use-p)
-   (tags :reader tags)
-   (file :reader file)
-   (preview :reader preview)
-   (url :reader url)
-   (votes-up :reader votes-up)
-   (votes-down :reader votes-down)
-   (score :reader score)
-   (metadata :reader metadata)
-   (statistics :reader statistics)
-   (app-dependencies :reader app-dependencies)
-   (file-dependencies :reader file-dependencies)
-   (key-value-tags :reader key-value-tags)))
+   kind consumer display-name description owner created updated added visibility
+   banned-p accepted-for-use-p tags file preview url votes-up votes-down score
+   previews metadata statistics app-dependencies file-dependencies key-value-tags))
 
 (defmethod initialize-instance :after ((file workshop-file) &key steamworkshop app kind)
   (unless app (error "APP required."))
@@ -377,6 +380,18 @@
   (make-all-cache-filled kind consumer display-name description owner created updated added visibility
                          banned-p accepted-for-use-p tags file preview url votes-up votes-down score
                          metadata statistics file-dependencies key-value-tags))
+
+(macrolet ((make-updatable (slot)
+             `(defmethod (setf ,slot) (value (file workshop-file))
+                (let ((update (make-instance 'workshop-update :steamworkshop (steamworkshop file)
+                                                              :workshop-file file
+                                             ,(intern (string slot) "KEYWORD") ,value)))
+                  (execute update)
+                  (setf (slot-value file ',slot) value))))
+           (make-all-updatable (&rest slots)
+             `(progn ,@(loop for slot in slots collect `(make-updatable ,slot)))))
+  (make-all-cache-filled display-name description visibility tags preview content previews metadata
+                         key-value-tags))
 
 (defmethod clear-cache ((file workshop-file))
   (dolist (slot '(kind consumer display-name description owner created updated added visibility
@@ -452,10 +467,6 @@
     (dolist (dependency to-remove)
       (steam::ugc-remove-app-dependency workshop (handle file) (handle dependency)))
     (setf (slot-value file 'app-dependencies) values)))
-
-(defmethod update ((file workshop-file) &key values previews)
-  ;; FIXME: do
-  )
 
 (defmethod favorite ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-add-item-to-favorites (handle (steamworkshop file)) (app-id (app file)) (handle file))

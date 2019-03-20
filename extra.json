@@ -10,6 +10,18 @@
             ]
         },
     ],
+    "consts":[
+        {
+            "constname": "k_cchPublishedDocumentTitleMax",
+            "consttype": "int",
+            "constval": "129"
+        },
+        {
+            "constname": "k_k_cchPublishedDocumentDescriptionMax",
+            "consttype": "int",
+            "constval": "8000"
+        },
+    ],
     "callresults":[
         {
 	        "classname": "ISteamFriends",

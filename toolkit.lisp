@@ -158,3 +158,8 @@
                    (write-char char buffer))
             finally (commit))
       (nreverse parts))))
+
+(defun printable-char-p (char)
+  ;; According to https://en.cppreference.com/w/c/string/byte/isprint
+  ;; which is in the steam api for some reason.
+  (find char "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"))

@@ -225,8 +225,8 @@
   (when preview (set-preview update preview))
   (when content (set-content update content))
   (when previews-p (set-previews update previews))
-  (when tags-p (set-tags udpate tags))
-  (when key-value-tags-p (set-key-value-tags udpate key-value-tags)))
+  (when tags-p (set-tags update tags))
+  (when key-value-tags-p (set-key-value-tags update key-value-tags)))
 
 (defmethod allocate-handle ((update workshop-update) &key steamworkshop workshop-file)
   (steam::ugc-start-item-update (handle steamworkshop) (handle (app workshop-file)) (handle workshop-file)))
@@ -289,6 +289,7 @@
     (flet ((index (list) (getf list :index)))
       (loop for preview in previews
             for value = (getf preview :source)
+            for type = (getf preview :type)
             unless (getf preview :index)
             do (case type
                  (:you-tube-video
@@ -300,6 +301,7 @@
       (loop for preview in previews
             for index = (getf preview :index)
             for value = (getf preview :source)
+            for type = (getf preview :type)
             when (and (getf preview :index)
                       (not (equal value (getf (find index previous-previews :key #'index) :source))))
             do (case type
@@ -379,19 +381,19 @@
              `(progn ,@(loop for slot in slots collect `(make-cache-filled ,slot)))))
   (make-all-cache-filled kind consumer display-name description owner created updated added visibility
                          banned-p accepted-for-use-p tags file preview url votes-up votes-down score
-                         metadata statistics file-dependencies key-value-tags))
+                         previews metadata statistics file-dependencies key-value-tags))
 
 (macrolet ((make-updatable (slot)
              `(defmethod (setf ,slot) (value (file workshop-file))
                 (let ((update (make-instance 'workshop-update :steamworkshop (steamworkshop file)
                                                               :workshop-file file
-                                             ,(intern (string slot) "KEYWORD") ,value)))
+                                             ,(intern (string slot) "KEYWORD") value)))
                   (execute update)
                   (setf (slot-value file ',slot) value))))
            (make-all-updatable (&rest slots)
              `(progn ,@(loop for slot in slots collect `(make-updatable ,slot)))))
-  (make-all-cache-filled display-name description visibility tags preview content previews metadata
-                         key-value-tags))
+  (make-all-updatable display-name description visibility tags preview content previews metadata
+                      key-value-tags))
 
 (defmethod clear-cache ((file workshop-file))
   (dolist (slot '(kind consumer display-name description owner created updated added visibility

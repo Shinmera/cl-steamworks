@@ -256,7 +256,7 @@
   (steam::ugc-set-item-preview (handle (steamworkshop update)) (handle update) file))
 
 (defmethod set-tags ((update workshop-update) tags)
-  (let ((tagcount (length thags)))
+  (let ((tagcount (length tags)))
     (dolist (tag tags)
       (when (< 255 (length tag))
         (error "FIXME: The tag ~s is too long." tag))

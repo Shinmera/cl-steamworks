@@ -15,6 +15,9 @@
       (error "FIXME: failed to create steam utils handle."))
     handle))
 
+(defun get-interface-handle* (steamworks function version)
+  (get-interface-handle steamworks function (handle (user steamworks)) (handle (pipe steamworks)) version))
+
 (defmethod call-with ((interface interface) function &rest args)
   (apply function (handle interface) args))
 

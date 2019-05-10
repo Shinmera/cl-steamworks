@@ -7,15 +7,16 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defclass steamapps (interface)
-  ((applist-handle :initarg :applist-handle :accessor applist-handle)))
+  ((applist-handle :initarg :applist-handle :accessor applist-handle)
+   (appticket-handle :initarg :appticket-handle :accessor appticket-handle)))
 
-(defmethod initialize-instance :after ((interface steamapps) &key version steamworks)
-  (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-apps
-                                                 (handle (user steamworks)) (handle (pipe steamworks))
+(defmethod initialize-instance :after ((interface steamapps) &key version applist-version appticket-version steamworks)
+  (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-apps
                                                  (t-or version steam::steamapps-interface-version)))
-  (setf (applist-handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-app-list
-                                                         (handle (user steamworks)) (handle (pipe steamworks))
-                                                         (t-or version steam::steamapplist-interface-version))))
+  (setf (applist-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-app-list
+                                                         (t-or applist-version steam::steamapplist-interface-version)))
+  (setf (appticket-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-app-ticket
+                                                            (t-or appticket-version steam::steamappticket-interface-version))))
 
 (define-interface-method steamapps low-violence-p (steam::apps-bis-low-violence))
 (define-interface-method steamapps subscribed-p (steam::apps-bis-subscribed))
@@ -95,6 +96,23 @@
     (loop for i from 0 below (steam::apps-get-installed-depots (handle (steamapps app)) (handle app) buffer 256)
           for handle = (cffi:mem-aref buffer 'steam::depot-id-t i)
           collect (make-instance 'depot :handle handle))))
+
+(defmethod ticket-data ((app app))
+  (cffi:with-foreign-objects ((buffer :uint8 256)
+                              (app-id :uint32)
+                              (steam-id :uint32)
+                              (signature :uint32)
+                              (signature-len :uint32))
+    (let ((copied (steam::app-ticket-get-app-ownership-ticket-data (appticket-handle (steamapps app)) (handle app)
+                                                                   buffer 256 app-id steam-id signature signature-len))
+          (steam-id (cffi:mem-ref steam-id :uint32))
+          (signature (cffi:mem-ref signature :uint32))
+          (signature-len (cffi:mem-ref signature-len :uint32)))
+      (when (= 0 copied)
+        (error "FIXME: failed to retrieve ticket data."))
+      (values (cffi:mem-aref (cffi:inc-pointer buffer steam-id) :unsigned-long)
+              (cffi:foreign-array-to-lisp (cffi:inc-pointer buffer signature) (list :array :uint8 signature-len)
+                                          :element-type '(unsigned-byte 8))))))
 
 (defclass dlc (app)
   ((available :initform NIL :reader available-p)

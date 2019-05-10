@@ -356,12 +356,13 @@
       (fresh-line stream))))
 
 (defun write-low-level-file (forms &key output (if-exists :error))
-  (with-open-file (stream (or output *standard-low-level-file*)
-                          :direction :output
-                          :element-type 'character
-                          :if-exists if-exists)
-    (when stream
-      (format stream "~
+  (let ((file (or output *standard-low-level-file*)))
+    (with-open-file (stream file
+                            :direction :output
+                            :element-type 'character
+                            :if-exists if-exists)
+      (when stream
+        (format stream "~
 #|
  This file is a part of cl-steamworks
  (c) 2019 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
@@ -372,22 +373,24 @@
        The generation occurs via the machinery from generator.lisp
        You should not edit this file manually.
 |#~%")
-      (write-form `(in-package #:org.shirakumo.fraf.steamworks.cffi) stream)
-      (loop for form in forms
-            do (write-form form stream)))))
+        (write-form `(in-package #:org.shirakumo.fraf.steamworks.cffi) stream)
+        (loop for form in forms
+              do (write-form form stream))
+        file))))
 
 (defun generate (source &key output (if-exists :supersede))
   (let* ((meta (pathname-utils:subdirectory source "public" "steam"))
          (json (make-pathname :name "steam_api" :type "json" :defaults meta)))
-    (write-low-level-file
-     (append
-      (compile-steam-api-spec
-       (merge-steam-api-spec
-        (read-steam-api-spec json)
-        (read-steam-api-spec *extras-file*)
-        (scan-all-headers meta))))
-     :output output
-     :if-exists if-exists)))
+    (cl-steamworks::maybe-compile-low-level
+     (write-low-level-file
+      (append
+       (compile-steam-api-spec
+        (merge-steam-api-spec
+         (read-steam-api-spec json)
+         (read-steam-api-spec *extras-file*)
+         (scan-all-headers meta))))
+      :output output
+      :if-exists if-exists))))
 
 (defun query-directory ()
   (format *query-io* "~&~%Please enter the path to the SteamWorks SDK root directory:~%> ")
@@ -417,5 +420,4 @@
     (format *query-io* "~&Generating bindings...")
     (cffi:load-foreign-library 'steam::steamworks)
     (generate sdk-directory)
-    (maybe-compile-low-level)
     (format *query-io* "~&Done. You can now use cl-steamworks!~%")))

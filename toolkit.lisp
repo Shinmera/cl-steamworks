@@ -6,9 +6,10 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
-(or (maybe-load-low-level)
-    (alexandria:simple-style-warning "No low-level file present. Please install the SteamWorks SDK:
-Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)"))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (or (maybe-load-low-level)
+      (alexandria:simple-style-warning "No low-level file present. Please install the SteamWorks SDK:
+Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
 
 (defmacro with-cleanup-on-failure (cleanup &body body)
   (let ((err (gensym "ERROR")))

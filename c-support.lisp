@@ -86,17 +86,29 @@
                                       :parent (asdf:find-system :cl-steamworks)
                                       :name "low-level"
                                       :pathname file))
-            (compile (asdf:find-operation NIL 'asdf:compile-op))
             (load (asdf:find-operation NIL 'asdf:load-op)))
-        (when (asdf:needed-in-image-p compile component)
-          (asdf:perform compile component))
-        (when (asdf:needed-in-image-p load component)
-          (asdf:perform load component)))
+        (asdf:perform load component))
       #-asdf
       (let ((fasl (compile-file-pathname file)))
-        (unless (probe-file fasl)
-          (compile-file file :verbose NIL :print NIL :output-file fasl))
-        (load fasl :verbose NIL :print NIL))
+        (if (probe-file fasl)
+            (load fasl :verbose NIL :print NIL)
+            (load file :verbose NIL :print NIL)))
+      T)))
+
+(defun maybe-compile-low-level (&optional file)
+  (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
+    (when (probe-file file)
+      (cffi:load-foreign-library 'steam::steamworks)
+      #+asdf
+      (let ((component (make-instance 'asdf:cl-source-file
+                                      :parent (asdf:find-system :cl-steamworks)
+                                      :name "low-level"
+                                      :pathname file))
+            (compile (asdf:find-operation NIL 'asdf:compile-op)))
+        (asdf:perform compile component))
+      #-asdf
+      (let ((fasl (compile-file-pathname file)))
+        (compile-file file :verbose NIL :print NIL :output-file fasl))
       T)))
 
 ;; DEFCSTRUCT interns its accessors in *PACKAGE* rather than using the package

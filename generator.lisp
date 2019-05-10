@@ -417,4 +417,5 @@
     (format *query-io* "~&Generating bindings...")
     (cffi:load-foreign-library 'steam::steamworks)
     (generate sdk-directory)
+    (maybe-compile-low-level)
     (format *query-io* "~&Done. You can now use cl-steamworks!~%")))

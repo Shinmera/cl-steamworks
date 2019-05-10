@@ -81,15 +81,12 @@
   (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
     (when (probe-file file)
       (cffi:load-foreign-library 'steam::steamworks)
-      #+asdf
-      (let ((component (make-instance 'asdf:cl-source-file
-                                      :parent (asdf:find-system :cl-steamworks)
-                                      :name "low-level"
-                                      :pathname file))
-            (load (asdf:find-operation NIL 'asdf:load-op)))
-        (asdf:perform load component))
-      #-asdf
-      (let ((fasl (compile-file-pathname file)))
+      (let ((fasl #-asdf (compile-file-pathname file)
+                  #+asdf (asdf:output-file (asdf:find-operation NIL 'asdf:compile-op)
+                                           (make-instance 'asdf:cl-source-file
+                                                          :parent (asdf:find-system :cl-steamworks)
+                                                          :name "low-level"
+                                                          :pathname file))))
         (if (probe-file fasl)
             (load fasl :verbose NIL :print NIL)
             (load file :verbose NIL :print NIL)))

@@ -25,7 +25,7 @@
     (cffi:with-foreign-object (buffer 'steam::published-file-id-t count)
       (loop for i from 0 below (steam::ugc-get-subscribed-items (handle workshop) buffer count)
             for handle = (cffi:mem-aref buffer 'steam::published-file-id-t i)
-            collect (make-instance 'workshop-file :steamworkshop workshop
+            collect (make-instance 'workshop-file :interface workshop
                                                   :app (app (interface 'steamapps (steamworks workshop)))
                                                   :handle handle)))))
 
@@ -35,14 +35,14 @@
                       (if user
                           'workshop-user-query
                           'workshop-global-query)
-                      :steamworkshop workshop
+                      :interface workshop
                       :app app
                       args)))
     (multiple-value-bind (count total) (execute query)
       (declare (ignore total))
       (loop for i from 0 below count
             collect (complete-from-query
-                     (make-instance 'workshop-file :steamworkshop workshop
+                     (make-instance 'workshop-file :interface workshop
                                                    :app app
                                                    :handle T)
                      query)))))
@@ -51,9 +51,8 @@
   (with-call-result (result :poll T) (steam::ugc-stop-playtime-tracking-for-all-items (handle workshop))
     (with-error-on-failure (steam::stop-playtime-tracking-result result))))
 
-(defclass workshop-query (c-managed-object)
-  ((steamworkshop :initarg :steamworkshop :reader steamworkshop)
-   (app :initarg app :reader app)))
+(defclass workshop-query (interface-object c-managed-object)
+  ((app :initarg app :reader app)))
 
 (defmethod initialize-instance :after ((query workshop-query) &key exclude require key-value-tags request search any-tag rank-by-trend-days)
   (dolist (tag exclude)
@@ -79,27 +78,27 @@
     (set-search-text query search)))
 
 (defmethod free-handle-function ((query workshop-query) handle)
-  (let ((workshop (steamworkshop query)))
+  (let ((workshop (iface* query)))
     (lambda ()
-      (steam::ugc-release-query-ugcrequest (handle workshop) handle))))
+      (steam::ugc-release-query-ugcrequest workshop handle))))
 
-(define-interface-submethod steamworkshop workshop-query add-excluded-tag ((tag string) steam::ugc-add-excluded-tag))
-(define-interface-submethod steamworkshop workshop-query add-required-tag ((tag string) steam::ugc-add-required-tag))
-(define-interface-submethod steamworkshop workshop-query add-key-value-tag ((key string) (value string) steam::ugc-add-required-key-value-tag))
-(define-interface-submethod steamworkshop workshop-query set-allow-cached-response (steam::ugc-set-allow-cached-response max-age-in-seconds))
-(define-interface-submethod steamworkshop workshop-query set-cloud-file-name-filter (steam::ugc-set-cloud-file-name-filter file-name))
-(define-interface-submethod steamworkshop workshop-query set-match-any-tag (steam::ugc-set-match-any-tag value))
-(define-interface-submethod steamworkshop workshop-query set-ranked-by-trend-days (steam::ugc-set-ranked-by-trend-days value))
-(define-interface-submethod steamworkshop workshop-query set-request-all-previews (steam::ugc-set-return-additional-previews value))
-(define-interface-submethod steamworkshop workshop-query set-request-children (steam::ugc-set-return-children value))
-(define-interface-submethod steamworkshop workshop-query set-request-key-value-tags (steam::ugc-set-return-key-value-tags value))
-(define-interface-submethod steamworkshop workshop-query set-request-full-description (steam::ugc-set-return-long-description value))
-(define-interface-submethod steamworkshop workshop-query set-request-metadata (steam::ugc-set-return-metadata value))
-(define-interface-submethod steamworkshop workshop-query set-request-ids-only (steam::ugc-set-return-only-ids value))
-(define-interface-submethod steamworkshop workshop-query set-request-playtime-stats (steam::ugc-set-return-playtime-stats value))
-(define-interface-submethod steamworkshop workshop-query set-request-total-only (steam::ugc-set-return-total-only value))
-(define-interface-submethod steamworkshop workshop-query set-search-text (steam::ugc-set-search-text value))
-(define-interface-submethod steamworkshop workshop-query set-language (steam::ugc-set-language language))
+(define-interface-submethod workshop-query add-excluded-tag ((tag string) steam::ugc-add-excluded-tag))
+(define-interface-submethod workshop-query add-required-tag ((tag string) steam::ugc-add-required-tag))
+(define-interface-submethod workshop-query add-key-value-tag ((key string) (value string) steam::ugc-add-required-key-value-tag))
+(define-interface-submethod workshop-query set-allow-cached-response (steam::ugc-set-allow-cached-response max-age-in-seconds))
+(define-interface-submethod workshop-query set-cloud-file-name-filter (steam::ugc-set-cloud-file-name-filter file-name))
+(define-interface-submethod workshop-query set-match-any-tag (steam::ugc-set-match-any-tag value))
+(define-interface-submethod workshop-query set-ranked-by-trend-days (steam::ugc-set-ranked-by-trend-days value))
+(define-interface-submethod workshop-query set-request-all-previews (steam::ugc-set-return-additional-previews value))
+(define-interface-submethod workshop-query set-request-children (steam::ugc-set-return-children value))
+(define-interface-submethod workshop-query set-request-key-value-tags (steam::ugc-set-return-key-value-tags value))
+(define-interface-submethod workshop-query set-request-full-description (steam::ugc-set-return-long-description value))
+(define-interface-submethod workshop-query set-request-metadata (steam::ugc-set-return-metadata value))
+(define-interface-submethod workshop-query set-request-ids-only (steam::ugc-set-return-only-ids value))
+(define-interface-submethod workshop-query set-request-playtime-stats (steam::ugc-set-return-playtime-stats value))
+(define-interface-submethod workshop-query set-request-total-only (steam::ugc-set-return-total-only value))
+(define-interface-submethod workshop-query set-search-text (steam::ugc-set-search-text value))
+(define-interface-submethod workshop-query set-language (steam::ugc-set-language language))
 
 (defmethod execute ((query workshop-query) &key callback)
   (flet ((default-callback (result)
@@ -107,14 +106,14 @@
            (values (steam::steam-ugcquery-completed-num-results-returned result)
                    (steam::steam-ugcquery-completed-total-matching-results result))))
     (with-call-result (result :poll (not (null callback)))
-        (steam::ugc-send-query-ugcrequest (handle (steamworkshop query)) (handle query))
+        (steam::ugc-send-query-ugcrequest (iface* query) (handle query))
       (funcall (or callback #'default-callback) result))))
 
 (defmethod get-previews ((query workshop-query) (index integer))
   (cffi:with-foreign-objects ((source :char 256)
                               (original :char 256)
                               (kind 'steam::eitem-preview-type))
-    (loop with workshop = (handle (steamworkshop query))
+    (loop with workshop = (iface* query)
           with handle = (handle query)
           for i from 0 below (steam::ugc-get-query-ugcnum-additional-previews workshop handle index)
           when (steam::ugc-get-query-ugcadditional-preview workshop handle index i source 256 original 256 kind)
@@ -125,17 +124,17 @@
 
 (defmethod get-children ((query workshop-query) (index integer) count)
   (cffi:with-foreign-object (buffer 'steam::published-file-id-t count)
-    (unless (steam::ugc-get-query-ugcchildren (handle (steamworkshop query)) (handle query) index buffer count)
+    (unless (steam::ugc-get-query-ugcchildren (iface* query) (handle query) index buffer count)
       (error "FIXME: failed to get children."))
     (loop for i from 0 below count
-          collect (make-instance 'workshop-file :steamworkshop (steamworkshop query)
+          collect (make-instance 'workshop-file :interface (iface query)
                                                 :handle (cffi:mem-aref buffer 'steam::published-file-id-t i)
                                                 :app (app query)))))
 
 (defmethod get-key-value-tags ((query workshop-query) (index integer))
   (cffi:with-foreign-objects ((key :char 256)
                               (value :char 256))
-    (loop with workshop = (handle (steamworkshop query))
+    (loop with workshop = (iface* query)
           with handle = (handle query)
           for i from 0 below (steam::ugc-get-query-ugcnum-key-value-tags workshop handle index)
           when (steam::ugc-get-query-ugckey-value-tag workshop handle index i key 256 value 256)
@@ -144,13 +143,13 @@
 
 (defmethod get-metadata ((query workshop-query) (index integer))
   (cffi:with-foreign-object (buffer :char 256)
-    (unless (steam::ugc-get-query-ugcmetadata (handle (steamworkshop query)) (handle query) index buffer 256)
+    (unless (steam::ugc-get-query-ugcmetadata (iface* query) (handle query) index buffer 256)
       (error "FIXME: failed to get metadata."))
     (cffi:foreign-string-to-lisp buffer :count 256 :encoding :utf-8)))
 
 (defmethod get-statistics ((query workshop-query) (index integer))
   (cffi:with-foreign-object (buffer :uint64)
-    (loop with workshop = (handle (steamworkshop query))
+    (loop with workshop = (iface* query)
           with handle = (handle query)
           for type in (cffi:foreign-enum-keyword-list 'steam::eitem-statistic)
           when (steam::ugc-get-query-ugcstatistic workshop handle index type buffer)
@@ -158,13 +157,13 @@
 
 (defmethod get-details ((query workshop-query) (index integer))
   (cffi:with-foreign-object (buffer '(:struct steam::steam-ugcdetails))
-    (unless (steam::ugc-get-query-ugcresult (handle (steamworkshop query)) (handle query) index buffer)
+    (unless (steam::ugc-get-query-ugcresult (iface* query) (handle query) index buffer)
       (error "FIXME: failed to get details."))
     (cffi:mem-ref buffer '(:struct steam::steam-ugcdetails))))
 
 (defmethod get-workshop-file ((query workshop-query) (index integer))
   (let* ((id (steam::steam-ugcdetails-published-file-id (get-details query index)))
-         (file (make-instance 'workshop-file :steamworkshop (steamworkshop query)
+         (file (make-instance 'workshop-file :interface (iface query)
                                              :app (app query)
                                              :handle id)))
     (complete-from-query file query index)
@@ -173,13 +172,13 @@
 (defclass workshop-global-query (workshop-query)
   ())
 
-(defmethod allocate-handle ((query workshop-global-query) &key steamworkshop app
+(defmethod allocate-handle ((query workshop-global-query) &key app
                                                                (type :all)
                                                                (sort :ranked-by-publication-date)
                                                                (on :target)
                                                                (page 1))
   (steam::ugc-create-query-all-ugcrequest
-   (handle steamworkshop) sort type
+   (iface* query) sort type
    (ecase on (:creator (handle app)) (:target 0))
    (ecase on (:creator 0) (:target (handle app)))
    page))
@@ -187,14 +186,14 @@
 (defclass workshop-user-query (workshop-query)
   ())
 
-(defmethod allocate-handle ((query workshop-user-query) &key steamworkshop app user
+(defmethod allocate-handle ((query workshop-user-query) &key app user
                                                              (list :subscribed)
                                                              (type :all)
                                                              (sort :creation-order-desc)
                                                              (on :target)
                                                              (page 1))
   (steam::ugc-create-query-user-ugcrequest
-   (handle steamworkshop) (account-id (handle user)) list type sort
+   (iface* query) (account-id (handle user)) list type sort
    (ecase on (:creator (handle app)) (:target 0))
    (ecase on (:creator 0) (:target (handle app)))
    page))
@@ -202,17 +201,16 @@
 (defclass workshop-detail-query (workshop-query)
   ())
 
-(defmethod allocate-handle ((query workshop-detail-query) &key steamworkshop files)
+(defmethod allocate-handle ((query workshop-detail-query) &key files)
   (cffi:with-foreign-object (buffer 'steam::published-file-id-t (length files))
     (loop for file in files
           for i from 0
           do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
     (steam::ugc-create-query-ugcdetails-request
-     (handle steamworkshop) buffer (length files))))
+     (iface* query) buffer (length files))))
 
-(defclass workshop-update (c-managed-object)
-  ((steamworkshop :initarg :steamworkshop :reader steamworkshop)
-   (workshop-file :initarg :workshop-file :reader workshop-file)
+(defclass workshop-update (interface-object c-managed-object)
+  ((workshop-file :initarg :workshop-file :reader workshop-file)
    (change-note :initarg :change-node :reader change-note :writer set-change-note)))
 
 (defmethod initialize-instance :after ((update workshop-update) &key description metadata display-name language visibility preview content
@@ -228,32 +226,31 @@
   (when tags-p (set-tags update tags))
   (when key-value-tags-p (set-key-value-tags update key-value-tags)))
 
-(defmethod allocate-handle ((update workshop-update) &key steamworkshop workshop-file)
-  (steam::ugc-start-item-update (handle steamworkshop) (handle (app workshop-file)) (handle workshop-file)))
+(defmethod allocate-handle ((update workshop-update) &key workshop-file)
+  (steam::ugc-start-item-update (iface* update) (handle (app workshop-file)) (handle workshop-file)))
 
 (defmethod free-handle-function ((update workshop-update) handle)
-  (let ((workshop (steamworkshop update)))
-    (lambda () ;; WTF: There seems to be no equivalent release function?
-      )))
+  (lambda () ;; WTF: There seems to be no equivalent release function?
+    ))
 
-(define-interface-submethod steamworkshop workshop-update set-metadata (steam::ugc-set-item-metadata metadata))
-(define-interface-submethod steamworkshop workshop-update set-language (steam::ugc-set-item-update-language language))
-(define-interface-submethod steamworkshop workshop-update set-visibility (steam::ugc-set-item-visibility visibility))
+(define-interface-submethod workshop-update set-metadata (steam::ugc-set-item-metadata metadata))
+(define-interface-submethod workshop-update set-language (steam::ugc-set-item-update-language language))
+(define-interface-submethod workshop-update set-visibility (steam::ugc-set-item-visibility visibility))
 
 (defmethod set-display-name ((update workshop-update) display-name)
   (when (< steam::published-document-title-max (length display-name))
     (error "FIXME: new display name is too long."))
-  (steam::ugc-set-item-title (handle (steamworkshop update)) (handle update) display-name))
+  (steam::ugc-set-item-title (iface* update) (handle update) display-name))
 
 (defmethod set-description ((update workshop-update) description)
   (when (< steam::published-document-description-max (length description))
     (error "FIXME: new description is too long."))
-  (steam::ugc-set-item-description (handle (steamworkshop update)) (handle update) description))
+  (steam::ugc-set-item-description (iface* update) (handle update) description))
 
 (defmethod set-preview ((update workshop-update) file)
   (unless (find (pathname-type file) '("png" "jpg" "jpeg" "gif" "svg") :test #'string=)
     (error "FIXME: preview file must be an image."))
-  (steam::ugc-set-item-preview (handle (steamworkshop update)) (handle update) file))
+  (steam::ugc-set-item-preview (iface* update) (handle update) file))
 
 (defmethod set-tags ((update workshop-update) tags)
   (let ((tagcount (length tags)))
@@ -274,16 +271,16 @@
             for foreign-string = (cffi:inc-pointer strings (* i 255))
             do (cffi:lisp-string-to-foreign tag foreign-string 255 :encoding :utf-8)
                (setf (cffi:mem-aref stringptr :pointer i) foreign-string))
-      (steam::ugc-set-item-tags (handle (steamworkshop update)) (handle update) struct))))
+      (steam::ugc-set-item-tags (iface* update) (handle update) struct))))
 
 (defmethod set-content ((update workshop-update) directory)
   (let ((directory (pathname directory)))
     (when (or (pathname-name directory) (pathname-type directory))
       (error "FIXME: need to pass a directory."))
-    (steam::ugc-set-item-content (handle (steamworkshop update)) (handle update) (namestring directory))))
+    (steam::ugc-set-item-content (iface* update) (handle update) (namestring directory))))
 
 (defmethod set-previews ((update workshop-update) previews)
-  (let* ((workshop (handle (steamworkshop update)))
+  (let* ((workshop (iface* update))
          (handle (handle update))
          (previous-previews (previews (workshop-file update))))
     (flet ((index (list) (getf list :index)))
@@ -315,7 +312,7 @@
             do (steam::ugc-remove-item-preview workshop handle (getf preview :index))))))
 
 (defmethod set-key-value-tags ((update workshop-update) key-value-tags)
-  (let* ((workshop (handle (steamworkshop update)))
+  (let* ((workshop (iface* update))
          (handle (handle update))
          (previous (key-value-tags (workshop-file update)))
          (to-add (set-difference key-value-tags previous :test #'equal))
@@ -340,14 +337,14 @@
            (with-error-on-failure (steam::submit-item-update-result result))
            (steam::submit-item-update-user-needs-to-accept-workshop-legal-agreement result)))
     (with-call-result (result :poll (null callback))
-        (steam::ugc-submit-item-update (handle (steamworkshop update)) (handle update)
+        (steam::ugc-submit-item-update (iface* update) (handle update)
                                        (or (change-note update) (cffi:null-pointer)))
       (funcall (or callback #'complete) result))))
 
 (defmethod update-status ((update workshop-update))
   (cffi:with-foreign-objects ((processed :uint64)
                               (total :uint64))
-    (when (steam::ugc-get-item-update-progress (handle (steamworkshop update)) (handle update) processed total)
+    (when (steam::ugc-get-item-update-progress (iface* update) (handle update) processed total)
       (list :processed (cffi:mem-ref processed :uint64)
             :total (cffi:mem-ref total :uint64)))))
 
@@ -355,18 +352,17 @@
   ((display-name :initarg :display-name :reader display-name)
    (size :initarg :size :reader size)))
 
-(defclass workshop-file (c-object)
+(defclass workshop-file (interface-object)
   ((app :initarg :app :reader app)
-   (steamworkshop :initarg :steamworkshop :reader steamworkshop)
    ;; caches
    kind consumer display-name description owner created updated added visibility
    banned-p accepted-for-use-p tags file preview url votes-up votes-down score
    previews metadata statistics app-dependencies file-dependencies key-value-tags))
 
-(defmethod initialize-instance :after ((file workshop-file) &key steamworkshop app kind)
+(defmethod initialize-instance :after ((file workshop-file) &key app kind)
   (unless app (error "APP required."))
   (unless (handle file)
-    (with-call-result (result :poll T) (steam::ugc-create-item (handle steamworkshop) (handle app) kind)
+    (with-call-result (result :poll T) (steam::ugc-create-item (iface* file) (handle app) kind)
       (when (steam::create-item-user-needs-to-accept-workshop-legal-agreement result)
         (warn "FIXME: user needs to accept agreement."))
       (with-error-on-failure (steam::create-item-result result))
@@ -385,7 +381,7 @@
 
 (macrolet ((make-updatable (slot)
              `(defmethod (setf ,slot) (value (file workshop-file))
-                (let ((update (make-instance 'workshop-update :steamworkshop (steamworkshop file)
+                (let ((update (make-instance 'workshop-update :interface (iface file)
                                                               :workshop-file file
                                              ,(intern (string slot) "KEYWORD") value)))
                   (execute update)
@@ -401,15 +397,15 @@
                   metadata statistics app-dependencies file-dependencies key-value-tags))
     (slot-makunbound file slot)))
 
-(define-interface-submethod steamworkshop workshop-file download (steam::ugc-download-item &key high-priority))
-(define-interface-submethod steamworkshop workshop-file state (steam::ugc-get-item-state)
+(define-interface-submethod workshop-file download (steam::ugc-download-item &key high-priority))
+(define-interface-submethod workshop-file state (steam::ugc-get-item-state)
   (decode-flags 'steam::eitem-state result))
 
 (defmethod start-tracking ((files list))
   (cffi:with-foreign-object (buffer 'steam::published-file-id-t 100)
     (loop while files
           for batch = (min 100 (length files))
-          for workshop = (handle (steamworkshop (first files)))
+          for workshop = (iface* (first files))
           do (loop for i from 0 below batch
                    for file = (pop files)
                    do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
@@ -420,7 +416,7 @@
   (cffi:with-foreign-object (buffer 'steam::published-file-id-t 100)
     (loop while files
           for batch = (min 100 (length files))
-          for workshop = (handle (steamworkshop (first files)))
+          for workshop = (iface* (first files))
           do (loop for i from 0 below batch
                    for file = (pop files)
                    do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
@@ -434,7 +430,7 @@
   (stop-tracking (list file)))
 
 (defmethod (setf file-dependencies) (values (file workshop-file))
-  (let* ((workshop (handle (steamworkshop file)))
+  (let* ((workshop (iface* file))
          (previous (file-dependencies file))
          (to-add (set-difference values previous))
          (to-remove (set-difference previous values)))
@@ -446,21 +442,21 @@
 
 (defmethod app-dependencies ((file workshop-file))
   (unless (slot-boundp file 'app-dependencies)
-    (with-call-result (result :poll T) (steam::ugc-get-app-dependencies (handle (steamworkshop file)) (handle file))
+    (with-call-result (result :poll T) (steam::ugc-get-app-dependencies (iface* file) (handle file))
       (with-error-on-failure (steam::get-app-dependencies-result result))
       ;; TODO: there's a "total num" field. Does this mean it can return less than
       ;;       everything? If so, how do I get the rest? There's no explicit pagination.
       ;;       does it split it across multiple call results? If so that's real bad...
       (loop with ptr = (struct-slot-ptr result 'steam::app-ids)
             for i from 0 below (steam::get-app-dependencies-num-app-dependencies result)
-            collect (make-instance 'app :steamapps (interface 'steamapps (steamworks (steamworkshop file)))
+            collect (make-instance 'app :steamapps (interface 'steamapps file)
                                         :handle (cffi:mem-aref ptr 'steam::app-id-t i))
             into results
             finally (setf (slot-value file 'app-dependencies) results))))
   (slot-value file 'app-dependencies))
 
 (defmethod (setf app-dependencies) (values (file workshop-file))
-  (let* ((workshop (handle (steamworkshop file)))
+  (let* ((workshop (iface* file))
          (previous (app-dependencies file))
          (to-add (set-difference values previous))
          (to-remove (set-difference previous values)))
@@ -471,29 +467,29 @@
     (setf (slot-value file 'app-dependencies) values)))
 
 (defmethod favorite ((file workshop-file))
-  (with-call-result (result :poll T) (steam::ugc-add-item-to-favorites (handle (steamworkshop file)) (app-id (app file)) (handle file))
+  (with-call-result (result :poll T) (steam::ugc-add-item-to-favorites (iface* file) (app-id (app file)) (handle file))
     (with-error-on-failure (steam::user-favorite-items-list-changed-result result))))
 
 (defmethod unfavorite ((file workshop-file))
-  (with-call-result (result :poll T) (steam::ugc-remove-item-from-favorites (handle (steamworkshop file)) (app-id (app file)) (handle file))
+  (with-call-result (result :poll T) (steam::ugc-remove-item-from-favorites (iface* file) (app-id (app file)) (handle file))
     (with-error-on-failure (steam::user-favorite-items-list-changed-result result))))
 
 (defmethod destroy ((file workshop-file))
-  (with-call-result (result :poll T) (steam::ugc-delete-item (handle (steamworkshop file)) (handle file))
+  (with-call-result (result :poll T) (steam::ugc-delete-item (iface* file) (handle file))
     (with-error-on-failure (steam::delete-item-result result))))
 
 (defmethod subscribe ((file workshop-file))
-  (with-call-result (result :poll T) (steam::ugc-subscribe-item (handle (steamworkshop file)) (handle file))
+  (with-call-result (result :poll T) (steam::ugc-subscribe-item (iface* file) (handle file))
     (with-error-on-failure (steam::remote-storage-subscribe-published-file-result result))))
 
 (defmethod unsubscribe ((file workshop-file))
-  (with-call-result (result :poll T) (steam::ugc-unsubscribe-item (handle (steamworkshop file)) (handle file))
+  (with-call-result (result :poll T) (steam::ugc-unsubscribe-item (iface* file) (handle file))
     (with-error-on-failure (steam::remote-storage-unsubscribe-published-file-result result))))
 
 (defmethod download-status ((file workshop-file))
   (cffi:with-foreign-objects ((downloaded :uint64)
                               (total :uint64))
-    (when (steam::ugc-get-item-download-info (handle (steamworkshop file)) (handle file) downloaded total)
+    (when (steam::ugc-get-item-download-info (iface* file) (handle file) downloaded total)
       (list :downloaded (cffi:mem-ref downloaded :uint64)
             :total (cffi:mem-ref total :uint64)))))
 
@@ -501,7 +497,7 @@
   (cffi:with-foreign-objects ((size :uint64)
                               (folder :char 256)
                               (last-update :uint32))
-    (when (steam::ugc-get-item-install-info (handle (steamworkshop file)) (handle file) size folder 256 last-update)
+    (when (steam::ugc-get-item-install-info (iface* file) (handle file) size folder 256 last-update)
       (values :size (cffi:mem-ref size :uint64)
               ;; KLUDGE: I'm actually unsure that parsing with UTF-8 is correct here.
               ;;         The code page on windows might be different for the FS...
@@ -509,7 +505,7 @@
               :last-update (unix->universal (cffi:mem-ref last-update :uint32))))))
 
 (defmethod vote ((file workshop-file))
-  (with-call-result (result :poll T) (steam::ugc-get-user-item-vote (handle (steamworkshop file)) (handle file))
+  (with-call-result (result :poll T) (steam::ugc-get-user-item-vote (iface* file) (handle file))
     (with-error-on-failure (steam::get-user-item-vote-result result))
     (cond ((steam::get-user-item-vote-voted-up result) :up)
           ((steam::get-user-item-vote-voted-down result) :down)
@@ -517,8 +513,8 @@
           (T :unknown))))
 
 (defmethod complete-from-query ((file workshop-file) (query workshop-query) &optional (index 0))
-  (let ((steamapps (interface 'steamapps (steamworks (steamworkshop file))))
-        (steamfriends (interface 'steamfriends (steamworks (steamworkshop file)))))
+  (let ((steamapps (interface 'steamapps file))
+        (steamfriends (interface 'steamfriends file)))
     (let ((details (get-details query index)))
       (macrolet ((sets (slot function &optional (transform 'result))
                    `(setf (slot-value file ',slot)
@@ -568,7 +564,7 @@
 
 (defmethod complete-from-query ((file workshop-file) (query (eql T)) &optional (index 0))
   (declare (ignore index))
-  (let ((query (make-instance 'workshop-detail-query :steamworkshop (steamworkshop file)
+  (let ((query (make-instance 'workshop-detail-query :interface (iface file)
                                                      :app (app file)
                                                      :files (list file))))
     (execute query)

@@ -73,12 +73,13 @@
 (defmethod app ((apps steamapps))
   (find-app apps T))
 
-(defclass app (c-object)
-  ((steamapps :initarg :steamapps :reader steamapps)))
+(defclass app (interface-object)
+  ()
+  (:default-initargs :interface 'steamapps))
 
-(define-interface-submethod steamapps app installed-p (steam::apps-bis-app-installed))
-(define-interface-submethod steamapps app subscribed-p (steam::apps-bis-subscribed-app))
-(define-interface-submethod steamapps app purchase-time (steam::apps-get-earliest-purchase-unix-time)
+(define-interface-submethod app installed-p (steam::apps-bis-app-installed))
+(define-interface-submethod app subscribed-p (steam::apps-bis-subscribed-app))
+(define-interface-submethod app purchase-time (steam::apps-get-earliest-purchase-unix-time)
   (unix->universal result))
 
 (defmethod app-id ((app app))
@@ -86,14 +87,14 @@
 
 (defmethod install-directory ((app app))
   (cffi:with-foreign-object (buffer :char 256)
-    (let ((count (steam::apps-get-app-install-dir (handle (steamapps app)) (handle app) buffer 256)))
+    (let ((count (steam::apps-get-app-install-dir (iface* app) (handle app) buffer 256)))
       ;; KLUDGE: I'm actually unsure that parsing with UTF-8 is correct here.
       ;;         The code page on windows might be different for the FS...
       (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8))))
 
 (defmethod list-installed-depots ((app app))
   (cffi:with-foreign-object (buffer 'steam::depot-id-t 256)
-    (loop for i from 0 below (steam::apps-get-installed-depots (handle (steamapps app)) (handle app) buffer 256)
+    (loop for i from 0 below (steam::apps-get-installed-depots (iface* app) (handle app) buffer 256)
           for handle = (cffi:mem-aref buffer 'steam::depot-id-t i)
           collect (make-instance 'depot :handle handle))))
 
@@ -103,7 +104,7 @@
                               (steam-id :uint32)
                               (signature :uint32)
                               (signature-len :uint32))
-    (let ((copied (steam::app-ticket-get-app-ownership-ticket-data (appticket-handle (steamapps app)) (handle app)
+    (let ((copied (steam::app-ticket-get-app-ownership-ticket-data (appticket-handle (iface app)) (handle app)
                                                                    buffer 256 app-id steam-id signature signature-len))
           (steam-id (cffi:mem-ref steam-id :uint32))
           (signature (cffi:mem-ref signature :uint32))
@@ -129,14 +130,14 @@
       (setf (slot-value dlc 'available) (cffi:mem-ref available :bool))
       (setf (slot-value dlc 'display-name) (cffi:foreign-string-to-lisp name :count 256 :encoding :utf-8)))))
 
-(define-interface-submethod steamapps dlc installed-p (steam::apps-bis-dlc-installed))
-(define-interface-submethod steamapps dlc install (steam::apps-install-dlc))
-(define-interface-submethod steamapps dlc uninstall (steam::apps-uninstall-dlc))
+(define-interface-submethod dlc installed-p (steam::apps-bis-dlc-installed))
+(define-interface-submethod dlc install (steam::apps-install-dlc))
+(define-interface-submethod dlc uninstall (steam::apps-uninstall-dlc))
 
 (defmethod download-status ((dlc dlc))
   (cffi:with-foreign-objects ((downloaded :uint64)
                               (total :uint64))
-    (when (steam::apps-get-dlc-download-progress (handle (steamapps dlc)) (handle dlc) downloaded total)
+    (when (steam::apps-get-dlc-download-progress (iface* dlc) (handle dlc) downloaded total)
       (list :downloaded (cffi:mem-ref downloaded :uint64)
             :total (cffi:mem-ref total :uint64)))))
 

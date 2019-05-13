@@ -25,6 +25,7 @@
                (:file "steamfriends")
                (:file "steamapps")
                (:file "steamworkshop")
+               (:file "steamcontroller")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

@@ -108,17 +108,15 @@
   )
 
 (defmethod haptic-pulse ((controller controller) pad &key (duration 0.1) (pause 0.1) (repeat 1))
-  (flet ((microsecs (s) (floor (* s 1000000))))
-    (if (<= repeat 1)
-        (steam::controller-trigger-haptic-pulse (iface* controller) (handle controller) pad
-                                                (microsecs duration))
-        (steam::controller-trigger-repeated-haptic-pulse (iface* controller) (handle controller) pad
-                                                         (microsecs duration) (microsecs pause) repeat 0))))
+  (if (<= repeat 1)
+      (steam::controller-trigger-haptic-pulse (iface* controller) (handle controller) pad
+                                              (microsecs duration))
+      (steam::controller-trigger-repeated-haptic-pulse (iface* controller) (handle controller) pad
+                                                       (microsecs duration) (microsecs pause) repeat 0)))
 
 (defmethod vibrate ((controller controller) &key (duration 0.1) (left duration) (right duration))
-  (flet ((microsecs (s) (floor (* s 1000000))))
-    (steam::controller-trigger-vibration (iface* controller) (handle controller)
-                                         (microsecs left) (microsecs right))))
+  (steam::controller-trigger-vibration (iface* controller) (handle controller)
+                                       (microsecs left) (microsecs right)))
 
 (defclass action-set (interface-object)
   ()

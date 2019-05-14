@@ -34,7 +34,10 @@
     `(defmethod ,method ,method-args
        (let ((result (,function (handle ,interface) ,@(apply #'remove-all (mapcar #'delist call)
                                                              function LAMBDA-LIST-KEYWORDS))))
-         ,@(or transform `(result))))))
+         ,@(or transform
+               (when (listp method)
+                 (list (delist (first call))))
+               `(result))))))
 
 (defmacro define-interface-submethod (sub method call &body transform)
   (let ((function (find-if (lambda (a) (and (symbolp a) (eq (symbol-package a) (find-package '#:steam)))) call))

@@ -9,6 +9,8 @@
 (defvar *steamworks* NIL)
 (defvar *default-interfaces*
   '(steamclient steamutils steamuser steamfriends steamapps steamworkshop))
+(defvar *default-server-interfaces*
+  '(steamclient steamutils steamuser steamfriends steamapps steamgameserver))
 
 (defun steamworks (&optional container)
   (if container
@@ -97,7 +99,8 @@
    (game-port :initarg :game-port :reader game-port)
    (query-port :initarg :query-port :reader query-port)
    (server-mode :initarg :server-mode :reader server-mode)
-   (version-string :initarg :version-string :reader version-string)))
+   (version-string :initarg :version-string :reader version-string))
+  (:default-initargs :interfaces *default-server-interfaces*))
 
 (defmethod initialize-instance ((steamworks steamworks-server) &key ip-address port game-port query-port server-mode version-string)
   (call-next-method)
@@ -106,6 +109,12 @@
   (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (steam::game-server-get-hsteam-pipe)))
   (setf (slot-value steamworks 'user) (make-instance 'user :handle (steam::game-server-get-hsteam-user)
                                                            :pipe (pipe steamworks))))
+
+(defmethod initialize-instance :after ((steamworks steamworks-server) &key directory)
+  ;; KLUDGE: We do this here rather than in steamgameserver as this step is /mandatory/.
+  (assert (string/= "" directory) (directory))
+  (check-utf8-size 32 directory)
+  (steam::game-server-set-mod-dir (handle (interface 'steamgameserver steamworks)) directory))
 
 (defmethod free-handle-function ((steamworks steamworks-server) handle)
   (lambda ()

@@ -119,6 +119,13 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
     (setf (ldb (byte 8  0) x) (parse-integer ipstring :start (1+ d3)))
     x))
 
+(defun int->ipv4 (ipint)
+  (format NIL "~d.~d.~d.~d"
+          (ldb (byte 8 24) ipint)
+          (ldb (byte 8 16) ipint)
+          (ldb (byte 8  8) ipint)
+          (ldb (byte 8  0) ipint)))
+
 (defun remove-all (sequence &rest items)
   (remove-if (lambda (i) (find i items)) sequence))
 
@@ -168,3 +175,15 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
   ;; According to https://en.cppreference.com/w/c/string/byte/isprint
   ;; which is in the steam api for some reason.
   (find char "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"))
+
+(defun check-utf8-size (length string)
+  (when (<= length (babel:string-size-in-octets string :encoding :utf-8))
+    (error "FIXME: string too long.")))
+
+(declaim (inline microsecs))
+(defun microsecs (s)
+  (floor (* s 1000000)))
+
+(declaim (inline millisecs))
+(defun millisecs (s)
+  (floor (* s 1000)))

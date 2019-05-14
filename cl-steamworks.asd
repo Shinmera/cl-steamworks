@@ -26,10 +26,12 @@
                (:file "steamapps")
                (:file "steamworkshop")
                (:file "steamcontroller")
+               (:file "steamgameserver")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria
                :trivial-features
                :trivial-garbage
+               :babel
                :cffi
                (:feature :sbcl (:require :sb-posix))))

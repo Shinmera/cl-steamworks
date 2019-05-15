@@ -27,6 +27,7 @@
                (:file "steamworkshop")
                (:file "steamcontroller")
                (:file "steamgameserver")
+               (:file "steamhtmlsurface")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

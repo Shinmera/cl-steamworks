@@ -7,11 +7,13 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defclass steamgameserver (interface)
-  ())
+  ((stats-handle :initarg :stats-handle :reader stats-handle)))
 
-(defmethod initialize-instance :after ((interface steamgameserver) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamgameserver) &key version stats-version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-game-server
-                                                  (t-or version steam::steamgameserver-interface-version))))
+                                                  (t-or version steam::steamgameserver-interface-version)))
+  (setf (stats-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-game-server-stats
+                                                        (t-or version steam::steamgameserverstats-interface-version))))
 
 ;; FIXME: token mechanism
 ;; FIXME: crawl constants
@@ -120,4 +122,56 @@
 (defmethod (setf spectator-server) ((value string) (gameserver steamgameserver))
   (check-utf8-size 32 value)
   (steam::game-server-set-spectator-server-name (handle gameserver) value)
+  value)
+
+(defmethod user-stats ((user friend) (gameserver steamgameserver) &key stats achievements)
+  (with-call-result (result :poll T) (steam::game-server-stats-request-user-stats (stats-handle gameserver) (steam-id user))
+    (with-error-on-failure (steam::gsstats-received-result result))
+    (list :stats
+          (cffi:with-foreign-object (data :int32)
+            (loop for stat in stats
+                  collect (destructuring-bind (name type) (enlist stat :int32)
+                            (check-utf8-size 128 name)
+                            (ecase type
+                              (:int32
+                               (unless (steam::game-server-stats-get-user-stat (stats-handle gameserver) (steam-id user) name data)
+                                 (error "FIXME: No such user stat"))
+                               (cons name (cffi:mem-ref data :int32)))
+                              (:float
+                               (unless (steam::game-server-stats-get-user-stat0 (stats-handle gameserver) (steam-id user) name data)
+                                 (error "FIXME: No such user stat"))
+                               (cons name (cffi:mem-ref data :float)))))))
+          :achievements
+          (cffi:with-foreign-object (data :bool)
+            (loop for achievement in achievements
+                  do (unless (steam::game-server-stats-get-user-achievement (stats-handle gameserver) (steam-id user) achievement data)
+                       (error "FIXME: No such achievement"))
+                  collect (cons achievement (cffi:mem-ref data :bool)))))))
+
+(defmethod (setf user-stats) ((value cons) (user friend) (gameserver steamgameserver) &key sync)
+  (with-call-result (result :poll T)  (steam::game-server-stats-request-user-stats (stats-handle gameserver) (steam-id user))
+    (with-error-on-failure (steam::gsstats-received-result result))
+    (destructuring-bind (&key stats achievements avgrates) value
+      (loop for (stat . value) in stats
+            do (unless (etypecase value
+                         (integer
+                          (steam::game-server-stats-set-user-stat (stats-handle gameserver) (steam-id user) stat value))
+                         (float
+                          (steam::game-server-stats-set-user-stat0 (stats-handle gameserver) (steam-id user) stat (coerce value 'single-float))))
+                 (error "FIXME: No such user stat")))
+      (loop for (achievement . value) in achievements
+            do (unless (if value
+                           (steam::game-server-stats-set-user-achievement (stats-handle gameserver) (steam-id user) achievement)
+                           (steam::game-server-stats-clear-user-achievement (stats-handle gameserver) (steam-id user) achievement))
+                 (error "FIXME: No such achievement")))
+      (loop for (avgrate count length) in avgrates
+            do (unless (steam::game-server-stats-update-user-avg-rate-stat (stats-handle gameserver) (steam-id user) avgrate count length)
+                 (error "FIXME: No such avgrate")))))
+  (when sync
+    (loop for i from 0 below 10
+          do (with-call-result (result :poll T) (steam::game-server-stats-store-user-stats (stats-handle gameserver) (steam-id user))
+               (when (eq :ok (steam::gsstats-stored-result result))
+                 (return)))
+             (sleep 0.1)
+          finally (error "FIXME: failed to store results after 10 retries.")))
   value)

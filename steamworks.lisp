@@ -43,6 +43,7 @@
 (defmethod initialize-instance :after ((steamworks steamworks) &key (interfaces *default-interfaces*))
   (tg:finalize steamworks (free-handle-function steamworks NIL))
   (create-interfaces steamworks interfaces)
+  (create-global-callbacks)
   (setf *steamworks* steamworks))
 
 (defmethod free ((steamworks steamworks))

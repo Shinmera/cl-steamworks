@@ -6,6 +6,34 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
+(defvar *global-callbacks* (make-hash-table :test 'eq))
+
+(defun global-callback (name &optional (errorp T))
+  (or (gethash name *global-callbacks*)
+      (when errorp (error "FIXME: no such callback"))))
+
+(defun (setf global-callback) (callback name)
+  (check-type name symbol)
+  (check-type callback (cons symbol (cons function null)))
+  (setf (gethash name *global-callbacks*) callback))
+
+(defun remove-global-callback (name)
+  (remhash name *global-callbacks*))
+
+(defmacro define-callback (struct-type (result &rest slots) &body body)
+  (destructuring-bind (name type) (enlist struct-type struct-type)
+    `(flet ((callback-thunk (,result)
+              (let ,(loop for slot in slots
+                          collect (destructuring-bind (var name) (enlist slot slot)
+                                    (list var `(,(intern (format NIL "~a-~a" type name) '#:steam) ,result))))
+                ,@body)))
+       (setf (global-callback ',name)
+             (list ',type #'callback-thunk)))))
+
+(defun create-global-callbacks ()
+  (loop for (struct-type thunk) being the hash-values of *global-callbacks*
+        do (make-instance 'closure-callback :closure thunk :struct-type struct-type)))
+
 ;; FIXME: Allow defining global callbacks that are registered on steamworks init.
 
 (defclass %callback (c-managed-object)

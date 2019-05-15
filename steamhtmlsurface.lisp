@@ -14,9 +14,8 @@
                                                   (t-or version steam::steamhtmlsurface-interface-version)))
   (steam::htmlsurface-init (handle interface)))
 
-(defmethod free-handle-function ((htmlsurface steamhtmlsurface))
-  (let ((handle (handle htmlsurface)))
-    (lambda () (steam::htmlsurface-shutdown handle))))
+(defmethod free-handle-function ((htmlsurface steamhtmlsurface) handle)
+  (lambda () (steam::htmlsurface-shutdown handle)))
 
 (defmethod make-browser ((htmlsurface steamhtmlsurface) &key user-agent css)
   (make-instance 'browser :interface htmlsurface :user-agent user-agent :css css))
@@ -35,10 +34,9 @@
       ;; Apparently this cannot fail. Weird. At least, there's no failure result or anything.
       (setf (handle browser) (steam::html-browser-ready-browser-handle result)))))
 
-(defmethod free-handle-function ((browser browser))
-  (let ((interface (iface* browser))
-        (handle (handle browser)))
-    (steam::htmlsurface-remove-browser interface handle)))
+(defmethod free-handle-function ((browser browser) handle)
+  (let ((interface (iface* browser)))
+    (lambda () (steam::htmlsurface-remove-browser interface handle))))
 
 (define-interface-submethod browser add-header (steam::htmlsurface-add-header (key string) (value string)))
 (define-interface-submethod browser (setf request-allowed-p) (value steam::htmlsurface-allow-start-request))
@@ -51,6 +49,9 @@
 (define-interface-submethod browser go-forward (steam::htmlsurface-go-forward))
 (define-interface-submethod browser reload (steam::htmlsurface-reload))
 (define-interface-submethod browser (setf backgrounded) (value steam::htmlsurface-set-background-mode))
+(define-interface-submethod browser (setf focused) (value steam::htmlsurface-set-key-focus))
+(define-interface-submethod browser stop (steam::htmlsurface-stop-load))
+(define-interface-submethod browser view-page-source (steam::htmlsurface-view-source))
 
 (defmethod find-in-page ((browser browser) &key (string NIL string-p) reverse)
   (cond ((or (null (find-string browser))
@@ -106,3 +107,16 @@
 (defmethod scroll ((browser browser) &key x y)
   (when x (steam::htmlsurface-set-horizontal-scroll (iface* browser) (handle browser) x))
   (when y (steam::htmlsurface-set-horizontal-scroll (iface* browser) (handle browser) y)))
+
+(defmethod zoom ((browser browser) (factor real) &key x y)
+  (steam::htmlsurface-set-page-scale-factor (iface* browser) (handle browser) (coerce factor 'single-float) (or x 0) (or y 0)))
+
+(defmethod (setf size) ((value cons) (browser browser))
+  (steam::htmlsurface-set-size (iface* browser) (handle browser) (car value) (cdr value)))
+
+(defmethod open-page ((url string) (browser browser) &key get post)
+  (let ((url (format NIL "~a~@[?~/cl-steamworks::format-query/~]" url get))
+        (post (format NIL "~/cl-steamworks::format-query/" post)))
+    (steam::htmlsurface-load-url (iface* browser) (handle browser) url post)))
+
+;; FIXME: handle callbacks

@@ -16,11 +16,10 @@
                                                   (t-or version steam::steamcontroller-interface-version)))
   (steam::controller-init (handle interface)))
 
-(defmethod free-handle-function ((steamcontroller steamcontroller))
-  (let ((handle (handle steamcontroller)))
-    (lambda () (steam::controller-shutdown handle))))
+(defmethod free-handle-function ((steamcontroller steamcontroller) handle)
+  (lambda () (steam::controller-shutdown handle)))
 
-(define-interface-method steamcontroller action-set (steam::controller-get-action-set-handle (name string))
+(define-interface-method steamcontroller find-action-set (steam::controller-get-action-set-handle (name string))
   (when (= 0 result)
     (error "FIXME: no action set found"))
   (make-instance 'action-set :interface steamcontroller :handle result))

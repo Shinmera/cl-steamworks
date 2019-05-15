@@ -7,10 +7,31 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defclass interface (c-object)
-  ((steamworks :initarg :steamworks :initform (error "STEAMWORKS required.") :reader %steamworks)))
+  ((steamworks :initarg :steamworks :initform (error "STEAMWORKS required.") :reader %steamworks)
+   (object-cache :initform (make-hash-table :test 'eql) :reader object-cache)))
+
+;; FIXME: make sure to consult cache before constructing new objects...
 
 (defmethod interface ((name symbol) (interface interface))
   (interface (%steamworks interface)))
+
+(defmethod interface-object (handle (name symbol))
+  (interface-object handle (interface name T)))
+
+(defmethod interface-object (handle (interface interface))
+  (gethash handle (object-cache interface)))
+
+(defmethod (setf interface-object) (object handle (name symbol))
+  (setf (interface-object handle (interface name T)) object))
+
+(defmethod (setf interface-object) (object handle (interface interface))
+  (setf (gethash handle (object-cache interface)) object))
+
+(defmethod remove-interface-object (handle (name symbol))
+  (remove-interface-object handle (interface name T)))
+
+(defmethod remove-interface-object (handle (interface interface))
+  (remhash handle (object-cache interface)))
 
 (defun get-interface-handle (steamworks function &rest args)
   (let ((handle (apply function (handle (interface 'steamclient steamworks)) args)))
@@ -52,11 +73,12 @@
 (defclass interface-object (c-object)
   ((interface :reader iface)))
 
-(defmethod initialize-instance :after ((object interface-object) &key interface (steamworks (steamworks)))
+(defmethod initialize-instance :after ((object interface-object) &key interface steamworks)
   (setf (slot-value object 'interface)
         (etypecase interface
           (interface interface)
-          ((and symbol (not null)) (interface interface steamworks)))))
+          ((and symbol (not null)) (interface interface (or steamworks (steamworks))))))
+  (setf (interface-object (handle object) (iface object)) object))
 
 (defun iface* (object)
   (handle (iface object)))

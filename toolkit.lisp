@@ -213,3 +213,7 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
              (url-encode val :stream stream))
            (when (cdr cons)
              (write-char #\& stream))))
+
+(defun destructure-query (query)
+  ;; TODO: Implement
+  ())

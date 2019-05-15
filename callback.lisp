@@ -6,6 +6,8 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
+;; FIXME: Allow defining global callbacks that are registered on steamworks init.
+
 (defclass %callback (c-managed-object)
   ((struct-type :initarg :struct-type :accessor struct-type)))
 
@@ -142,6 +144,6 @@
          (if ,interval
              (loop for ,result = (maybe-result ,instance)
                    do (if ,result
-                          (,thunk ,result)
+                          (return (,thunk ,result))
                           (sleep ,interval)))
              ,instance)))))

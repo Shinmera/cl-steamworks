@@ -231,3 +231,9 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
   `(cffi:with-foreign-objects ((,var ,type))
      ,@body
      (cffi:mem-ref ,var ,type)))
+
+(defmacro with-foreign-values (bindings &body body)
+  `(cffi:with-foreign-objects ,bindings
+     ,@body
+     (values ,@(loop for (var type) in bindings
+                     collect `(cffi:mem-ref ,var ,type)))))

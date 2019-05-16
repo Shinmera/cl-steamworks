@@ -75,12 +75,15 @@
 
 (defun strip-hungarian (string)
   (let ((i 0))
-    (loop while (or (lower-case-p (char string i))
-                    (char= (char string i) #\_))
+    (when (prefix-p "m_" string)
+      (setf string (subseq string 2)))
+    (loop while (and (< i (length string))
+                     (or (lower-case-p (char string i))
+                         (char= (char string i) #\_)))
           do (incf i))
-    (if (= i (length string))
-        string
-        (subseq string i))))
+    (if (< i (length string))
+        (subseq string i)
+        string)))
 
 (defun kw (name)
   (intern (string-upcase name) "KEYWORD"))

@@ -61,3 +61,10 @@
       (tg:cancel-finalization object)
       (setf (handle object) NIL)
       (funcall (free-handle-function object handle)))))
+
+(defmacro with-c-objects (bindings &body body)
+  `(let ,bindings
+     (unwind-protect (progn
+                       ,@body)
+       ,@(loop for binding in bindings
+               collect `(free ,(first binding))))))

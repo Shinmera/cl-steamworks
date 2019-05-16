@@ -13,7 +13,7 @@
 
 (defclass steaminventory (interface)
   ((prices-available-p :initform NIL :accessor prices-available-p)
-   (local-currency :inintform NIL :accessor local-currency)))
+   (local-currency :initform NIL :accessor local-currency)))
 
 (defmethod initialize-instance :after ((interface steaminventory) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-inventory
@@ -103,7 +103,7 @@
 
 (defmethod grant-promo ((items cons))
   (with-inventory-result (handle (iface (car items)))
-    (cffi:with-foreign-object ((g 'steam::steam-item-def-t (length items)))
+    (cffi:with-foreign-object (g 'steam::steam-item-def-t (length items))
       (loop for i from 0
             for el in items
             do (setf (cffi:mem-aref 'steam::steam-item-def-t i) (handle el)))
@@ -112,8 +112,8 @@
 
 (defun generate-items (items)
   (with-inventory-result (handle (iface (caar items)))
-    (cffi:with-foreign-object ((g 'steam::steam-item-def-t (length items))
-                               (q :uint32 (length items)))
+    (cffi:with-foreign-objects ((g 'steam::steam-item-def-t (length items))
+                                (q :uint32 (length items)))
       (loop for i from 0
             for (el qu) in items
             do (setf (cffi:mem-aref 'steam::steam-item-def-t i) (handle el))
@@ -139,7 +139,7 @@
                                 (q :uint32 (length consume)))
       (loop for i from 0
             for (el qu) in consume
-            do (check-type el 'item-instance)
+            do (check-type el item-instance)
                (setf (cffi:mem-aref c 'steam::steam-item-def-t i) (handle el))
                (setf (cffi:mem-aref q :uint32) qu))
       (setf (cffi:mem-aref g 'steam::steam-item-def-t 0) (handle grant))
@@ -183,7 +183,7 @@
   ()
   (:default-initargs :interface 'steaminventory))
 
-(defmethod allocate-handle ((result inventory-result))
+(defmethod allocate-handle ((result inventory-result) &key)
   (error "Cannot allocate an inventory result."))
 
 (defmethod free-handle-function ((result inventory-result) handle)

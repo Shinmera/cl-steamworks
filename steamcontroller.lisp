@@ -11,10 +11,12 @@
 (defclass steamcontroller (c-managed-object interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamcontroller) &key version steamworks)
-  (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-controller
-                                                  (t-or version steam::steamcontroller-interface-version)))
+(defmethod initialize-instance :after ((interface steamcontroller) &key)
   (steam::controller-init (handle interface)))
+
+(defmethod allocate-handle ((interface steamcontroller) &key version steamworks)
+  (get-interface-handle* steamworks 'steam::client-get-isteam-controller
+                         (t-or version steam::steamcontroller-interface-version)))
 
 (defmethod free-handle-function ((steamcontroller steamcontroller) handle)
   (lambda () (steam::controller-shutdown handle)))

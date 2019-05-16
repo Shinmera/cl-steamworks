@@ -73,7 +73,8 @@
 (defclass interface-object (c-object)
   ((interface :reader iface)))
 
-(defmethod initialize-instance :after ((object interface-object) &key interface steamworks)
+(defmethod initialize-instance ((object interface-object) &key interface steamworks)
+  (call-next-method)
   (setf (slot-value object 'interface)
         (etypecase interface
           (interface interface)

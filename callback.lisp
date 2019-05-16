@@ -147,6 +147,16 @@
   (unwind-protect (funcall (closure callresult) (if failed NIL parameter))
     (free callresult)))
 
+(defun poll-for-result (type handle &key (pause 0.01))
+  (let ((instance (make-instance 'closure-callresult
+                                 :token handle
+                                 :struct-type type
+                                 :closure (constantly NIL))))
+    (loop for result = (maybe-result instance)
+          do (if result
+                 (return result)
+                 (sleep pause)))))
+
 (defmacro with-call-result ((result &key poll) (method interface &rest args) &body body &environment env)
   ;; KLUDGE: in order to infer the struct-type we need access to the method name
   ;;         which extends the macro to the call and disallows passing a token

@@ -226,3 +226,8 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
         for sep = (position #\= part)
         collect (cons (url-decode part :end sep)
                       (url-decode part :start (1+ sep)))))
+
+(defmacro with-foreign-value ((var type) &body body)
+  `(cffi:with-foreign-objects ((,var ,type))
+     ,@body
+     (cffi:mem-ref ,var ,type)))

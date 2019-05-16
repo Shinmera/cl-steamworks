@@ -10,15 +10,17 @@
   ())
 
 (defmethod initialize-instance :after ((interface steamhtmlsurface) &key version steamworks)
-  (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-htmlsurface
-                                                  (t-or version steam::steamhtmlsurface-interface-version)))
   (steam::htmlsurface-init (handle interface)))
+
+(defmethod allocate-handle ((interface steamhtmlsurface) &key version steamworks)
+  (get-interface-handle* steamworks 'steam::client-get-isteam-htmlsurface
+                         (t-or version steam::steamhtmlsurface-interface-version)))
 
 (defmethod free-handle-function ((htmlsurface steamhtmlsurface) handle)
   (lambda () (steam::htmlsurface-shutdown handle)))
 
 ;; WTF: Why is this not on a per-browser basis?
-(defmethod (setf cookie) ((htmlsurface steamhtmlsurface) (host string) (key string) (value string) &key (path "/") (expires 0) secure http-only)
+(defmethod (setf cookie) ((value string) (htmlsurface steamhtmlsurface) (host string) (key string) &key (path "/") (expires 0) secure http-only)
   (steam::htmlsurface-set-cookie (handle htmlsurface) host key value path expires secure http-only))
 
 (defclass browser (c-managed-object interface-object)
@@ -27,11 +29,10 @@
    (find-string :initform NIL :accessor find-string))
   (:default-initargs :interface 'steamhtmlsurface))
 
-(defmethod initialize-instance :after ((browser browser) &key user-agent css)
-  (unless (handle browser)
-    (with-call-result (result :poll T) (steam::htmlsurface-create-browser (iface* browser) (or user-agent (cffi:null-pointer)) (or css (cffi:null-pointer)))
-      ;; Apparently this cannot fail. Weird. At least, there's no failure result or anything.
-      (setf (handle browser) (steam::html-browser-ready-browser-handle result)))))
+(defmethod allocate-handle ((browser browser) &key user-agent css)
+  (with-call-result (result :poll T) (steam::htmlsurface-create-browser (iface* browser) (or user-agent (cffi:null-pointer)) (or css (cffi:null-pointer)))
+    ;; Apparently this cannot fail. Weird. At least, there's no failure result or anything.
+    (setf (handle browser) (steam::html-browser-ready-browser-handle result))))
 
 (defmethod free-handle-function ((browser browser) handle)
   (let ((interface (iface* browser)))

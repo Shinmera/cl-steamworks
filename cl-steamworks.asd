@@ -28,6 +28,7 @@
                (:file "steamcontroller")
                (:file "steamgameserver")
                (:file "steamhtmlsurface")
+               (:file "steamhttp")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

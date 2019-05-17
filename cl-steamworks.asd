@@ -30,6 +30,7 @@
                (:file "steamhtmlsurface")
                (:file "steamhttp")
                (:file "steaminventory")
+               (:file "steammatchmaking")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

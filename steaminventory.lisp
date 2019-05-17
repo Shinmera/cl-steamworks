@@ -82,13 +82,39 @@
                                (error "FIXME: failed")))))
     (mapcar #'first (list-items result))))
 
+(defmethod update-item-properties ((inventory steaminventory) updates)
+  (let ((handle (steam::inventory-start-update-properties (handle inventory))))
+    (dolist (update updates)
+      (destructuring-bind (item property &optional (value NIL value-p)) update
+        (unless (if value-p
+                    (etypecase value
+                      (string (steam::inventory-set-property (handle inventory) handle (handle item) property value))
+                      (boolean (steam::inventory-set-property0 (handle inventory) handle (handle item) property value))
+                      ((unsigned-byte 64) (steam::inventory-set-property1 (handle inventory) handle (handle item) property value))
+                      (float (steam::inventory-set-property2 (handle inventory) handle (handle item) property (coerce value 'single-float))))
+                    (steam::inventory-remove-property (handle inventory) handle (handle item) property))
+          (error "FIXME: failed"))))
+    (with-inventory-result (result inventory)
+      (unless (steam::inventory-submit-update-properties (handle inventory) handle result)
+        (error "FIXME: failed")))))
+
 (defclass item-instance (interface-object)
   ()
   (:default-initargs :interface 'steaminventory))
 
 (defmethod consume ((item item-instance) &optional (quantity 1))
   (with-inventory-result (handle (iface item))
-    (unless (steam::inventory-consume-item (iface* item) handle (handle item) quantity))))
+    (unless (steam::inventory-consume-item (iface* item) handle (handle item) quantity)
+      (error "FIXME: failed"))))
+
+(defmethod transfer ((source item-instance) (destination item-instance) &optional (quantity 1))
+  (with-inventory-result (handle (iface source))
+    (unless (steam::inventory-transfer-item-quantity (iface* item) handle (handle source) quantity (handle destination))
+      (error "FIXME: failed"))))
+
+(defmethod (setf property) (value (item item-instance) (property string))
+  (check-type value (or string boolean (unsigned-byte 64) float))
+  (update-item-properties (iface item) (list (list item property value))))
 
 ;; FIXME: GetItemsById
 
@@ -115,9 +141,11 @@
     (cffi:with-foreign-objects ((g 'steam::steam-item-def-t (length items))
                                 (q :uint32 (length items)))
       (loop for i from 0
-            for (el qu) in items
-            do (setf (cffi:mem-aref 'steam::steam-item-def-t i) (handle el))
-               (setf (cffi:mem-aref :uint32 i) qu))
+            for item in items
+            do (destructuring-bind (el qu) (enlist item 1)
+                 (check-type el item)
+                 (setf (cffi:mem-aref 'steam::steam-item-def-t i) (handle el))
+                 (setf (cffi:mem-aref :uint32 i) qu)))
       (unless (steam::inventory-add-promo-items (iface* (caar items)) handle defs (length items))
         (error "FIXME: failed")))))
 
@@ -138,10 +166,11 @@
                                 (g 'steam::steam-item-def-t 1)
                                 (q :uint32 (length consume)))
       (loop for i from 0
-            for (el qu) in consume
-            do (check-type el item-instance)
-               (setf (cffi:mem-aref c 'steam::steam-item-def-t i) (handle el))
-               (setf (cffi:mem-aref q :uint32) qu))
+            for item in consume
+            do (destructuring-bind (el qu) (enlist item 1)
+                 (check-type el item-instance)
+                 (setf (cffi:mem-aref c 'steam::steam-item-def-t i) (handle el))
+                 (setf (cffi:mem-aref q :uint32) qu)))
       (setf (cffi:mem-aref g 'steam::steam-item-def-t 0) (handle grant))
       (unless (steam::inventory-exchange-items (iface* consume) handle g q 1 c q 1)
         (error "FIXME: failed")))))
@@ -178,6 +207,25 @@
           (error "FIXME: failed"))
         (setf (slot-value item 'price) (list (cffi:mem-ref base :uint64)
                                              (cffi:mem-ref price :uint64))))))
+
+(defmethod purchase-items ((items cons))
+  (with-c-objects ((p 'steam::steam-item-def-t (length items))
+                   (q :uint32 (length items)))
+    (loop for i from 0
+          for item in items
+          do (destructuring-bind (el qu) (enlist item 1)
+               (check-type el item)
+               (setf (cffi:mem-aref p 'steam::steam-item-def-t i) (handle el))
+               (setf (cffi:mem-aref q :uint32 i) qu)))
+    (with-call-result (result :poll T) (steam::inventory-start-purchase (iface* (caar items)) p q (length items))
+      (with-error-on-failure (steam::steam-inventory-start-purchase-result result))
+      (list :order-id (steam::steam-inventory-start-purchase-order-id result)
+            :transaction-id (steam::steam-inventory-start-purchase-trans-id result)))))
+
+(defmethod trigger-item-drop ((item item))
+  (with-inventory-result (handle (iface item))
+    (unless (steam::inventory-trigger-item-drop (iface* item) handle (handle item))
+      (error "FIXME: failed"))))
 
 (defclass inventory-result (c-managed-object interface-item)
   ()

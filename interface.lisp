@@ -45,6 +45,9 @@
 (defmethod call-with ((interface interface) function &rest args)
   (apply function (handle interface) args))
 
+(defmethod call-with ((handle integer) function &rest args)
+  (apply function handle args))
+
 (defmethod call-with ((interface symbol) function &rest args)
   (apply #'call-with (interface interface (steamworks)) function args))
 
@@ -68,7 +71,10 @@
        (let ((result (,function (handle (iface ,sub)) (handle ,sub)
                                 ,@(apply #'remove-all (mapcar #'delist call)
                                          function LAMBDA-LIST-KEYWORDS))))
-         ,@(or transform `(result))))))
+         ,@(or transform
+               (when (listp method)
+                 (list (delist (first call))))
+               `(result))))))
 
 (defclass interface-object (c-object)
   ((interface :reader iface)))

@@ -77,6 +77,8 @@
    "steam_api.dll"
    :search-path #.(merge-pathnames "win64/" *static*)))
 
+(cffi:defctype steam::steam-id :unsigned-long)
+
 (defun maybe-load-low-level (&optional file)
   (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
     (when (probe-file file)

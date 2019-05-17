@@ -242,3 +242,7 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
   (if (string= "" string)
       (apply #'error datum args)
       string))
+
+(defun fill-foreign-ascii (pointer string &optional length)
+  (dotimes (i (max (or length 0) (length string)))
+    (setf (cffi:mem-aref pointer :uchar) (char-code (aref string i)))))

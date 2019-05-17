@@ -7,11 +7,13 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defclass steammatchmaking (interface)
-  ())
+  ((servers-handle :accessor servers-handle)))
 
 (defmethod initialize-instance :after ((interface steammatchmaking) &key version steamworks)
-  (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-inventory
-                                                  (t-or version steam::steammatchmaking-interface-version))))
+  (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-matchmaking
+                                                  (t-or version steam::steammatchmaking-interface-version)))
+  (setf (servers-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-matchmaking-servers
+                                                          (t-or list-version steam::steammatchmakingservers-interface-version))))
 
 (defmethod add-favorite-game ((interface steammatchmaking) (app app) (ip string) (connection-port integer) (query-port integer) &optional (list :favorite))
   (steam::matchmaking-add-favorite-game (handle interface) (app-id app) (ipv4->int ip) connection-port query-port
@@ -190,3 +192,103 @@
   (unless (steam::matchmaking-set-lobby-owner (iface* lobby) (handle lobby) (handle friend))
     (error "FIXME: failed"))
   friend)
+
+(defun compute-filters-count (filters)
+  (loop for filter in filters
+        sum (if (find (first filter) '(:and :or :nand :nor))
+                (1+ (compute-filters-count (rest filter)))
+                1)))
+
+(defun translate-server-filters (ptr filters)
+  (loop with stride = (cffi:foreign-type-size '(:struct steam::match-making-key-value-pair))
+        for (key . value) in filters
+        do (flet ((set-key-val (key &optional (val value))
+                    (fill-foreign-ascii ptr key)
+                    (fill-foreign-ascii (cffi:inc-pointer ptr 256) val 256)))
+             (ecase key
+               (:map (set-key-val "map"))
+               (:query-address (set-key-val "addr"))
+               (:game-address (set-key-val "gameaddr"))
+               (:game-data (set-key-val "gamedataand"))
+               (:tag (set-key-val "gametagsand"))
+               (:flag
+                (ecase value
+                  (:dedicated (set-key-val "dedicated" ""))
+                  (:secure (set-key-val "secure" ""))
+                  (:linux (set-key-val "linux" ""))))
+               (:players
+                (ecase value
+                  (:not-full (set-key-val "notfull" ""))
+                  (:some (set-key-val "hasplayers" ""))
+                  (:none (set-key-val "noplayers" ""))))
+               ((:and :or :nand :nor)
+                (let ((count (compute-filters-count value)))
+                  (set-key-val (string-downcase key) (princ-to-string count))
+                  (translate-server-filters (cffi:inc-pointer ptr stride) value)
+                  (cffi:incf-pointer ptr (* stride count))))))
+           (cffi:incf-pointer ptr stride)))
+
+(defmethod request-servers ((interface steammatchmaking) (app app) &key (list :internet) filters)
+  (let ((count (compute-filters-count filters)))
+    (cffi:with-foreign-objects ((array :pointer count)
+                                (cfilters '(:struct steam::match-making-key-value-pair) count))
+      (translate-server-filters cfilters filters)
+      (dotimes (i count)
+        (setf (cffi:mem-aref array :pointer i)
+              (cffi:mem-aptr cfilters '(:struct steam::match-making-key-value-pair) i)))
+      ;; FIXME: wtf is the response object??
+      (let* ((response (cffi:null-pointer))
+             (handle (ecase list
+                       (:favorites (steam::matchmaking-servers-request-favorites-server-list (handle interface) (handle app) array count response))
+                       (:friends (steam::matchmaking-servers-request-friends-server-list (handle interface) (handle app) array count response))
+                       (:history (steam::matchmaking-servers-request-history-server-list (handle interface) (handle app) array count response))
+                       (:internet (steam::matchmaking-servers-request-internet-server-list (handle interface) (handle app) array count response))
+                       (:spectator (steam::matchmaking-servers-request-spectator-server-list (handle interface) (handle app) array count response))
+                       (:lan (steam::matchmaking-servers-request-lanserver-list (handle interface) (handle app) response)))))
+        (make-instance 'server-list-query :interface interface :handle handle)))))
+
+(defmethod ping-server ((interface steammatchmaking) (ip string) (port integer))
+  ;; FIXME: wtf is the response object??
+  (let* ((response (cffi:null-pointer))
+         (handle (steam::matchmaking-servers-ping-server (handle interface) (ipv4->int ip) port response)))
+    (make-instance 'server-query :interface interface :handle handle)))
+
+(defmethod player-details ((interface steammatchmaking) (ip string) (port integer))
+  ;; FIXME: wtf is the response object??
+  (let* ((response (cffi:null-pointer))
+         (handle (steam::matchmaking-servers-player-details (handle interface) (ipv4->int ip) port response)))
+    (make-instance 'server-query :interface interface :handle handle)))
+
+(defmethod server-rules ((interface steammatchmaking) (ip string) (port integer))
+  ;; FIXME: wtf is the response object??
+  (let* ((response (cffi:null-pointer))
+         (handle (steam::matchmaking-servers-server-rules (handle interface) (ipv4->int ip) port response)))
+    (make-instance 'server-query :interface interface :handle handle)))
+
+(defclass server-query (c-managed-object interface-object)
+  ()
+  (:default-initargs :interface 'steammatchmaking))
+
+(defmethod free-handle-function ((query server-query) handle)
+  (let ((interface (servers-handle (iface query))))
+    (lambda ()
+      (steam::matchmaking-servers-cancel-server-query interface handle))))
+
+(defclass server-list-query (c-managed-object interface-object)
+  ())
+
+(defmethod free-handle-function ((query server-list-query) handle)
+  (let ((interface (servers-handle (iface query))))
+    (lambda ()
+      (steam::matchmaking-servers-cancel-query interface handle)
+      (steam::matchmaking-servers-release-request interface handle))))
+
+(define-interface-submethod server-list-query server-count (steam::matchmaking-servers-get-server-count))
+(define-interface-submethod server-list-query refreshing-p (steam::matchmaking-servers-is-refreshing))
+(define-interface-submethod server-list-query refresh (steam::matchmaking-servers-refresh-query))
+
+(defmethod list-servers ((query server-list-query))
+  (loop for i from 0 below (server-count query)
+        collect (cffi:mem-ref (steam::matchmaking-servers-get-server-details (iface* query) (handle query) i)
+                              '(:struct steam::gameserveritem))))
+

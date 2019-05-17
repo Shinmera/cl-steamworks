@@ -1,0 +1,83 @@
+#|
+ This file is a part of cl-steamworks
+ (c) 2019 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
+ Author: Nicolas Hafner <shinmera@tymoon.eu>
+|#
+
+(in-package #:org.shirakumo.fraf.steamworks)
+
+(defclass steammusicremote (c-managed-object interface)
+  ((remote-handle :accessor remote-handle)))
+
+(defmethod initialize-instance :after ((interface steammusicremote) &key (or name "remote"))
+  (steam::music-remote-register-steam-music-remote (handle interface) name))
+
+(defmethod allocate-handle ((interface steammusicremote) &key version steamworks)
+  (get-interface-handle* steamworks 'steam::client-get-isteam-music-remote
+                         (t-or version steam::steammusicremote-interface-version)))
+
+(defmethod free-handle-function ((interface steammusicremote) handle)
+  (lambda () (steam::music-remote-deregister-steam-music-remote handle)))
+
+(define-interface-method steammusicremote (setf activated) (value steam::music-remote-bactivation-success)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote remote-p (steam::music-remote-bis-current-music-remote))
+(define-interface-method steammusicremote entry-changed-p (steam::music-remote-current-entry-did-change))
+(define-interface-method steammusicremote (setf entry-available-p) (value steam::music-remote-current-entry-is-available)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote entry-will-change-p (steam::music-remote-current-entry-will-change))
+(define-interface-method steammusicremote (setf looped-p) (value steam::music-remote-enable-looped))
+(define-interface-method steammusicremote (setf playlists-enabled-p) (value steam::music-remote-enable-playlists)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf play-next-enabled-p) (value steam::music-remote-enable-play-next)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf play-previous-enabled-p) (value steam::music-remote-enable-play-previous)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf queue-enabled-p) (value steam::music-remote-enable-queue)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf shuffle-enabled-p) (value steam::music-remote-enable-shuffled)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote playlist-changed-p (steam::music-remote-playlist-did-change))
+(define-interface-method steammusicremote playlist-will-change-p (steam::music-remote-playlist-will-change))
+(define-interface-method steammusicremote queue-changed-p (steam::music-remote-queue-did-change))
+(define-interface-method steammusicremote queue-will-change-p (steam::music-remote-queue-will-change))
+(define-interface-method steammusicremote reset-playlist (steam::music-remote-reset-playlist-entries)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote reset-queue (steam::music-remote-reset-queue-entries)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf current-playlist-entry) ((value integer) steam::music-remote-set-current-playlist-entry)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf current-queue-entry) ((value integer) steam::music-remote-set-current-queue-entry)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf display-name) ((value string) steam::music-remote-set-display-name)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf elapsed-seconds) ((value integer) steam::music-remote-update-current-entry-elapsed-seconds)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf entry-text) ((value string) steam::music-remote-update-current-entry-text)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf looped-p) (value steam::music-remote-update-looped)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf playback-status) (value steam::music-remote-update-playback-status)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf shuffled-p) (value steam::music-remote-update-shuffled)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf volume) ((value float) steam::music-remote-update-volume)
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf queue-entry) ((value string) steam::music-remote-set-queue-entry (id integer) (position integer))
+  (unless result (error "FIXME: failed")))
+(define-interface-method steammusicremote (setf playlist-entry) ((value string) steam::music-remote-set-playlist-entry (id integer) (position integer))
+  (unless result (error "FIXME: failed")))
+
+(defmethod (setf icon) ((image pathname) (remote steammusicremote))
+  (setf (icon remote) (read-file-to-sharable-byte-vector image)))
+
+(defmethod (setf icon) ((image vector) (remote steammusicremote))
+  (cffi:with-pointer-to-vector-data (buffer image)
+    (steam::music-remote-set-pngicon-64x64 (handle remote) buffer (length image))))
+
+(defmethod (setf cover-art) ((image pathname) (remote steammusicremote))
+  (setf (cover-art remote) (read-file-to-sharable-byte-vector image)))
+
+(defmethod (setf cover-art) ((image vector) (remote steammusicremote))
+  (cffi:with-pointer-to-vector-data (buffer image)
+    (steam::music-remote-update-current-entry-cover-art (handle remote) buffer (length image))))

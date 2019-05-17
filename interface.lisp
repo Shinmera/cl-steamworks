@@ -52,17 +52,18 @@
   (apply #'call-with (interface interface (steamworks)) function args))
 
 (defmacro define-interface-method (interface method call &body transform)
-  (let ((function (find-if (lambda (a) (and (symbolp a) (eq (symbol-package a) (find-package '#:steam)))) call))
-        (method-args (copy-list call)))
-    (setf (nth (position function method-args) method-args) (list interface interface))
-    `(defmethod ,method ,method-args
-       (let ((result (,function (handle ,interface) ,@(apply #'remove-all (mapcar #'delist call)
-                                                             function LAMBDA-LIST-KEYWORDS))))
-         (declare (ignorable result))
-         ,@(or transform
-               (when (listp method)
-                 (list (delist (first call))))
-               `(result))))))
+  (destructuring-bind (interface handle) (enlist interface 'handle)
+    (let ((function (find-if (lambda (a) (and (symbolp a) (eq (symbol-package a) (find-package '#:steam)))) call))
+          (method-args (copy-list call)))
+      (setf (nth (position function method-args) method-args) (list interface interface))
+      `(defmethod ,method ,method-args
+         (let ((result (,function (,handle ,interface) ,@(apply #'remove-all (mapcar #'delist call)
+                                                                function LAMBDA-LIST-KEYWORDS))))
+           (declare (ignorable result))
+           ,@(or transform
+                 (when (listp method)
+                   (list (delist (first call))))
+                 `(result)))))))
 
 (defmacro define-interface-submethod (sub method call &body transform)
   (let ((function (find-if (lambda (a) (and (symbolp a) (eq (symbol-package a) (find-package '#:steam)))) call))

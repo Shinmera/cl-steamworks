@@ -246,3 +246,11 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
 (defun fill-foreign-ascii (pointer string &optional length)
   (dotimes (i (max (or length 0) (length string)))
     (setf (cffi:mem-aref pointer :uchar) (char-code (aref string i)))))
+
+(defun read-file-to-sharable-byte-vector (path)
+  (with-open-file (stream path :direction :input :element-type '(unsigned-byte 8))
+    (let ((buffer (cffi:make-shareable-byte-vector (file-length stream))))
+      (loop with offset = 0
+            while (< offset (length buffer))
+            do (incf offset (read-sequence buffer stream :start offset)))
+      buffer)))

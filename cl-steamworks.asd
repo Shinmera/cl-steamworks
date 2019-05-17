@@ -31,6 +31,7 @@
                (:file "steamhttp")
                (:file "steaminventory")
                (:file "steammatchmaking")
+               (:file "steammusic")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

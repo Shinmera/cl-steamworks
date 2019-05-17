@@ -58,6 +58,7 @@
     `(defmethod ,method ,method-args
        (let ((result (,function (handle ,interface) ,@(apply #'remove-all (mapcar #'delist call)
                                                              function LAMBDA-LIST-KEYWORDS))))
+         (declare (ignorable result))
          ,@(or transform
                (when (listp method)
                  (list (delist (first call))))
@@ -71,6 +72,7 @@
        (let ((result (,function (handle (iface ,sub)) (handle ,sub)
                                 ,@(apply #'remove-all (mapcar #'delist call)
                                          function LAMBDA-LIST-KEYWORDS))))
+         (declare (ignorable result))
          ,@(or transform
                (when (listp method)
                  (list (delist (first call))))

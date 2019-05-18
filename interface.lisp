@@ -8,15 +8,15 @@
 
 (defclass interface (c-object)
   ((steamworks :initarg :steamworks :initform (error "STEAMWORKS required.") :reader %steamworks)
-   (object-cache :initform (make-hash-table :test 'eql) :reader object-cache)))
+   (object-cache :initform (tg:make-weak-hash-table :weakness :value :test 'eql) :reader object-cache)))
 
 ;; FIXME: make sure to consult cache before constructing new objects...
 
 (defmethod interface ((name symbol) (interface interface))
   (interface (%steamworks interface)))
 
-(defmethod interface-object (handle (name symbol))
-  (interface-object handle (interface name T)))
+(defmethod interface-object (handle (interface symbol))
+  (interface-object handle (interface interface T)))
 
 (defmethod interface-object (handle (interface interface))
   (gethash handle (object-cache interface)))

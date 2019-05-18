@@ -33,6 +33,8 @@
                (:file "steammatchmaking")
                (:file "steammusic")
                (:file "steammusicremote")
+               (:file "steamnetworking")
+               (:file "steamparties")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

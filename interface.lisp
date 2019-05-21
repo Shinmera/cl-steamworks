@@ -66,18 +66,19 @@
                  `(result)))))))
 
 (defmacro define-interface-submethod (sub method call &body transform)
-  (let ((function (find-if (lambda (a) (and (symbolp a) (eq (symbol-package a) (find-package '#:steam)))) call))
-        (method-args (copy-list call)))
-    (setf (nth (position function method-args) method-args) (list sub sub))
-    `(defmethod ,method ,method-args
-       (let ((result (,function (handle (iface ,sub)) (handle ,sub)
-                                ,@(apply #'remove-all (mapcar #'delist call)
-                                         function LAMBDA-LIST-KEYWORDS))))
-         (declare (ignorable result))
-         ,@(or transform
-               (when (listp method)
-                 (list (delist (first call))))
-               `(result))))))
+  (destructuring-bind (sub handle) (enlist sub 'handle)
+    (let ((function (find-if (lambda (a) (and (symbolp a) (eq (symbol-package a) (find-package '#:steam)))) call))
+          (method-args (copy-list call)))
+      (setf (nth (position function method-args) method-args) (list sub sub))
+      `(defmethod ,method ,method-args
+         (let ((result (,function (,handle (iface ,sub)) (handle ,sub)
+                                  ,@(apply #'remove-all (mapcar #'delist call)
+                                           function LAMBDA-LIST-KEYWORDS))))
+           (declare (ignorable result))
+           ,@(or transform
+                 (when (listp method)
+                   (list (delist (first call))))
+                 `(result)))))))
 
 (defclass interface-object (c-object)
   ((interface :reader iface)))

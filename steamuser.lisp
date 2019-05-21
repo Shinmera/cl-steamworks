@@ -10,8 +10,7 @@
   ())
 
 (defmethod initialize-instance :after ((interface steamuser) &key version steamworks)
-  (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-user
-                                                 (handle (user steamworks)) (handle (pipe steamworks))
+  (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-user
                                                  (t-or version steam::steamuser-interface-version))))
 
 (defmethod advertise-game (user server (ip string) port)

@@ -37,6 +37,7 @@
                (:file "steamparties")
                (:file "steamremotestorage")
                (:file "steamscreenshots")
+               (:file "steamvideo")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria

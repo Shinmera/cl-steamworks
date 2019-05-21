@@ -348,10 +348,6 @@
       (list :processed (cffi:mem-ref processed :uint64)
             :total (cffi:mem-ref total :uint64)))))
 
-(defclass file (c-object)
-  ((display-name :initarg :display-name :reader display-name)
-   (size :initarg :size :reader size)))
-
 (defclass workshop-file (interface-object)
   ((app :initarg :app :reader app)
    ;; caches
@@ -541,12 +537,9 @@
         (sets tags steam::steam-ugcdetails-tags
               (split-string result #\,))
         (sets file steam::steam-ugcdetails-file
-              (make-instance 'file :handle result
-                                   :name (steam::steam-ugcdetails-file-name details)
-                                   :size (steam::steam-ugcdetails-file-size details)))
+              (make-instance 'ugc :handle result))
         (sets preview steam::steam-ugcdetails-preview-file
-              (make-instance 'file :handle result
-                                   :size (steam::steam-ugcdetails-preview-file-size details)))
+              (make-instance 'ugc :handle result))
         (sets url steam::steam-ugcdetails-url)
         (sets votes-up steam::steam-ugcdetails-votes-up)
         (sets votes-down steam::steam-ugcdetails-votes-down)

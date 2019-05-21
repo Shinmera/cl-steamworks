@@ -105,7 +105,7 @@
 (defmacro with-write-stream ((stream file) &body body)
   `(let ((,stream (write-stream ,file)))
      (unwind-protect (progn ,@body)
-       (finish-output ,stream))))
+       (close ,stream))))
 
 (defclass file-write-stream (c-managed-object interface-object trivial-gray-streams:fundamental-binary-output-stream)
   ())
@@ -122,9 +122,17 @@
     (unless (steam::remote-storage-file-write-stream-write-chunk (iface* stream) (handle stream) (cffi:inc-pointer buffer start) (- start end))
       (error "FIXME: failed"))))
 
-(defmethod trivial-gray-streams:stream-finish-output ((stream file-write-stream))
+(defmethod cl:open-stream-p ((stream file-write-stream))
+  (not (null (handle stream))))
+
+(defmethod cl:stream-element-type ((stream file-write-stream))
+  '(unsigned-byte 8))
+
+(defmethod cl:close ((stream file-write-stream) &key abort)
   (when (handle stream)
-    (unless (steam::remote-storage-file-write-stream-close (iface* stream) (handle stream))
+    (unless (if abort
+                (steam::remote-storage-file-write-stream-cancel (iface* stream) (handle stream))
+                (steam::remote-storage-file-write-stream-close (iface* stream) (handle stream)))
       (error "FIXME: failed"))
     (tg:cancel-finalization stream)
     (setf (handle stream) NIL)))

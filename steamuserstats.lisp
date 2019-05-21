@@ -139,6 +139,8 @@
 (define-interface-submethod achievement icon (steam::user-stats-get-achievement-icon)
   (check-invalid 0 result "FIXME: failed")
   (make-instance 'image :handle result))
+(define-interface-submethod achievement show-progress (steam::user-stats-indicate-achievement-progress progress total)
+  (unless result (error "FIXME: failed")))
 
 (defmethod display-name ((achievement achievement))
   (check-empty-string (steam::user-stats-get-achievement-display-attribute (iface* achievement) (handle achievement) "name")
@@ -180,16 +182,18 @@
   value)
 
 (defmethod unlock-time ((achievement achievement) &optional user)
-  (cffi:with-foreign-object ((achieved-p :bool)
-                             (time :uint32))
+  (cffi:with-foreign-objects ((achieved-p :bool)
+                              (time :uint32))
     (unless (if user
                 (steam::user-stats-get-user-achievement-and-unlock-time (iface* achievement) (steam-id user) (handle achievement) achieved-p time)
                 (steam::user-stats-get-achievement-and-unlock-time (iface* achievement) (handle achievement) achieved-p time))
       (error "FIXME: failed"))
     (unix->universal (cffi:mem-ref time :uint32))))
 
-(define-achievement-method achieved-percentage (steam::user-stats-get-achievement-achieved-percent (percentage :float)))
-(define-achievement-method show-progress (steam::user-stats-indicate-achievement-progress progress max))
+(defmethod achieved-percentage ((stat stat))
+  (with-foreign-value (percentage :float)
+    (unless (steam::user-stats-get-achievement-achieved-percent (iface* stat) (handle stat) percentage)
+      (error "FIXME: failed"))))
 
 (defclass leaderboard (interface-object)
   ()

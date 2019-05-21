@@ -37,6 +37,7 @@
                (:file "steamparties")
                (:file "steamremotestorage")
                (:file "steamscreenshots")
+               (:file "steamuserstats")
                (:file "steamvideo")
                (:file "documentation"))
   :depends-on (:documentation-utils

@@ -9,7 +9,7 @@
 (defclass steammusicremote (c-managed-object interface)
   ((remote-handle :accessor remote-handle)))
 
-(defmethod initialize-instance :after ((interface steammusicremote) &key (or name "remote"))
+(defmethod initialize-instance :after ((interface steammusicremote) &key (name "remote"))
   (steam::music-remote-register-steam-music-remote (handle interface) name))
 
 (defmethod allocate-handle ((interface steammusicremote) &key version steamworks)

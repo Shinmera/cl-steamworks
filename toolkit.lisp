@@ -238,10 +238,13 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
      (values ,@(loop for (var type) in bindings
                      collect `(cffi:mem-ref ,var ,type)))))
 
-(defun check-empty-string (string &optional (datum "FIXME: failed") &rest args)
-  (if (string= "" string)
+(defun check-invalid (invalid value &optional (datum "FIXME: failed") &rest args)
+  (if (equal invalid value)
       (apply #'error datum args)
-      string))
+      value))
+
+(defun check-empty-string (string &optional (datum "FIXME: failed") &rest args)
+  (apply #'check-invalid "" string datum args))
 
 (defun fill-foreign-ascii (pointer string &optional length)
   (dotimes (i (max (or length 0) (length string)))

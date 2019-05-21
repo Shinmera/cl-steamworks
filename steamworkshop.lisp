@@ -397,6 +397,7 @@
                   metadata statistics app-dependencies file-dependencies key-value-tags))
     (slot-makunbound file slot)))
 
+(defgeneric download (thing &key &allow-other-keys))
 (define-interface-submethod workshop-file download (steam::ugc-download-item &key high-priority))
 (define-interface-submethod workshop-file state (steam::ugc-get-item-state)
   (decode-flags 'steam::eitem-state result))

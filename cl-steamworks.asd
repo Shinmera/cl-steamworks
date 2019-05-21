@@ -35,11 +35,13 @@
                (:file "steammusicremote")
                (:file "steamnetworking")
                (:file "steamparties")
+               (:file "steamremotestorage")
                (:file "documentation"))
   :depends-on (:documentation-utils
                :alexandria
                :trivial-features
                :trivial-garbage
+               :trivial-gray-streams
                :babel
                :cffi
                (:feature :sbcl (:require :sb-posix))))

@@ -414,6 +414,24 @@
            (let ((dest (merge-pathnames (pathname-utils:to-file file) dest)))
              (alexandria:copy-file file dest))))))
 
+(defun generate-shim (sdk)
+  (let ((source (pathname-utils:subdirectory *this* "shim"))
+        (target (pathname-utils:subdirectory *this* "static"
+                                             #+(and linux x86-64) "linux64"
+                                             #+(and linux x86) "linux32"
+                                             #+darwin "osx32"
+                                             #+(and windows x86-64) "win64"
+                                             #+(and windows x86) "")))
+    (uiop:run-program (list "make"
+                            "-C" (uiop:native-namestring source)
+                            (format NIL "steamworks=~a" (uiop:native-namestring sdk)))
+                      :output T :error-output T)
+    (uiop:copy-file (make-pathname :name "steamworks_shim" :type "so" :defaults source)
+                    (make-pathname :name "steamworks_shim" :defaults target :type
+                                   #+linux "so"
+                                   #+darwin "dylib"
+                                   #+windows "dll"))))
+
 (defun setup (&optional (sdk-directory (query-directory)))
   (when sdk-directory
     (format *query-io* "~&Copying binaries...")
@@ -423,4 +441,5 @@
     (format *query-io* "~&Generating bindings...")
     (cffi:load-foreign-library 'steam::steamworks)
     (generate sdk-directory)
+    (generate-shim sdk-directory)
     (format *query-io* "~&Done. You can now use cl-steamworks!~%")))

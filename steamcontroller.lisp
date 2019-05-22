@@ -103,8 +103,8 @@
                                     (flags 'steam::esteam-controller-ledflag :set-color))))
 
 (defmethod motion-data ((controller controller))
-  ;; FIXME: can't implement this due to structure return.
-  )
+  (with-foreign-value (data '(:struct steam::input-motion-data))
+    (steam::shim-isteam-controller-get-motion-data (iface* controller) (handle controller) data)))
 
 (defmethod haptic-pulse ((controller controller) pad &key (duration 0.1) (pause 0.1) (repeat 1))
   (if (<= repeat 1)
@@ -154,8 +154,8 @@
             collect (cffi:mem-aref origins 'steam::econtroller-action-origin i)))))
 
 (defmethod action-data ((action analog-action) (controller controller))
-  ;; FIXME: can't implement this due to structure return.
-  )
+  (with-foreign-value (data '(:struct steam::input-analog-action-data))
+    (steam::shim-isteam-controller-get-analog-action-data (iface* controller) (handle controller) (handle action) data)))
 
 (defmethod stop-action-momentum ((action analog-action) (controller controller))
   (steam::controller-stop-analog-action-momentum (iface* action) (handle controller) (handle action)))
@@ -171,5 +171,5 @@
             collect (cffi:mem-aref origins 'steam::econtroller-action-origin i)))))
 
 (defmethod action-data ((action digital-action) (controller controller))
-  ;; FIXME: can't implement this due to structure return.
-  )
+  (with-foreign-value (data '(:struct steam::input-digital-action-data))
+    (steam::shim-isteam-controller-get-digital-action-data (iface* controller) (handle controller) (handle action) data)))

@@ -1,2 +1,4 @@
 low-level.lisp
 static/
+shim/shim.o
+shim/steamworks_shim.so

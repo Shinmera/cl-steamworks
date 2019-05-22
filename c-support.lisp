@@ -87,12 +87,30 @@
    "steam_api.dll"
    :search-path #.(merge-pathnames "win64/" *static*)))
 
+(cffi:define-foreign-library steam::steamworks-shim
+  ((:and :darwin :x86)
+   "steamworks_shim.dylib"
+   :search-path #.(merge-pathnames "osx32/" *static*))
+  ((:and :unix :x86)
+   "steamworks_shim.so"
+   :search-path #.(merge-pathnames "linux32/" *static*))
+  ((:and :unix :x86-64)
+   "steamworks_shim.so"
+   :search-path #.(merge-pathnames "linux64/" *static*))
+  ((:and :windows :x86)
+   "steamworks_shim.dll"
+   :search-path #.(merge-pathnames "/" *static*))
+  ((:and :windows :x86-64)
+   "steamworks_shim.dll"
+   :search-path #.(merge-pathnames "win64/" *static*)))
+
 (cffi:defctype steam::steam-id :unsigned-long)
 
 (defun maybe-load-low-level (&optional file)
   (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
     (when (probe-file file)
       (cffi:load-foreign-library 'steam::steamworks)
+      (cffi:load-foreign-library 'steam::steamworks-shim)
       (let ((fasl #-asdf (compile-file-pathname file)
                   #+asdf (asdf:output-file (asdf:find-operation NIL 'asdf:compile-op)
                                            (make-instance 'asdf:cl-source-file

@@ -177,6 +177,35 @@
             "params": [
                 {"paramname": "unOwnAppID", "paramtype": "uint32"}
             ]
+        },
+        {
+            "functionname": "shim_ISteamController_GetDigitalActionData",
+            "returntype": "void",
+            "params": [
+                {"paramname": "self", "paramtype": "ISteamController *"},
+                {"paramname": "controller", "paramtype": "ControllerHandle_t"},
+                {"paramname": "action", "paramtype": "ControllerDigitalActionHandle_t"},
+                {"paramname": "out", "paramtype": "InputDigitalActionData_t *"}
+            ]
+        },
+        {
+            "functionname": "shim_ISteamController_GetAnalogActionData",
+            "returntype": "void",
+            "params": [
+                {"paramname": "self", "paramtype": "ISteamController *"},
+                {"paramname": "controller", "paramtype": "ControllerHandle_t"},
+                {"paramname": "action", "paramtype": "ControllerAnalogActionHandle_t"},
+                {"paramname": "out", "paramtype": "InputAnalogActionData_t *"}
+            ]
+        },
+        {
+            "functionname": "shim_ISteamController_GetMotionData",
+            "returntype": "void",
+            "params": [
+                {"paramname": "self", "paramtype": "ISteamController *"},
+                {"paramname": "controller", "paramtype": "ControllerHandle_t"},
+                {"paramname": "out", "paramtype": "InputMotionData_t *"}
+            ]
         }
     ]
 }

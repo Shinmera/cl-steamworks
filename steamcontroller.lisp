@@ -9,7 +9,8 @@
 ;; FIXME: crawl constants
 
 (defclass steamcontroller (c-managed-object interface)
-  ())
+  ((action-glyph-cache :initform (make-hash-table :test 'eql) :reader action-glyph-cache)
+   (action-label-cache :initform (make-hash-table :test 'eql) :reader action-label-cache)))
 
 (defmethod initialize-instance :after ((interface steamcontroller) &key)
   (steam::controller-init (handle interface)))
@@ -22,35 +23,36 @@
   (lambda () (steam::controller-shutdown handle)))
 
 (define-interface-method steamcontroller find-action-set (steam::controller-get-action-set-handle (name string))
-  (when (= 0 result)
-    (error "FIXME: no action set found"))
+  (check-invalid 0 result "FIXME: no action set found")
   (make-instance 'action-set :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller analog-action (steam::controller-get-analog-action-handle (name string))
-  (when (= 0 result)
-    (error "FIXME: no analog action found"))
+  (check-invalid 0 result "FIXME: no action set found")
   (make-instance 'analog-action :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller digital-action (steam::controller-get-digital-action-handle (name string))
-  (when (= 0 result)
-    (error "FIXME: no digital action found"))
+  (check-invalid 0 result "FIXME: no action set found")
   (make-instance 'digital-action :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller controller (steam::controller-get-controller-for-gamepad-index (index integer))
-  (when (= 0 result)
-    (error "FIXME: no controller at index"))
+  (check-invalid 0 result "FIXME: no action set found")
   (make-instance 'controller :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller action-glyph (steam::controller-get-glyph-for-action-origin origin)
   ;; KLUDGE: ech, uiop
-  ;; FIXME: cache
   (uiop:parse-native-namestring result))
-
-(define-interface-method steamcontroller action-label (steam::controller-get-string-for-action-origin origin)
-  ;; FIXME: cache
-  )
-
+(define-interface-method steamcontroller action-label (steam::controller-get-string-for-action-origin origin))
 (define-interface-method steamcontroller run-frame (steam::controller-run-frame))
+
+(defmethod action-glyph :around ((interface steamcontroller) origin)
+  (or (gethash origin (action-glyph-cache interface))
+      (setf (gethash origin (action-glyph-cache interface))
+            (call-next-method))))
+
+(defmethod action-label :around ((interface steamcontroller) origin)
+  (or (gethash origin (action-label-cache interface))
+      (setf (gethash origin (action-label-cache interface))
+            (call-next-method))))
 
 (defmethod list-controllers ((steamcontroller steamcontroller))
   (cffi:with-foreign-object (handles 'steam::controller-handle-t 16)

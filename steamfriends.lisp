@@ -111,8 +111,8 @@
   (print-unreadable-object (friend stream :type T)
     (format stream "~s @~d" (display-name friend) (handle friend))))
 
-;; FIXME: game representation
-(define-interface-submethod friend coplay-game (steam::friends-get-friend-coplay-game))
+(define-interface-submethod friend coplay-game (steam::friends-get-friend-coplay-game)
+  (when (/= 0 result) (make-instance 'app :handle result)))
 (define-interface-submethod friend coplay-time (steam::friends-get-friend-coplay-time)
   (unix->universal result))
 (define-interface-submethod friend state (steam::friends-get-friend-persona-state))

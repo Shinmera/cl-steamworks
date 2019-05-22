@@ -20,11 +20,21 @@
   (or (gethash callback steam::*callback-id-map*)
       (error "Not a callback: ~s" callback)))
 
+(define-compiler-macro callback-type-id (&whole whole callback &environment env)
+  (if (constantp callback env)
+      `(load-time-value (or (gethash ,callback steam::*callback-id-map*)
+                            (error "Not a callback: ~s" ,callback)))
+      whole))
+
 (defun function-callresult (function)
   (or (gethash function steam::*function-callresult-map*)
       (error "Not a callresult function: ~s" function)))
 
-;; TODO: optimise above access through compiler-macros
+(define-compiler-macro function-callresult (&whole whole function &environment env)
+  (if (constantp function env)
+      `(load-time-value (or (gethash ,function steam::*function-callresult-map*)
+                            (error "Not a callresult function: ~s" ,function)))
+      whole))
 
 (defun c-slot-value-extractor (struct slotdef)
   (destructuring-bind (name type &key count offset) slotdef

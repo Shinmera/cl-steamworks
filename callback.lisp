@@ -34,8 +34,6 @@
   (loop for (struct-type thunk) being the hash-values of *global-callbacks*
         do (make-instance 'closure-callback :closure thunk :struct-type struct-type)))
 
-;; FIXME: Allow defining global callbacks that are registered on steamworks init.
-
 (defclass %callback (c-managed-object)
   ((struct-type :initarg :struct-type :accessor struct-type)))
 

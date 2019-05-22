@@ -115,9 +115,8 @@
   (steam::htmlsurface-set-size (iface* browser) (handle browser) (car value) (cdr value)))
 
 (defmethod open-page ((url string) (browser browser) &key get post)
-  ;; FIXME: what if url already has ? or #
-  (let ((url (format NIL "~a~@[?~/cl-steamworks::format-query/~]" url get))
-        (post (format NIL "~/cl-steamworks::format-query/" post)))
+  (let* ((url (merge-query url get))
+         (post (format NIL "~/cl-steamworks::format-query/" post)))
     (steam::htmlsurface-load-url (iface* browser) (handle browser) url post)))
 
 (defmethod clone ((browser browser))

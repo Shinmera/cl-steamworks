@@ -41,11 +41,11 @@
 
 (defgeneric list-items (thing &key &allow-other-keys))
 
-(defmethod list-items ((inventory steaminventory) &key prices user)
+(defmethod list-items ((inventory steaminventory) &key prices user ids)
   (cond (user
          (with-call-result (result :poll T) (steam::inventory-request-eligible-promo-item-definitions-ids (handle inventory) (steam-id user))
            (with-error-on-failure (steam::steam-inventory-eligible-promo-item-def-ids-result result))
-           (let ((count (steam::steam-inventory-eligible-promo-item-def-ids-num-eligible-promo-item-defs result)))
+           (let ((count (steam::steam-inventory-eligible-promo-item-def-ids-eligible-promo-item-defs result)))
              (cffi:with-foreign-object (array 'steam::steam-item-def-t count)
                (unless (steam::inventory-get-eligible-promo-item-definition-ids (handle inventory) (steam-id user) array count)
                  (error "FIXME: failed"))
@@ -65,6 +65,17 @@
                    for price = (cffi:mem-aref prices :uint64 i)
                    for base = (cffi:mem-aref bases :uint64 i)
                    collect (ensure-iface-obj 'item :interface inventory :handle handle :price (list base price))))))
+        (ids
+         (cffi:with-foreign-objects ((idsp 'steam::steam-item-instance-id-t (length ids))
+                                     (result 'steam::steam-inventory-result-t))
+           (loop for i from 0 below (length ids)
+                 for id in ids
+                 do (setf (cffi:mem-aref idsp 'steam::steam-item-instance-id-t i) id))
+           (unless (steam::inventory-get-items-by-id (handle inventory) result idsp 1)
+             (error "FIXME: failed"))
+           (let* ((handle (cffi:mem-ref result 'steam::steam-inventory-result-t))
+                  (result (make-instance 'inventory-result :interface inventory :handle handle)))
+             (list-items result))))
         (T
          (cffi:with-foreign-object (count :uint32)
            (unless (steam::inventory-get-item-definition-ids (handle inventory) (cffi:null-pointer) count)
@@ -98,6 +109,16 @@
       (unless (steam::inventory-submit-update-properties (handle inventory) handle result)
         (error "FIXME: failed")))))
 
+(defmethod item ((index integer) (inventory steaminventory))
+  (cffi:with-foreign-objects ((ids 'steam::steam-item-instance-id-t)
+                              (result 'steam::steam-inventory-result-t))
+    (setf (cffi:mem-ref ids 'steam::steam-item-instance-id-t) index)
+    (unless (steam::inventory-get-items-by-id (handle inventory) result ids 1)
+      (error "FIXME: failed"))
+    (let* ((handle (cffi:mem-ref result 'steam::steam-inventory-result-t))
+           (result (make-instance 'inventory-result :interface inventory :handle handle)))
+      (first (list-items result)))))
+
 (defclass item-instance (interface-object)
   ()
   (:default-initargs :interface 'steaminventory))
@@ -115,8 +136,6 @@
 (defmethod (setf property) (value (item item-instance) (property string))
   (check-type value (or string boolean (unsigned-byte 64) float))
   (update-item-properties (iface item) (list (list item property value))))
-
-;; FIXME: GetItemsById
 
 (defclass item (interface-object)
   ((price :initform NIL :initarg :price))

@@ -31,7 +31,7 @@
         collect (ensure-iface-obj 'achievement :interface interface :handle handle)))
 
 (defun ensure-current-stats (interface &key force)
-  ;; FIXME: FUCK, we can't poll for this, so the other ensure-* calls won't work right.
+  ;; KLUDGE: FUCK, we can't poll for this, so the other ensure-* calls won't work right.
   (when (or force (null (current-stats-available-p interface)))
     (unless (steam::user-stats-request-current-stats (handle interface))
       (error "FIXME: failed"))

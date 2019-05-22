@@ -439,9 +439,9 @@
   (unless (slot-boundp file 'app-dependencies)
     (with-call-result (result :poll T) (steam::ugc-get-app-dependencies (iface* file) (handle file))
       (with-error-on-failure (steam::get-app-dependencies-result result))
-      ;; TODO: there's a "total num" field. Does this mean it can return less than
-      ;;       everything? If so, how do I get the rest? There's no explicit pagination.
-      ;;       does it split it across multiple call results? If so that's real bad...
+      ;; WTF: there's a "total num" field. Does this mean it can return less than
+      ;;      everything? If so, how do I get the rest? There's no explicit pagination.
+      ;;      does it split it across multiple call results? If so that's real bad...
       (loop with ptr = (struct-slot-ptr result 'steam::app-ids)
             for i from 0 below (steam::get-app-dependencies-num-app-dependencies result)
             collect (ensure-iface-obj 'app :interface (interface 'steamapps file)

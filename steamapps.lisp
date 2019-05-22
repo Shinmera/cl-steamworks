@@ -26,7 +26,7 @@
 (define-interface-method steamapps vac-banned-p (steam::apps-bis-vacbanned))
 (define-interface-method steamapps build-id (steam::apps-get-app-build-id))
 (define-interface-method steamapps owner (steam::apps-get-app-owner)
-  (make-instance 'friend :steamfriends (interface 'steamfriends (steamworks steamapps)) :handle result))
+  (ensure-iface-obj 'friend :interface (interface 'steamfriends steamapps) :handle result))
 (define-interface-method steamapps languages (steam::apps-get-available-game-languages)
   (split-string result #\,))
 (define-interface-method steamapps language (steam::apps-get-current-game-language))
@@ -34,12 +34,17 @@
   (when (string/= "" result) result))
 (define-interface-method steamapps mark-as-corrupt (steam::apps-mark-content-corrupt &key missing-only))
 
-(defmethod dlc ((apps steamapps) (index integer))
-  (make-instance 'dlc :steamapps apps :index index))
-
 (defmethod list-dlcs ((apps steamapps))
   (loop for i from 0 below (steam::apps-get-dlccount (handle apps))
-        collect (make-instance 'dlc :steamapps apps :index i)))
+        collect (cffi:with-foreign-objects ((id 'steam::app-id-t)
+                                            (available :bool)
+                                            (name :char 256))
+                  (unless (steam::apps-bget-dlcdata-by-index (handle steamapps) index id available name 256)
+                    (error "FIXME: could not retrieve dlc."))
+                  (ensure-iface-obj 'dlc :interface apps
+                                         :handle (cffi:mem-ref id 'steam::app-id-t)
+                                         :available (cffi:mem-ref available :bool)
+                                         :display-name (cffi:foreign-string-to-lisp name :count 256 :encoding :utf-8)))))
 
 (defmethod beta-name ((apps steamapps))
   (cffi:with-foreign-object (buffer :char 256)
@@ -62,10 +67,10 @@
   (let ((count (steam::app-list-get-num-installed-apps (applist-handle apps))))
     (cffi:with-foreign-object (buffer 'steam::app-id-t count)
       (loop for i from 0 below (steam::app-list-get-installed-apps (applist-handle apps) buffer count)
-            collect (make-instance 'app :steamapps apps :handle (cffi:mem-aref buffer 'steam::app-id-t i))))))
+            collect (ensure-iface-obj 'app :interface apps :handle (cffi:mem-aref buffer 'steam::app-id-t i))))))
 
 (defmethod find-app ((apps steamapps) (handle integer))
-  (make-instance 'app :steamapps apps :handle handle))
+  (ensure-iface-obj 'app :interface apps :handle handle))
 
 (defmethod find-app ((apps steamapps) (handle (eql T)))
   (app apps (app-id (interface 'steamutils (steamworks apps)))))
@@ -96,7 +101,7 @@
   (cffi:with-foreign-object (buffer 'steam::depot-id-t 256)
     (loop for i from 0 below (steam::apps-get-installed-depots (iface* app) (handle app) buffer 256)
           for handle = (cffi:mem-aref buffer 'steam::depot-id-t i)
-          collect (make-instance 'depot :handle handle))))
+          collect handle)))
 
 (defmethod ticket-data ((app app))
   (cffi:with-foreign-objects ((buffer :uint8 256)
@@ -116,19 +121,8 @@
                                           :element-type '(unsigned-byte 8))))))
 
 (defclass dlc (app)
-  ((available :initform NIL :reader available-p)
-   (display-name :initform NIL :reader display-name)))
-
-(defmethod initialize-instance :after ((dlc dlc) &key steamapps index)
-  (when index
-    (cffi:with-foreign-objects ((id 'steam::app-id-t)
-                                (available :bool)
-                                (name :char 256))
-      (unless (steam::apps-bget-dlcdata-by-index (handle steamapps) index id available name 256)
-        (error "FIXME: could not retrieve dlc."))
-      (setf (handle dlc) (cffi:mem-ref id 'steam::app-id-t))
-      (setf (slot-value dlc 'available) (cffi:mem-ref available :bool))
-      (setf (slot-value dlc 'display-name) (cffi:foreign-string-to-lisp name :count 256 :encoding :utf-8)))))
+  ((available :initform NIL :initarg :available :reader available-p)
+   (display-name :initform NIL :initarg :display-name :reader display-name)))
 
 (define-interface-submethod dlc installed-p (steam::apps-bis-dlc-installed))
 (define-interface-submethod dlc install (steam::apps-install-dlc))
@@ -140,6 +134,3 @@
     (when (steam::apps-get-dlc-download-progress (iface* dlc) (handle dlc) downloaded total)
       (list :downloaded (cffi:mem-ref downloaded :uint64)
             :total (cffi:mem-ref total :uint64)))))
-
-(defclass depot (c-object)
-  ())

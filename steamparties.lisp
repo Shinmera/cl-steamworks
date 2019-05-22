@@ -22,14 +22,14 @@
         (error "FIXME: failed"))
       (loop for i from 0 below count
             for struct = (cffi:mem-aref array '(:struct steam::steam-party-beacon-location) i)
-            collect (make-instance 'beacon-location :interface interface :handle struct)))))
+            collect (ensure-iface-obj 'beacon-location :interface interface :handle struct)))))
 
 (defmethod beacons ((interface steamparties))
   (loop for i from 0 below (steam::parties-get-num-active-beacons (handle interface))
         for struct = (steam::parties-get-beacon-by-index (handle interface) i)
-        collect (make-instance 'beacon :interface interface
-                                       :type (steam::steam-party-beacon-location-type struct)
-                                       :handle (steam::steam-party-beacon-location-location-id struct))))
+        collect (ensure-iface-obj 'beacon :interface interface
+                                          :type (steam::steam-party-beacon-location-type struct)
+                                          :handle (steam::steam-party-beacon-location-location-id struct))))
 
 (defclass beacon-location (interface-object)
   ((type :initarg :type :initform (error "FIXME: type required") :reader location-type))
@@ -48,12 +48,12 @@
                               (metadata :uchar 4096))
     (unless (steam::parties-get-beacon-details (iface* beacon) (handle beacon) owner location metadata 4096)
       (error "FIXME: failed"))
-    (setf (slot-value beacon 'owner) (make-instance 'friend :handle (cffi:mem-ref owner 'steam::steam-id)
-                                                            :interface (interface 'steamfriends beacon)))
+    (setf (slot-value beacon 'owner) (ensure-iface-obj 'friend :handle (cffi:mem-ref owner 'steam::steam-id)
+                                                               :interface (interface 'steamfriends beacon)))
     (let ((struct (cffi:mem-ref location '(:struct steam::steam-party-beacon-location))))
-      (setf (slot-value beacon 'location) (make-instance 'beacon-location :type (steam::steam-party-beacon-location-type struct)
-                                                                          :handle (steam::steam-party-beacon-location-location-id struct)
-                                                                          :interface (iface beacon))))
+      (setf (slot-value beacon 'location) (ensure-iface-obj 'beacon-location :type (steam::steam-party-beacon-location-type struct)
+                                                                             :handle (steam::steam-party-beacon-location-location-id struct)
+                                                                             :interface (iface beacon))))
     (setf (slot-value beacon 'metadata) (cffi:foreign-string-to-lisp metadata :encoding :utf-8 :count 4096))))
 
 (defmethod allocate-handle ((beacon beacon) &key open-slots location connect-string metadata)

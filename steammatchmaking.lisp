@@ -41,8 +41,8 @@
       (loop for i from 0 below count
             do (unless (steam::matchmaking-get-favorite-game (handle interface) i app ip connection-port query-port flags last-played)
                  (error "FIXME: failed"))
-            collect (listp (make-instance 'app :interface (interface 'steamapps interface)
-                                               :handle (cffi:mem-ref app 'steam::app-id-t))
+            collect (listp (ensure-iface-obj 'app :interface (interface 'steamapps interface)
+                                                  :handle (cffi:mem-ref app 'steam::app-id-t))
                            (int->ipv4 (cffi:mem-ref ip :uint32))
                            (cffi:mem-ref connection-port :uint16)
                            (cffi:mem-ref query-port :uint16)
@@ -85,7 +85,7 @@
     (let ((count (steam::lobby-match-list-lobbies-matching result)))
       (loop for i from 0 below count
             for handle = (steam::matchmaking-get-lobby-by-index (handle interface) i)
-            collect (make-instance 'lobby :interface interface :handle handle)))))
+            collect (ensure-iface-obj 'lobby :interface interface :handle handle)))))
 
 (defclass lobby (interface-object)
   ()
@@ -107,7 +107,7 @@
 (define-interface-submethod lobby (setf member-limit) ((max integer) steam::matchmaking-set-lobby-member-limit)
   (unless result (error "FIXME: failed")))
 (define-interface-submethod lobby owner (steam::matchmaking-get-lobby-owner)
-  (make-instance 'friend :handle result :interface (interface 'steamfriends lobby)))
+  (ensure-iface-obj 'friend :handle result :interface (interface 'steamfriends lobby)))
 (define-interface-submethod lobby member-count (steam::matchmaking-get-num-lobby-members))
 (define-interface-submethod lobby leave (steam::matchmaking-leave-lobby))
 (define-interface-submethod lobby refresh (steam::matchmaking-request-lobby-data)
@@ -158,8 +158,8 @@
                               (buffer :uchar 4096))
     (let ((count (steam::matchmaking-get-lobby-chat-entry (iface* lobby) (handle lobby) index user buffer 4096 (cffi:null-pointer))))
       (values (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8)
-              (make-instance 'friend :handle (cffi:mem-ref user 'steam::steam-id)
-                                     :interface (interface 'steamfriends lobby))))))
+              (ensure-iface-obj 'friend :handle (cffi:mem-ref user 'steam::steam-id)
+                                        :interface (interface 'steamfriends lobby))))))
 
 (defmethod server-details ((lobby lobby))
   (cffi:with-foreign-objects ((ip :uint32)
@@ -180,7 +180,7 @@
   (let ((count (steam::matchmaking-get-num-lobby-members (iface* lobby) (handle lobby))))
     (loop for i from 0 below count
           for handle = (steam::matchmaking-get-lobby-member-by-index (iface* lobby) (handle lobby) i)
-          collect (make-instance 'friend :handle handle :interface (interface 'steamfriends lobby)))))
+          collect (ensure-iface-obj 'friend :handle handle :interface (interface 'steamfriends lobby)))))
 
 (defmethod send-message ((message string) (lobby lobby))
   (cffi:with-foreign-string ((buffer size) message :encoding :utf-8)

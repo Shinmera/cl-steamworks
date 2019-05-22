@@ -55,7 +55,7 @@
   (handle session))
 
 (defmethod user ((session p2p-session))
-  (make-instance 'friend :handle (handle session)))
+  (ensure-iface-obj 'friend :interface (interface 'steamfriends session) :handle (handle session)))
 
 (defmethod session-state ((session p2p-session))
   (cffi:with-foreign-object (state '(:struct steam::p2psession-state))

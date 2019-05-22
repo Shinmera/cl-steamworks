@@ -25,9 +25,9 @@
     (cffi:with-foreign-object (buffer 'steam::published-file-id-t count)
       (loop for i from 0 below (steam::ugc-get-subscribed-items (handle workshop) buffer count)
             for handle = (cffi:mem-aref buffer 'steam::published-file-id-t i)
-            collect (make-instance 'workshop-file :interface workshop
-                                                  :app (app (interface 'steamapps (steamworks workshop)))
-                                                  :handle handle)))))
+            collect (ensure-iface-obj 'workshop-file :interface workshop
+                                                     :app (app (interface 'steamapps (steamworks workshop)))
+                                                     :handle handle)))))
 
 (defmethod query ((workshop steamworkshop) (app app) &rest args &key user list type sort on page exclude require key-value-tags request search any-tay rank-by-trend-days)
   (declare (ignore list type sort on page exclude require key-value-tags request search any-tay rank-by-trend-days))
@@ -41,11 +41,9 @@
     (multiple-value-bind (count total) (execute query)
       (declare (ignore total))
       (loop for i from 0 below count
-            collect (complete-from-query
-                     (make-instance 'workshop-file :interface workshop
-                                                   :app app
-                                                   :handle T)
-                     query)))))
+            for handle = (steam::steam-ugcdetails-published-file-id (get-details query i))
+            for file = (ensure-iface-obj 'workshop-file :interface workshop :app app :handle handle)
+            collect (complete-from-query file query i)))))
 
 (defmethod stop-tracking ((workshop steamworkshop))
   (with-call-result (result :poll T) (steam::ugc-stop-playtime-tracking-for-all-items (handle workshop))
@@ -127,9 +125,9 @@
     (unless (steam::ugc-get-query-ugcchildren (iface* query) (handle query) index buffer count)
       (error "FIXME: failed to get children."))
     (loop for i from 0 below count
-          collect (make-instance 'workshop-file :interface (iface query)
-                                                :handle (cffi:mem-aref buffer 'steam::published-file-id-t i)
-                                                :app (app query)))))
+          collect (ensure-iface-obj 'workshop-file :interface (iface query)
+                                                   :handle (cffi:mem-aref buffer 'steam::published-file-id-t i)
+                                                   :app (app query)))))
 
 (defmethod get-key-value-tags ((query workshop-query) (index integer))
   (cffi:with-foreign-objects ((key :char 256)
@@ -156,16 +154,15 @@
           collect type and collect (cffi:mem-ref buffer :uint64))))
 
 (defmethod get-details ((query workshop-query) (index integer))
-  (cffi:with-foreign-object (buffer '(:struct steam::steam-ugcdetails))
+  (with-foreign-value (buffer '(:struct steam::steam-ugcdetails))
     (unless (steam::ugc-get-query-ugcresult (iface* query) (handle query) index buffer)
-      (error "FIXME: failed to get details."))
-    (cffi:mem-ref buffer '(:struct steam::steam-ugcdetails))))
+      (error "FIXME: failed to get details."))))
 
 (defmethod get-workshop-file ((query workshop-query) (index integer))
   (let* ((id (steam::steam-ugcdetails-published-file-id (get-details query index)))
-         (file (make-instance 'workshop-file :interface (iface query)
-                                             :app (app query)
-                                             :handle id)))
+         (file (ensure-iface-obj 'workshop-file :interface (iface query)
+                                                :app (app query)
+                                                :handle id)))
     (complete-from-query file query index)
     file))
 
@@ -362,7 +359,8 @@
       (when (steam::create-item-user-needs-to-accept-workshop-legal-agreement result)
         (warn "FIXME: user needs to accept agreement."))
       (with-error-on-failure (steam::create-item-result result))
-      (setf (handle file) (steam::create-item-published-file-id result)))))
+      (setf (handle file) (steam::create-item-published-file-id result))
+      (setf (interface-object (handle file) (iface file)) file))))
 
 (macrolet ((make-cache-filled (slot)
              `(defmethod ,slot ((file workshop-file))
@@ -446,8 +444,8 @@
       ;;       does it split it across multiple call results? If so that's real bad...
       (loop with ptr = (struct-slot-ptr result 'steam::app-ids)
             for i from 0 below (steam::get-app-dependencies-num-app-dependencies result)
-            collect (make-instance 'app :steamapps (interface 'steamapps file)
-                                        :handle (cffi:mem-aref ptr 'steam::app-id-t i))
+            collect (ensure-iface-obj 'app :interface (interface 'steamapps file)
+                                           :handle (cffi:mem-aref ptr 'steam::app-id-t i))
             into results
             finally (setf (slot-value file 'app-dependencies) results))))
   (slot-value file 'app-dependencies))
@@ -511,7 +509,8 @@
 
 (defmethod complete-from-query ((file workshop-file) (query workshop-query) &optional (index 0))
   (let ((steamapps (interface 'steamapps file))
-        (steamfriends (interface 'steamfriends file)))
+        (steamfriends (interface 'steamfriends file))
+        (steamremotestorage (interface 'steamremotestorage file)))
     (let ((details (get-details query index)))
       (macrolet ((sets (slot function &optional (transform 'result))
                    `(setf (slot-value file ',slot)
@@ -520,11 +519,11 @@
         (sets handle steam::steam-ugcdetails-published-file-id)
         (sets kind steam::steam-ugcdetails-file-type)
         (sets consumer steam::steam-ugcdetails-consumer-app-id
-              (make-instance 'app :steamapps steamapps :handle result))
+              (ensure-iface-obj 'app :interface steamapps :handle result))
         (sets display-name steam::steam-ugcdetails-title)
         (sets description steam::steam-ugcdetails-description)
         (sets owner steam::steam-ugcdetails-steam-idowner
-              (make-instance 'friend :steamfriends steamfriends :handle result))
+              (ensure-iface-obj 'friend :interface steamfriends :handle result))
         (sets created steam::steam-ugcdetails-created
               (unix->universal result))
         (sets updated steam::steam-ugcdetails-updated
@@ -537,9 +536,9 @@
         (sets tags steam::steam-ugcdetails-tags
               (split-string result #\,))
         (sets file steam::steam-ugcdetails-file
-              (make-instance 'ugc :handle result))
+              (ensure-iface-obj 'ugc :interface steamremotestorage :handle result))
         (sets preview steam::steam-ugcdetails-preview-file
-              (make-instance 'ugc :handle result))
+              (ensure-iface-obj 'ugc :interface steamremotestorage :handle result))
         (sets url steam::steam-ugcdetails-url)
         (sets votes-up steam::steam-ugcdetails-votes-up)
         (sets votes-down steam::steam-ugcdetails-votes-down)
@@ -557,9 +556,8 @@
   file)
 
 (defmethod complete-from-query ((file workshop-file) (query (eql T)) &optional (index 0))
-  (declare (ignore index))
   (let ((query (make-instance 'workshop-detail-query :interface (iface file)
                                                      :app (app file)
                                                      :files (list file))))
     (execute query)
-    (complete-from-query file query)))
+    (complete-from-query file query index)))

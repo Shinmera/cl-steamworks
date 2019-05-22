@@ -51,7 +51,7 @@
                  (error "FIXME: failed"))
                (loop for i from 0 below count
                      for handle = (cffi:mem-aref array 'steam::steam-item-def-t i)
-                     collect (make-instance 'item :interface inventory :handle handle))))))
+                     collect (ensure-iface-obj 'item :interface inventory :handle handle))))))
         (prices
          (ensure-prices-available inventory)
          (let ((count (steam::inventory-get-num-items-with-prices (handle inventory))))
@@ -64,7 +64,7 @@
                    for handle = (cffi:mem-aref handles 'steam::steam-item-def-t i)
                    for price = (cffi:mem-aref prices :uint64 i)
                    for base = (cffi:mem-aref bases :uint64 i)
-                   collect (make-instance 'item :interface inventory :handle handle :price (list base price))))))
+                   collect (ensure-iface-obj 'item :interface inventory :handle handle :price (list base price))))))
         (T
          (cffi:with-foreign-object (count :uint32)
            (unless (steam::inventory-get-item-definition-ids (handle inventory) (cffi:null-pointer) count)
@@ -74,7 +74,7 @@
                (error "FIXME: failed"))
              (loop for i from 0 below (cffi:mem-ref count :uint32)
                    for handle = (cffi:mem-aref array 'steam::steam-item-def-t i)
-                   collect (make-instance 'item :interface inventory :handle handle)))))))
+                   collect (ensure-iface-obj 'item :interface inventory :handle handle)))))))
 
 (defmethod list-item-instances ((inventory steaminventory))
   (with-c-objects ((result (with-inventory-result (handle inventory)
@@ -273,7 +273,7 @@
         (error "FIXME: failed"))
       (loop for i from 0 below (cffi:mem-ref count :uint32)
             for details = (cffi:mem-aref array 'steam::steam-item-details i)
-            collect (list (make-instance 'item :interface inventory :handle (steam::steam-item-details-definition details))
+            collect (list (ensure-iface-obj 'item :interface inventory :handle (steam::steam-item-details-definition details))
                           (steam::steam-item-details-quantity details)
                           (decode-flags 'steam::esteam-item-flags (steam::steam-item-details-flags details)))))))
 

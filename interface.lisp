@@ -10,7 +10,10 @@
   ((steamworks :initarg :steamworks :initform (error "STEAMWORKS required.") :reader %steamworks)
    (object-cache :initform (tg:make-weak-hash-table :weakness :value :test 'eql) :reader object-cache)))
 
-;; FIXME: make sure to consult cache before constructing new objects...
+(defun ensure-iface-obj (class &rest initargs &key handle interface &allow-other-keys)
+  (or (interface-object handle interface)
+      (setf (interface-object handle interface)
+            (apply #'make-instance class initargs))))
 
 (defmethod interface ((name symbol) (interface interface))
   (interface (%steamworks interface)))
@@ -32,6 +35,9 @@
 
 (defmethod remove-interface-object (handle (interface interface))
   (remhash handle (object-cache interface)))
+
+(defmethod remove-interface-object ((all (eql T)) (interface interface))
+  (clrhash (object-cache interface)))
 
 (defun get-interface-handle (steamworks function &rest args)
   (let ((handle (apply function (handle (interface 'steamclient steamworks)) args)))
@@ -88,8 +94,7 @@
   (setf (slot-value object 'interface)
         (etypecase interface
           (interface interface)
-          ((and symbol (not null)) (interface interface (or steamworks (steamworks))))))
-  (setf (interface-object (handle object) (iface object)) object))
+          ((and symbol (not null)) (interface interface (or steamworks (steamworks)))))))
 
 (defun iface* (object)
   (handle (iface object)))

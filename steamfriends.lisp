@@ -45,7 +45,8 @@
            (steam::friends-activate-game-overlay (handle friends) dialog)))))
 
 (defmethod clan ((friends steamfriends) (index integer))
-  (make-instance 'clan :interface friends :index index))
+  (let ((handle (steam::friends-get-clan-by-index (handle friends) index)))
+    (ensure-iface-obj 'clan :interface friends :handle handle)))
 
 (defmethod list-clans ((friends steamfriends))
   (loop for i from 0 below (steam::friends-get-clan-count (handle friends))
@@ -58,20 +59,24 @@
 
 (defmethod list-friend-groups ((friends steamfriends))
   (loop for i from 0 below (steam::friends-get-friends-group-count (handle friends))
-        collect (make-instance 'friend-group :interface friends :index i)))
+        for handle = (steam::friends-get-friends-group-idby-index (handle friends) i)
+        collect (ensure-iface-obj 'friend-group :interface friends :handle handle)))
 
 (defmethod list-friends ((friends steamfriends) &key (flags '(:all)) source coplay)
   (cond (source
          (let ((source (handle source)))
            (loop for i from 0 below (steam::friends-get-friend-count-from-source (handle friends) source)
-                 collect (make-instance 'friend :interface friends :source source :index i))))
+                 for handle = (steam::friends-get-friend-from-source-by-index (handle friends) source i)
+                 collect (ensure-iface-obj 'friend :interface friends :handle handle))))
         (coplay
          (loop for i from 0 below (steam::friends-get-coplay-friend-count (handle friends))
-               collect (make-instance 'friend :interface friends :coplay T :index i)))
+               for handle = (steam::friends-get-coplay-friend (handle friends) i)
+               collect (ensure-iface-obj 'friend :interface friends :handle handle)))
         (T
          (let ((flags (apply #'flags 'steam::efriend-flags flags)))
            (loop for i from 0 below (steam::friends-get-friend-count (handle friends) flags)
-                 collect (make-instance 'friend :interface friends :flags flags :index i))))))
+                 for handle = (steam::friends-get-friend-by-index (handle friends) i flags)
+                 collect (ensure-iface-obj 'friend :interface friends :handle handle))))))
 
 (defmethod (setf rich-presence) (value (friends steamfriends) key)
   (let ((key (case key
@@ -96,15 +101,7 @@
   ()
   (:default-initargs :interface 'steamfriends))
 
-(defmethod initialize-instance :after ((friend friend) &key index flags source coplay handle)
-  (cond (source
-         (setf (handle friend) (steam::friends-get-friend-from-source-by-index (iface* friend) source index)))
-        (flags
-         (setf (handle friend) (steam::friends-get-friend-by-index (iface* friend) index flags)))
-        (coplay
-         (setf (handle friend) (steam::friends-get-coplay-friend (iface* friend) index)))
-        ((null handle)
-         (setf (handle friend) (steam-id (interface 'steamuser friend)))))
+(defmethod initialize-instance :after ((friend friend) &key)
   (steam::friends-request-user-information (iface* friend) (handle friend) T))
 
 (defmethod print-object ((friend friend) stream)
@@ -112,7 +109,7 @@
     (format stream "~s @~d" (display-name friend) (handle friend))))
 
 (define-interface-submethod friend coplay-game (steam::friends-get-friend-coplay-game)
-  (when (/= 0 result) (make-instance 'app :handle result)))
+  (when (/= 0 result) (ensure-iface-obj 'app :interface (interface 'steamapps friend) :handle result)))
 (define-interface-submethod friend coplay-time (steam::friends-get-friend-coplay-time)
   (unix->universal result))
 (define-interface-submethod friend state (steam::friends-get-friend-persona-state))
@@ -193,10 +190,6 @@
   ()
   (:default-initargs :interface 'steamfriends))
 
-(defmethod initialize-instance :after ((group friend-group) &key index)
-  (when index
-    (setf (handle group) (steam::friends-get-friends-group-idby-index (iface* group) index))))
-
 (defmethod print-object ((group friend-group) stream)
   (print-unreadable-object (group stream :type T)
     (format stream "~s @~d" (display-name group) (handle group))))
@@ -208,19 +201,14 @@
     (cffi:with-foreign-object (members :unsigned-long count)
       (steam::friends-get-friends-group-members-list (handle (iface group)) (handle group) members count)
       (loop for i from 0 below count
-            collect (make-instance 'friend :interface (iface group)
-                                           :handle (cffi:mem-aref members :unsigned-long i))))))
+            collect (ensure-iface-obj 'friend :interface (iface group)
+                                              :handle (cffi:mem-aref members :unsigned-long i))))))
 
-;; FIXME: friend instance cache to allow eq comparison
 ;; FIXME: message stuff (only in callbacks)
 
 (defclass clan (interface-object)
   ()
   (:default-initargs :interface 'steamfriends))
-
-(defmethod initialize-instance :after ((clan clan) &key index)
-  (when index
-    (setf (handle clan) (steam::friends-get-clan-by-index (iface* clan) index))))
 
 (defmethod print-object ((clan clan) stream)
   (print-unreadable-object (clan stream :type T)
@@ -274,7 +262,7 @@
       (refresh-clan clan)
       (setf result (steam::friends-get-clan-officer-by-index (handle (iface clan)) (handle clan) index))
       (when (= 0 result) (error "FIXME: No such clan officer.")))
-    (make-instance 'friend :interface (iface clan) :handle result)))
+    (ensure-iface-obj 'friend :interface (iface clan) :handle result)))
 
 (defmethod list-officers ((clan clan))
   (let ((result (steam::friends-get-clan-officer-count (handle (iface clan)) (handle clan))))
@@ -289,4 +277,4 @@
     (when (= 0 result)
       (refresh-clan clan)
       (setf result (steam::friends-get-clan-owner (handle (iface clan)) (handle clan))))
-    (make-instance 'friend :interface (iface clan) :handle result)))
+    (ensure-iface-obj 'friend :interface (iface clan) :handle result)))

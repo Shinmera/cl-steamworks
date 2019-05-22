@@ -24,19 +24,19 @@
 
 (define-interface-method steamcontroller find-action-set (steam::controller-get-action-set-handle (name string))
   (check-invalid 0 result "FIXME: no action set found")
-  (make-instance 'action-set :interface steamcontroller :handle result))
+  (ensure-iface-obj 'action-set :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller analog-action (steam::controller-get-analog-action-handle (name string))
   (check-invalid 0 result "FIXME: no action set found")
-  (make-instance 'analog-action :interface steamcontroller :handle result))
+  (ensure-iface-obj 'analog-action :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller digital-action (steam::controller-get-digital-action-handle (name string))
   (check-invalid 0 result "FIXME: no action set found")
-  (make-instance 'digital-action :interface steamcontroller :handle result))
+  (ensure-iface-obj 'digital-action :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller controller (steam::controller-get-controller-for-gamepad-index (index integer))
   (check-invalid 0 result "FIXME: no action set found")
-  (make-instance 'controller :interface steamcontroller :handle result))
+  (ensure-iface-obj 'controller :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller action-glyph (steam::controller-get-glyph-for-action-origin origin)
   ;; KLUDGE: ech, uiop
@@ -59,25 +59,21 @@
     (let ((count (steam::controller-get-connected-controllers (handle steamcontroller) handles)))
       (loop for i from 0 below count
             for handle = (cffi:mem-aref handles 'steam::controller-handle-t i)
-            collect (make-instance 'controller :interface steamcontroller :handle handle)))))
+            collect (ensure-iface-obj 'controller :interface steamcontroller :handle handle)))))
 
 (defclass controller (interface-object)
   ()
   (:default-initargs :interface 'steamcontroller))
-
-(defmethod initialize-instance :after ((controller controller) &key index)
-  (when index
-    (setf (handle controller) (steam::controller-get-controller-for-gamepad-index (iface* controller) index))))
 
 (defmethod list-action-set-layers ((controller controller))
   (cffi:with-foreign-object (handles 'steam::controller-action-set-handle-t 16)
     (let ((count (steam::controller-get-active-action-set-layers (handle (iface controller)) (handle controller) handles)))
       (loop for i from 0 below count
             for handle = (cffi:mem-aref handles 'steam::controller-action-set-handle-t i)
-            collect (make-instance 'action-set-layer :interface (iface controller) :handle handle)))))
+            collect (ensure-iface-obj 'action-set-layer :interface (iface controller) :handle handle)))))
 
 (define-interface-submethod controller action-set (steam::controller-get-current-action-set)
-  (make-instance 'action-set :interface (iface controller) :handle result))
+  (ensure-iface-obj 'action-set :interface (iface controller) :handle result))
 
 (define-interface-submethod controller index (steam::controller-get-gamepad-index-for-controller)
   ;; WTF: I don't know how to detect if the controller is /not/ emulating a gamepad.

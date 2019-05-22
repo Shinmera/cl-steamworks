@@ -28,7 +28,7 @@
   (ensure-current-stats interface)
   (loop for i from 0 below (steam::user-stats-get-num-achievements (handle interface))
         for handle = (steam::user-stats-get-achievement-name (handle interface) i)
-        collect (make-instance 'achievement :interface interface :handle handle)))
+        collect (ensure-iface-obj 'achievement :interface interface :handle handle)))
 
 (defun ensure-current-stats (interface &key force)
   ;; FIXME: FUCK, we can't poll for this, so the other ensure-* calls won't work right.
@@ -68,7 +68,7 @@
       (check-invalid -1 iterator)
       (flet ((commit ()
                (let ((handle (cffi:foreign-string-to-lisp name :count 128 :encoding :utf-8)))
-                 (push (make-instance 'achievement :interface interface :handle handle) list))))
+                 (push (ensure-iface-obj 'achievement :interface interface :handle handle) list))))
         (loop while (/= -1 iterator)
               repeat max
               do (commit)
@@ -78,6 +78,19 @@
 (defmethod reset-stats ((interface steamuserstats) &key achievements)
   (unless (steam::user-stats-reset-all-stats (handle interface) achievements)
     (error "FIXME: failed")))
+
+(defmethod leaderboard ((name string) (interface steamuserstats) &key (if-does-not-exist :error)
+                                                                      (sort-method :ascending)
+                                                                      (display-type :nubmeric))
+  (check-utf8-size 128 name)
+  (ecase if-does-not-exist
+    (:error
+     (with-call-result (result :poll T) (steam::user-stats-find-leaderboard (iface* leaderboard) name)
+       (check-invalid 0 (steam::leaderboard-find-leaderboard-found result))
+       (ensure-iface-obj 'leaderboard :interface interface :handle (steam::leaderboard-find-steam-leaderboard result))))
+    (:create
+     (with-call-result (result :poll T) (steam::user-stats-find-or-create-leaderboard (iface* leaderboard) name sort display)
+       (ensure-iface-obj 'leaderboard :interface interface :handle (steam::leaderboard-find-steam-leaderboard result))))))
 
 (defclass stat (interface-object)
   ((stat-type :initarg :stat-type :initform 'integer :reader stat-type))
@@ -138,7 +151,7 @@
 
 (define-interface-submethod achievement icon (steam::user-stats-get-achievement-icon)
   (check-invalid 0 result "FIXME: failed")
-  (make-instance 'image :handle result))
+  (make-instance 'image :interface (interface 'steamutils achievement) :handle result))
 (define-interface-submethod achievement show-progress (steam::user-stats-indicate-achievement-progress progress total)
   (unless result (error "FIXME: failed")))
 
@@ -198,21 +211,6 @@
 (defclass leaderboard (interface-object)
   ()
   (:default-initargs :interface 'steamuserstats))
-
-(defmethod initialize-instance :after ((leaderboard leaderboard) &key name
-                                                                      (if-does-not-exist :error)
-                                                                      (sort-method :ascending)
-                                                                      (display-type :nubmeric))
-  (unless (handle leaderboard)
-    (check-utf8-size 128 name)
-    (ecase if-does-not-exist
-      (:error
-       (with-call-result (result :poll T) (steam::user-stats-find-leaderboard (iface* leaderboard) name)
-         (check-invalid 0 (steam::leaderboard-find-leaderboard-found result))
-         (setf (handle leaderboard) (steam::leaderboard-find-steam-leaderboard result))))
-      (:create
-       (with-call-result (result :poll T) (steam::user-stats-find-or-create-leaderboard (iface* leaderboard) name sort display)
-         (setf (handle leaderboard) (steam::leaderboard-find-steam-leaderboard result)))))))
 
 (define-interface-submethod leaderboard display-type (steam::user-stats-get-leaderboard-display-type))
 (define-interface-submethod leaderboard entry-count (steam::user-stats-get-leaderboard-entry-count))

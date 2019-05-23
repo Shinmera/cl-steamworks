@@ -55,6 +55,12 @@
 (defgeneric allocate-handle (c-managed-object &key &allow-other-keys))
 (defgeneric free-handle-function (c-managed-object handle))
 
+(defmethod free-handle-function :around ((object c-managed-object) handle)
+  (let ((next (call-next-method)))
+    (lambda ()
+      (setf (pointer->object handle) NIL)
+      (funcall next))))
+
 (defmethod free ((object c-managed-object))
   (let ((handle (when (slot-boundp object 'handle) (handle object))))
     (when handle

@@ -14,9 +14,6 @@
                                                   (t-or version steam::steamgameserver-interface-version)))
   (setf (stats-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-game-server-stats
                                                         (t-or version steam::steamgameserverstats-interface-version))))
-
-;; FIXME: token mechanism
-
 (define-interface-method steamgameserver logged-on-p (steam::game-server-blogged-on))
 (define-interface-method steamgameserver secure-p (steam::game-server-bsecure))
 (define-interface-method steamgameserver heartbeat (steam::game-server-force-heartbeat))
@@ -174,3 +171,37 @@
              (sleep 0.1)
           finally (error "FIXME: failed to store results after 10 retries.")))
   value)
+
+(defmethod make-session-ticket ((interface steamgameserver))
+  (make-instance 'server-session-ticket :interface interface :handle handle))
+
+(defclass server-session-ticket (session-ticket)
+  ()
+  (:default-initargs :interface 'steamgameserver))
+
+(defmethod allocate-handle ((ticket server-session-ticket) &key)
+  (cffi:with-foreign-objects ((buffer :uchar 1024)
+                              (length :uint32))
+    (prog1 (steam::game-server-get-auth-session-ticket (handle interface) buffer 1024 length)
+      (setf (slot-value ticket 'payload) (cffi:foreign-array-to-lisp buffer (list :array :uchar (cffi:mem-ref length :uint32)))))))
+
+(defmethod free-handle-function ((ticket server-session-ticket) handle)
+  (let ((interface (iface* ticket)))
+    (lambda () (steam::game-server-cancel-auth-ticket interface handle))))
+
+(defclass server-auth-session (auth-session)
+  ()
+  (:default-initargs :interface 'steamgameserver))
+
+(defmethod allocate-handle ((session server-auth-session) &key ticket-payload user)
+  (check-type ticket-payload (vector (unsigned-byte 8)))
+  (let ((handle (etypecase user
+                  (integer user)
+                  (friend (steam-id user)))))
+    (cffi:with-pointer-to-vector-data (buffer ticket-payload)
+      (with-error-on-failure (steam::game-server-begin-auth-session (iface* session) buffer (length ticket-payload) handle)))
+    handle))
+
+(defmethod free-handle-function ((session server-auth-session) handle)
+  (let ((interface (iface* session)))
+    (lambda () (steam::game-server-end-auth-session interface handle))))

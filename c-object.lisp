@@ -44,6 +44,7 @@
       (when free-on-gc
         (tg:finalize object (free-handle-function object handle)))
       (setf (handle object) handle)
+      ;; FIXME: most don't need this, should remove to avoid clashing.
       (setf (pointer->object handle) object))))
 
 (defmethod initialize-instance :around ((object c-managed-object) &key handle)

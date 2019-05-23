@@ -34,8 +34,6 @@
 (defmethod steam-id ((self (eql T)))
   (steam-id (interface 'steamuser T)))
 
-;; FIXME: Token mechanism
-
 ;; Internal static buffer for compressed voice data
 (#-sbcl defvar #+sbcl sb-ext:defglobal compressed-voice-buffer
         (make-array (* 1024 8) :element-type '(unsigned-byte 8)))
@@ -59,3 +57,40 @@
              0)
             (T
              (error "FIXME: failed to get voice data: ~a" result))))))))
+
+(defmethod make-session-ticket ((interface steamuser))
+  (make-instance 'session-ticket :interface interface :handle handle))
+
+(defclass session-ticket (c-managed-object interface-object)
+  ((payload :reader payload))
+  (:default-initargs :interface 'steamuser))
+
+(defmethod allocate-handle ((ticket session-ticket) &key)
+  (cffi:with-foreign-objects ((buffer :uchar 1024)
+                              (length :uint32))
+    (prog1 (steam::user-get-auth-session-ticket (handle interface) buffer 1024 length)
+      (setf (slot-value ticket 'payload) (cffi:foreign-array-to-lisp buffer (list :array :uchar (cffi:mem-ref length :uint32)))))))
+
+(defmethod free-handle-function ((ticket session-ticket) handle)
+  (let ((interface (iface* ticket)))
+    (lambda () (steam::user-cancel-auth-ticket interface handle))))
+
+(defclass auth-session (c-managed-object interface-object)
+  ()
+  (:default-initargs :interface 'steamuser))
+
+(defmethod allocate-handle ((session auth-session) &key ticket-payload user)
+  (check-type ticket-payload (vector (unsigned-byte 8)))
+  (let ((handle (etypecase user
+                  (integer user)
+                  (friend (steam-id user)))))
+    (cffi:with-pointer-to-vector-data (buffer ticket-payload)
+      (with-error-on-failure (steam::user-begin-auth-session (iface* session) buffer (length ticket-payload) handle)))
+    handle))
+
+(defmethod free-handle-function ((session auth-session) handle)
+  (let ((interface (iface* session)))
+    (lambda () (steam::user-end-auth-session interface handle))))
+
+(defmethod user ((session auth-session))
+  (ensure-iface-obj 'friend :handle (handle session) :interface (interface 'steamfriends session)))

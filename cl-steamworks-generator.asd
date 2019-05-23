@@ -18,5 +18,6 @@
   :depends-on (:yason
                :cffi
                :pathname-utils
+               :parse-number
                :alexandria
                :cl-ppcre))

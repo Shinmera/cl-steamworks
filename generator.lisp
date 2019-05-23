@@ -46,7 +46,7 @@
 
 (defvar *bad-types* #("ValvePackingSentinel_t"))
 
-(defvar *bad-consts* #("k_cchPersonaNameMax"))
+(defvar *bad-consts* #("k_cchPersonaNameMax" "VALVE_BIG_ENDIAN" "X64BITS" "POSIX" "__cdecl"))
 
 (defvar *bad-structs* #("CSteamID" "CGameID" "CSteamAPIContext" "CCallResult"
                         "CCallback" "CCallbackBase" "ValvePackingSentinel_t"))
@@ -129,7 +129,7 @@
   (strip-suffixes name "Result_t" "Response_t" "_t"))
 
 (defun strip-constant-name (name)
-  (strip-prefixes name "k_cch" "k_cwch" "k_c" "k_i"))
+  (strip-prefixes name "k_cch" "k_cwch" "k_cub" "k_cb" "k_c" "k_i" "k_ul" "k_un" "k_u" "k_n" "k_"))
 
 (defun parse-typespec (specstring)
   (let ((parts (split #\Space specstring))
@@ -298,11 +298,32 @@
 
 (defun scan-for-constants (content)
   (let ((results ()))
-    (flet ((add-constant (name value)
-             (push (list :constname name :constval value)
-                   results)))
-      (cl-ppcre:do-register-groups (name value) ("#define ([\\w_]+)\\s+\"([^\"]+?)\"" content)
-        (add-constant name value)))
+    (labels ((add-constant (name value)
+               (push (list :constname name :constval value)
+                     results))
+             (parse-value (value)
+               (cond ((eql #\# (char value 0))
+                      NIL)
+                     ((eql #\" (char value 0))
+                      (subseq value 0 (1- (length value))))
+                     ((string= "UINT64_MAX" value)
+                      (1- (ash 1 64)))
+                     ((string= "((uint16)-1)" value)
+                      (1- (ash 1 16)))
+                     ((prefix-p "0x" value)
+                      (parse-integer value :start 2 :end (nth-value 1 (cl-ppcre:scan "0x[\\da-fA-F]+" value)) :radix 16))
+                     ((cl-ppcre:scan "^\\d+\\.\\d+f?" value)
+                      (parse-number:parse-number value :end (1- (length value))))
+                     ((every #'digit-char-p value)
+                      (parse-integer value))))
+             (maybe-add-constant (name value)
+               (let ((value (parse-value value)))
+                 (when (eql T value) (break))
+                 (when value (add-constant name value)))))
+      (cl-ppcre:do-register-groups (name value) ("#define ([\\w_]+)\\s+([^\\n]+?)(\\r|\\n)" content)
+        (maybe-add-constant name value))
+      (cl-ppcre:do-register-groups (name value) ("const\\s+[\\w\\d]+\\s+(k_[\\w_]+)\\s+=\\s(.*?);" content)
+        (maybe-add-constant name value)))
     results))
 
 (defun scan-all-headers (directory)

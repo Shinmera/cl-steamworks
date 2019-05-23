@@ -39,7 +39,8 @@
   ((owner :reader owner)
    (location :reader location)
    (metadata :reader metadata))
-  (:default-initargs :interface 'steamparties))
+  (:default-initargs :interface 'steamparties
+                     :free-on-gc T))
 
 (defmethod initialize-instance :after ((beacon beacon) &key)
   (cffi:with-foreign-objects ((owner 'steam::steam-id)

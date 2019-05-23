@@ -8,7 +8,8 @@
 
 (defclass steamcontroller (c-managed-object interface)
   ((action-glyph-cache :initform (make-hash-table :test 'eql) :reader action-glyph-cache)
-   (action-label-cache :initform (make-hash-table :test 'eql) :reader action-label-cache)))
+   (action-label-cache :initform (make-hash-table :test 'eql) :reader action-label-cache))
+  (:default-initargs :free-on-gc T))
 
 (defmethod initialize-instance :after ((interface steamcontroller) &key)
   (steam::controller-init (handle interface)))
@@ -65,7 +66,7 @@
 
 (defmethod list-action-set-layers ((controller controller))
   (cffi:with-foreign-object (handles 'steam::controller-action-set-handle-t steam::steam-controller-max-count)
-    (let ((count (steam::controller-get-active-action-set-layers (handle (iface controller)) (handle controller) handles)))
+    (let ((count (steam::controller-get-active-action-set-layers (iface* controller) (handle controller) handles)))
       (loop for i from 0 below count
             for handle = (cffi:mem-aref handles 'steam::controller-action-set-handle-t i)
             collect (ensure-iface-obj 'action-set-layer :interface (iface controller) :handle handle)))))

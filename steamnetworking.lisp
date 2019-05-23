@@ -36,7 +36,8 @@
 
 (defclass p2p-session (c-managed-object interface-object)
   ()
-  (:default-initargs :interface 'steamnetworking))
+  (:default-initargs :interface 'steamnetworking
+                     :free-on-gc T))
 
 (defmethod initialize-instance :after ((session p2p-session) &key)
   (unless (steam::networking-accept-p2psession-with-user (iface* session) (handle session))

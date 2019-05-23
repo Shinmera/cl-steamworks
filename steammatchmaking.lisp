@@ -267,7 +267,8 @@
 
 (defclass server-query (c-managed-object interface-object)
   ((response :initarg :response :initform (error "RESPONSE required.") :reader response))
-  (:default-initargs :interface 'steammatchmaking))
+  (:default-initargs :interface 'steammatchmaking
+                     :free-on-gc T))
 
 (defmethod free-handle-function ((query server-query) handle)
   (let ((interface (servers-handle (iface query))))
@@ -278,7 +279,9 @@
   (status (response query)))
 
 (defclass server-list-query (c-managed-object interface-object)
-  ((response :initarg :response :initform (error "RESPONSE required.") :reader response)))
+  ((response :initarg :response :initform (error "RESPONSE required.") :reader response))
+  (:default-initargs :interface 'steammatchmaking
+                     :free-on-gc T))
 
 (defmethod free-handle-function ((query server-list-query) handle)
   (let ((interface (servers-handle (iface query))))

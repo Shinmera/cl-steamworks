@@ -15,8 +15,9 @@
          ,@(loop for (func ret args . body) in methods
                  collect `(,func :pointer)))
        
-       (defclass ,name (,@direct-superclasses c-managed-object)
-         ,direct-slots)
+       (defclass ,name (,@direct-superclasses c-registered-object c-managed-object)
+         ,direct-slots
+         (:default-initargs :free-on-gc T))
        
        (defmethod allocate-handle ((,name ,name) &key)
          (let ((handle (calloc '(:struct ,name))))

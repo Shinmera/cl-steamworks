@@ -7,7 +7,8 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defclass steammusicremote (c-managed-object interface)
-  ((remote-handle :accessor remote-handle)))
+  ((remote-handle :accessor remote-handle))
+  (:default-initargs :free-on-gc T))
 
 (defmethod initialize-instance :after ((interface steammusicremote) &key (name "remote"))
   (steam::music-remote-register-steam-music-remote (handle interface) name))

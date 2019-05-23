@@ -34,7 +34,7 @@
   (loop for (struct-type thunk) being the hash-values of *global-callbacks*
         do (make-instance 'closure-callback :closure thunk :struct-type struct-type)))
 
-(defclass %callback (c-managed-object)
+(defclass %callback (c-registered-object c-managed-object)
   ((struct-type :initarg :struct-type :accessor struct-type)))
 
 (defmethod initialize-instance :before ((callback %callback) &key struct-type)

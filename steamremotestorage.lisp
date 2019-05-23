@@ -108,7 +108,9 @@
        (close ,stream))))
 
 (defclass file-write-stream (c-managed-object interface-object trivial-gray-streams:fundamental-binary-output-stream)
-  ())
+  ()
+  (:default-initargs :interface 'steamremotestorage
+                     :free-on-gc T))
 
 (defmethod allocate-handle ((stream file-write-stream) &key file)
   (check-invalid #xffffffffffffffff (steam::remote-storage-file-write-stream-open (iface* stream) (handle file))))

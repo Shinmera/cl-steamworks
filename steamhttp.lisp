@@ -15,7 +15,8 @@
 
 (defclass cookie-container (c-managed-object interface-object)
   ()
-  (:default-initargs :interface 'steamhttp))
+  (:default-initargs :interface 'steamhttp
+                     :free-on-gc T))
 
 (defmethod allocate-handle ((container cookie-container) &key allow-modification)
   (steam::http-create-cookie-container (iface* container) allow-modification))
@@ -30,8 +31,9 @@
   (steam::http-set-cookie (iface* container) (handle container) host key value))
 
 (defclass http-request (c-managed-object interface-object)
-  ()
-  (:default-initargs :interface 'steamhttp))
+  ((cookie-container :initform NIL :reader cookie-container))
+  (:default-initargs :interface 'steamhttp
+                     :free-on-gc T))
 
 (defmethod allocate-handle ((request http-request) &key (method :get) url)
   (check-type url string)
@@ -114,8 +116,10 @@
 
 (defmethod (setf timeout) (timeout (request http-request))
   (unless (steam::http-set-httprequest-absolute-timeout-ms (iface* request) (handle request) (millisecs timeout))
-    (error "FIXME: failed")))
+    (error "FIXME: failed"))
+  timeout)
 
 (defmethod (setf cookie-container) ((container cookie-container) (request http-request))
   (unless (steam::http-set-httprequest-cookie-container (iface* request) (handle request) (handle container))
-    (error "FIXME: failed")))
+    (error "FIXME: failed"))
+  (setf (slot-value request 'cookie-container) container))

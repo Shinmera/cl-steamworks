@@ -50,7 +50,9 @@
     (with-error-on-failure (steam::stop-playtime-tracking-result result))))
 
 (defclass workshop-query (interface-object c-managed-object)
-  ((app :initarg app :reader app)))
+  ((app :initarg app :reader app))
+  (:default-initargs :interface 'steamworkshop
+                     :free-on-gc T))
 
 (defmethod initialize-instance :after ((query workshop-query) &key exclude require key-value-tags request search any-tag rank-by-trend-days)
   (dolist (tag exclude)
@@ -208,7 +210,9 @@
 
 (defclass workshop-update (interface-object c-managed-object)
   ((workshop-file :initarg :workshop-file :reader workshop-file)
-   (change-note :initarg :change-node :reader change-note :writer set-change-note)))
+   (change-note :initarg :change-node :reader change-note :writer set-change-note))
+  (:default-initargs :interface 'steamworkshop
+                     :free-on-gc T))
 
 (defmethod initialize-instance :after ((update workshop-update) &key description metadata display-name language visibility preview content
                                                                      (previews () previews-p) (tags () tags-p) (key-value-tags () key-value-tags-p))

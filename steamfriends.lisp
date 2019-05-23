@@ -208,9 +208,9 @@
 (define-interface-submethod friend-group display-name (steam::friends-get-friends-group-name))
 
 (defmethod members ((group friend-group))
-  (let ((count (steam::friends-get-friends-group-members-count (handle (iface group)) (handle group))))
+  (let ((count (steam::friends-get-friends-group-members-count (iface* group) (handle group))))
     (cffi:with-foreign-object (members :unsigned-long count)
-      (steam::friends-get-friends-group-members-list (handle (iface group)) (handle group) members count)
+      (steam::friends-get-friends-group-members-list (iface* group) (handle group) members count)
       (loop for i from 0 below count
             collect (ensure-iface-obj 'friend :interface (iface group)
                                               :handle (cffi:mem-aref members :unsigned-long i))))))

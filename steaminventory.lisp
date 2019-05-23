@@ -124,12 +124,12 @@
   (:default-initargs :interface 'steaminventory))
 
 (defmethod consume ((item item-instance) &optional (quantity 1))
-  (with-inventory-result (handle (iface item))
+  (with-inventory-result (iface* item)
     (unless (steam::inventory-consume-item (iface* item) handle (handle item) quantity)
       (error "FIXME: failed"))))
 
 (defmethod transfer ((source item-instance) (destination item-instance) &optional (quantity 1))
-  (with-inventory-result (handle (iface source))
+  (with-inventory-result (iface* source)
     (unless (steam::inventory-transfer-item-quantity (iface* item) handle (handle source) quantity (handle destination))
       (error "FIXME: failed"))))
 
@@ -142,12 +142,12 @@
   (:default-initargs :interface 'steaminventory))
 
 (defmethod grant-promo ((item item))
-  (with-inventory-result (handle (iface item))
+  (with-inventory-result (iface* item)
     (unless (steam::inventory-add-promo-item (iface* item) handle (handle item))
       (error "FIXME: failed"))))
 
 (defmethod grant-promo ((items cons))
-  (with-inventory-result (handle (iface (car items)))
+  (with-inventory-result (iface* (car items))
     (cffi:with-foreign-object (g 'steam::steam-item-def-t (length items))
       (loop for i from 0
             for el in items
@@ -156,7 +156,7 @@
         (error "FIXME: failed")))))
 
 (defun generate-items (items)
-  (with-inventory-result (handle (iface (caar items)))
+  (with-inventory-result (iface* (caar items))
     (cffi:with-foreign-objects ((g 'steam::steam-item-def-t (length items))
                                 (q :uint32 (length items)))
       (loop for i from 0
@@ -169,7 +169,7 @@
         (error "FIXME: failed")))))
 
 (defmethod exchange ((consume item-instance) (grant item))
-  (with-inventory-result (handle (iface consume))
+  (with-inventory-result (iface* consume)
     (cffi:with-foreign-objects ((c 'steam::steam-item-def-t 1)
                                 (g 'steam::steam-item-def-t 1)
                                 (q :uint32 1))
@@ -180,7 +180,7 @@
         (error "FIXME: failed")))))
 
 (defmethod exchange ((consume cons) (grant item))
-  (with-inventory-result (handle (iface consume))
+  (with-inventory-result (iface* consume)
     (cffi:with-foreign-objects ((c 'steam::steam-item-def-t (length consume))
                                 (g 'steam::steam-item-def-t 1)
                                 (q :uint32 (length consume)))
@@ -242,13 +242,14 @@
             :transaction-id (steam::steam-inventory-start-purchase-trans-id result)))))
 
 (defmethod trigger-item-drop ((item item))
-  (with-inventory-result (handle (iface item))
+  (with-inventory-result (iface* item)
     (unless (steam::inventory-trigger-item-drop (iface* item) handle (handle item))
       (error "FIXME: failed"))))
 
 (defclass inventory-result (c-managed-object interface-item)
   ()
-  (:default-initargs :interface 'steaminventory))
+  (:default-initargs :interface 'steaminventory
+                     :free-on-gc T))
 
 (defmethod allocate-handle ((result inventory-result) &key)
   (error "Cannot allocate an inventory result."))

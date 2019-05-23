@@ -63,7 +63,8 @@
 
 (defclass session-ticket (c-managed-object interface-object)
   ((payload :reader payload))
-  (:default-initargs :interface 'steamuser))
+  (:default-initargs :interface 'steamuser
+                     :free-on-gc T))
 
 (defmethod allocate-handle ((ticket session-ticket) &key)
   (cffi:with-foreign-objects ((buffer :uchar 1024)
@@ -77,7 +78,8 @@
 
 (defclass auth-session (c-managed-object interface-object)
   ()
-  (:default-initargs :interface 'steamuser))
+  (:default-initargs :interface 'steamuser
+                     :free-on-gc T))
 
 (defmethod allocate-handle ((session auth-session) &key ticket-payload user)
   (check-type ticket-payload (vector (unsigned-byte 8)))

@@ -7,7 +7,8 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defclass steamhtmlsurface (c-managed-object interface)
-  ())
+  ()
+  (:default-initargs :free-on-gc T))
 
 (defmethod initialize-instance :after ((interface steamhtmlsurface) &key version steamworks)
   (steam::htmlsurface-init (handle interface)))
@@ -27,7 +28,8 @@
   ((user-agent :initarg :user-agent)
    (css :initarg :css)
    (find-string :initform NIL :accessor find-string))
-  (:default-initargs :interface 'steamhtmlsurface))
+  (:default-initargs :interface 'steamhtmlsurface
+                     :free-on-gc T))
 
 (defmethod allocate-handle ((browser browser) &key user-agent css)
   (with-call-result (result :poll T) (steam::htmlsurface-create-browser (iface* browser) (or user-agent (cffi:null-pointer)) (or css (cffi:null-pointer)))

@@ -16,7 +16,6 @@
                                                         (t-or version steam::steamgameserverstats-interface-version))))
 
 ;; FIXME: token mechanism
-;; FIXME: crawl constants
 
 (define-interface-method steamgameserver logged-on-p (steam::game-server-blogged-on))
 (define-interface-method steamgameserver secure-p (steam::game-server-bsecure))
@@ -71,7 +70,7 @@
   (steam::game-server-request-user-group-status (handle gameserver) (handle user) (handle group)))
 
 (defmethod (setf game-data) ((value string) (gameserver steamgameserver))
-  (check-utf8-size 2048 value)
+  (check-utf8-size steam::max-game-server-game-data value)
   (steam::game-server-set-game-data (handle gameserver) value)
   value)
 
@@ -79,12 +78,12 @@
   (setf (game-data gameserver) (format NIL "~{~a~^,~}" value)))
 
 (defmethod (setf game-description) ((value string) (gameserver steamgameserver))
-  (check-utf8-size 64 value)
+  (check-utf8-size steam::max-game-server-game-description value)
   (steam::game-server-set-game-description (handle gameserver) value)
   value)
 
 (defmethod (setf game-tags) ((value string) (gameserver steamgameserver))
-  (check-utf8-size 128 value)
+  (check-utf8-size steam::max-game-server-tags value)
   (steam::game-server-set-game-tags (handle gameserver) value)
   value)
 
@@ -92,7 +91,7 @@
   (setf (game-tags gameserver) (format NIL "~{~a~^,~}" value)))
 
 (defmethod (setf map-name) ((value string) (gameserver steamgameserver))
-  (check-utf8-size 32 value)
+  (check-utf8-size steam::max-game-server-map-name value)
   (steam::game-server-set-map-name (handle gameserver) value)
   value)
 
@@ -120,7 +119,7 @@
   (setf (spectator-port gameserver) 0))
 
 (defmethod (setf spectator-server) ((value string) (gameserver steamgameserver))
-  (check-utf8-size 32 value)
+  (check-utf8-size steam::max-game-server-map-name value)
   (steam::game-server-set-spectator-server-name (handle gameserver) value)
   value)
 
@@ -131,7 +130,7 @@
           (cffi:with-foreign-object (data :int32)
             (loop for stat in stats
                   collect (destructuring-bind (name type) (enlist stat :int32)
-                            (check-utf8-size 128 name)
+                            (check-utf8-size steam::stat-name-max name)
                             (ecase type
                               (:int32
                                (unless (steam::game-server-stats-get-user-stat (stats-handle gameserver) (steam-id user) name data)

@@ -82,7 +82,7 @@
 (defmethod leaderboard ((name string) (interface steamuserstats) &key (if-does-not-exist :error)
                                                                       (sort-method :ascending)
                                                                       (display-type :nubmeric))
-  (check-utf8-size 128 name)
+  (check-utf8-size steam::leaderboard-name-max name)
   (ecase if-does-not-exist
     (:error
      (with-call-result (result :poll T) (steam::user-stats-find-leaderboard (iface* leaderboard) name)

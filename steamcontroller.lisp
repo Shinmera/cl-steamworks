@@ -6,8 +6,6 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
-;; FIXME: crawl constants
-
 (defclass steamcontroller (c-managed-object interface)
   ((action-glyph-cache :initform (make-hash-table :test 'eql) :reader action-glyph-cache)
    (action-label-cache :initform (make-hash-table :test 'eql) :reader action-label-cache)))
@@ -55,7 +53,7 @@
             (call-next-method))))
 
 (defmethod list-controllers ((steamcontroller steamcontroller))
-  (cffi:with-foreign-object (handles 'steam::controller-handle-t 16)
+  (cffi:with-foreign-object (handles 'steam::controller-handle-t steam::steam-controller-max-count)
     (let ((count (steam::controller-get-connected-controllers (handle steamcontroller) handles)))
       (loop for i from 0 below count
             for handle = (cffi:mem-aref handles 'steam::controller-handle-t i)
@@ -66,7 +64,7 @@
   (:default-initargs :interface 'steamcontroller))
 
 (defmethod list-action-set-layers ((controller controller))
-  (cffi:with-foreign-object (handles 'steam::controller-action-set-handle-t 16)
+  (cffi:with-foreign-object (handles 'steam::controller-action-set-handle-t steam::steam-controller-max-count)
     (let ((count (steam::controller-get-active-action-set-layers (handle (iface controller)) (handle controller) handles)))
       (loop for i from 0 below count
             for handle = (cffi:mem-aref handles 'steam::controller-action-set-handle-t i)
@@ -128,7 +126,7 @@
   (activate thing (handle controller)))
 
 (defmethod activate (thing (all (eql T)))
-  (activate thing (1- (ash 1 64))))
+  (activate thing steam::steam-controller-handle-all-controllers))
 
 (defclass action-set-layer (interface-object)
   ()
@@ -148,7 +146,7 @@
   (:default-initargs :interface 'steamcontroller))
 
 (defmethod origins ((action analog-action) (controller controller) (set action-set))
-  (cffi:with-foreign-object (origins 'steam::econtroller-action-origin 8)
+  (cffi:with-foreign-object (origins 'steam::econtroller-action-origin steam::steam-controller-max-origins)
     (let ((count (steam::controller-get-analog-action-origins (iface* action) (handle controller) (handle set) (handle action) origins)))
       (loop for i from 0 below count
             collect (cffi:mem-aref origins 'steam::econtroller-action-origin i)))))
@@ -165,7 +163,7 @@
   (:default-initargs :interface 'steamcontroller))
 
 (defmethod origins ((action digital-action) (controller controller) (set action-set))
-  (cffi:with-foreign-object (origins 'steam::econtroller-action-origin 8)
+  (cffi:with-foreign-object (origins 'steam::econtroller-action-origin steam::steam-controller-max-origins)
     (let ((count (steam::controller-get-digital-action-origins (iface* action) (handle controller) (handle set) (handle action) origins)))
       (loop for i from 0 below count
             collect (cffi:mem-aref origins 'steam::econtroller-action-origin i)))))

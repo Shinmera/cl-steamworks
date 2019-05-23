@@ -7,7 +7,7 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defclass steamgameserver (interface)
-  ((stats-handle :initarg :stats-handle :reader stats-handle)))
+  ((stats-handle :initarg :stats-handle :accessor stats-handle)))
 
 (defmethod initialize-instance :after ((interface steamgameserver) &key version stats-version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-game-server
@@ -173,7 +173,7 @@
   value)
 
 (defmethod make-session-ticket ((interface steamgameserver))
-  (make-instance 'server-session-ticket :interface interface :handle handle))
+  (make-instance 'server-session-ticket :interface interface))
 
 (defclass server-session-ticket (session-ticket)
   ()
@@ -182,7 +182,7 @@
 (defmethod allocate-handle ((ticket server-session-ticket) &key)
   (cffi:with-foreign-objects ((buffer :uchar 1024)
                               (length :uint32))
-    (prog1 (steam::game-server-get-auth-session-ticket (handle interface) buffer 1024 length)
+    (prog1 (steam::game-server-get-auth-session-ticket (iface* ticket) buffer 1024 length)
       (setf (slot-value ticket 'payload) (cffi:foreign-array-to-lisp buffer (list :array :uchar (cffi:mem-ref length :uint32)))))))
 
 (defmethod free-handle-function ((ticket server-session-ticket) handle)

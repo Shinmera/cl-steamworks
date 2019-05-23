@@ -69,11 +69,11 @@
 
 (defmethod (setf selected-files) (value (browser browser))
   (cffi:with-foreign-object (list :pointer (length value))
-    (let ((strings (map 'vector #'cffi:lisp-string-to-foreign value)))
+    (let ((strings (map 'vector #'cffi:foreign-string-alloc value)))
       (loop for i from 0 below (length strings)
             do (setf (cffi:mem-aref list :pointer i) (aref strings i)))
       (steam::htmlsurface-file-load-dialog-response (iface* browser) (handle browser) list)
-      (map NIL #'cffi:foreign-free strings)))
+      (map NIL #'cffi:foreign-string-free strings)))
   value)
 
 (defgeneric cause-event (type arg browser &key &allow-other-keys))
@@ -84,7 +84,8 @@
 
 (defmethod cause-event ((type (eql :key-down)) key (browser browser) &key modifiers)
   (steam::htmlsurface-key-down (iface* browser) (handle browser) key
-                               (apply #'flags 'steam::isteam-htmlsurface-ehtmlkey-modifiers modifiers)))
+                               (apply #'flags 'steam::isteam-htmlsurface-ehtmlkey-modifiers modifiers)
+                               NIL))
 
 (defmethod cause-event ((type (eql :key-up)) key (browser browser) &key modifiers)
   (steam::htmlsurface-key-up (iface* browser) (handle browser) key
@@ -198,7 +199,7 @@
   (window-opened browser url x y wide tall (make-instance 'browser :interface (iface browser) :handle new-window-browser-handle-ignore)))
 (define-simple-browser-callback steam::html-open-link-in-new-tab (tab-open-requested url))
 (define-simple-browser-callback steam::html-search-results (search-result results current-match))
-(define-simple-browser-callback steam::html-set-cursor (cursor-change-requested cursor))
+(define-simple-browser-callback steam::html-set-cursor (cursor-change-requested mouse-cursor))
 (define-simple-browser-callback steam::html-show-tool-tip (tooltip-show-requested msg))
 (define-browser-callback steam::html-start-request (browser url target post-data is-redirect)
   (navigation-requested browser url target (destructure-query post-data) is-redirect))

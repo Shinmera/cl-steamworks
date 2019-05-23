@@ -85,11 +85,11 @@
   (check-utf8-size steam::leaderboard-name-max name)
   (ecase if-does-not-exist
     (:error
-     (with-call-result (result :poll T) (steam::user-stats-find-leaderboard (iface* leaderboard) name)
+     (with-call-result (result :poll T) (steam::user-stats-find-leaderboard (handle interface) name)
        (check-invalid 0 (steam::leaderboard-find-leaderboard-found result))
        (ensure-iface-obj 'leaderboard :interface interface :handle (steam::leaderboard-find-steam-leaderboard result))))
     (:create
-     (with-call-result (result :poll T) (steam::user-stats-find-or-create-leaderboard (iface* leaderboard) name sort display)
+     (with-call-result (result :poll T) (steam::user-stats-find-or-create-leaderboard (handle interface) name sort-method display-type)
        (ensure-iface-obj 'leaderboard :interface interface :handle (steam::leaderboard-find-steam-leaderboard result))))))
 
 (defclass stat (interface-object)
@@ -142,7 +142,7 @@
             (float (steam::user-stats-set-stat0 (iface* stat) (handle stat) (coerce value 'single-float))))
     (error "FIXME: failed"))
   (when sync
-    (store (iface achievement)))
+    (store-stats (iface stat)))
   value)
 
 (defclass achievement (interface-object)
@@ -191,7 +191,7 @@
               (steam::user-stats-clear-achievement (iface* achievement) (handle achievement)))
     (error "FIXME: failed"))
   (when sync
-    (store (iface achievement)))
+    (store-stats (iface achievement)))
   value)
 
 (defmethod unlock-time ((achievement achievement) &optional user)

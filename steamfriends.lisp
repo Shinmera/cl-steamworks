@@ -189,9 +189,8 @@
 
 (defmethod get-message ((friend friend) (index integer))
   (cffi:with-foreign-objects ((buffer :uchar (+ 2048 1))
-                              (type steam::echat-entry-type)
-                              (user steam::steam-id))
-    (let ((count (steam::friends-get-friend-message (iface* friend) (handle clan) index buffer (+ 2048 1) type)))
+                              (type 'steam::echat-entry-type))
+    (let ((count (steam::friends-get-friend-message (iface* friend) (handle friend) index buffer (+ 2048 1) type)))
       (check-invalid 0 count)
       (list :type (cffi:mem-ref type 'steam::echat-entry-type)
             :user friend
@@ -290,8 +289,8 @@
 
 (defmethod get-message ((clan clan) (index integer))
   (cffi:with-foreign-objects ((buffer :uchar (+ 2048 1))
-                              (type steam::echat-entry-type)
-                              (user steam::steam-id))
+                              (type 'steam::echat-entry-type)
+                              (user 'steam::steam-id))
     (let ((count (steam::friends-get-clan-chat-message (iface* clan) (handle clan) index buffer (+ 2048 1) type user)))
       (check-invalid 0 count)
       (list :type (cffi:mem-ref type 'steam::echat-entry-type)

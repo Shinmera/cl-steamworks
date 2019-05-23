@@ -126,3 +126,6 @@
 
 (defmethod run-callbacks ((steamworks steamworks-server))
   (steam::game-server-run-callbacks))
+
+(defmethod server-depot ((steamworks steamworks-server))
+  (error "You must add a method on SERVER-DEPOT that returns a valid depot-id."))

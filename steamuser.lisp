@@ -59,7 +59,7 @@
              (error "FIXME: failed to get voice data: ~a" result))))))))
 
 (defmethod make-session-ticket ((interface steamuser))
-  (make-instance 'session-ticket :interface interface :handle handle))
+  (make-instance 'session-ticket :interface interface))
 
 (defclass session-ticket (c-managed-object interface-object)
   ((payload :reader payload))
@@ -69,7 +69,7 @@
 (defmethod allocate-handle ((ticket session-ticket) &key)
   (cffi:with-foreign-objects ((buffer :uchar 1024)
                               (length :uint32))
-    (prog1 (steam::user-get-auth-session-ticket (handle interface) buffer 1024 length)
+    (prog1 (steam::user-get-auth-session-ticket (iface* ticket) buffer 1024 length)
       (setf (slot-value ticket 'payload) (cffi:foreign-array-to-lisp buffer (list :array :uchar (cffi:mem-ref length :uint32)))))))
 
 (defmethod free-handle-function ((ticket session-ticket) handle)

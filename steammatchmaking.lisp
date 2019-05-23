@@ -9,11 +9,11 @@
 (defclass steammatchmaking (interface)
   ((servers-handle :accessor servers-handle)))
 
-(defmethod initialize-instance :after ((interface steammatchmaking) &key version steamworks)
+(defmethod initialize-instance :after ((interface steammatchmaking) &key version servers-version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-matchmaking
                                                   (t-or version steam::steammatchmaking-interface-version)))
   (setf (servers-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-matchmaking-servers
-                                                          (t-or list-version steam::steammatchmakingservers-interface-version))))
+                                                          (t-or servers-version steam::steammatchmakingservers-interface-version))))
 
 (defmethod add-favorite-game ((interface steammatchmaking) (app app) (ip string) (connection-port integer) (query-port integer) &optional (list :favorite))
   (steam::matchmaking-add-favorite-game (handle interface) (app-id app) (ipv4->int ip) connection-port query-port
@@ -41,16 +41,16 @@
       (loop for i from 0 below count
             do (unless (steam::matchmaking-get-favorite-game (handle interface) i app ip connection-port query-port flags last-played)
                  (error "FIXME: failed"))
-            collect (listp (ensure-iface-obj 'app :interface (interface 'steamapps interface)
-                                                  :handle (cffi:mem-ref app 'steam::app-id-t))
-                           (int->ipv4 (cffi:mem-ref ip :uint32))
-                           (cffi:mem-ref connection-port :uint16)
-                           (cffi:mem-ref query-port :uint16)
-                           (case (cffi:mem-ref flags :uint32)
-                             (1 :favorite)
-                             (2 :history)
-                             (0 :none))
-                           (unix->universal (cffi:mem-ref last-played :uint32)))))))
+            collect (list (ensure-iface-obj 'app :interface (interface 'steamapps interface)
+                                                 :handle (cffi:mem-ref app 'steam::app-id-t))
+                          (int->ipv4 (cffi:mem-ref ip :uint32))
+                          (cffi:mem-ref connection-port :uint16)
+                          (cffi:mem-ref query-port :uint16)
+                          (case (cffi:mem-ref flags :uint32)
+                            (1 :favorite)
+                            (2 :history)
+                            (0 :none))
+                          (unix->universal (cffi:mem-ref last-played :uint32)))))))
 
 (defmethod (setf favorite-games) ((after cons) (interface steammatchmaking))
   (flet ((trim-to-size (el)
@@ -58,10 +58,10 @@
              (if cons
                  (setf (cdr cons) NIL)
                  (setf (cdr (last el)) (list :favorite))))))
-    (let ((before (mapcar #'trim-to-size (favorite-games interface)))
-          (after (mapcar #'trim-to-size after))
-          (to-add (set-difference after before))
-          (to-remove (set-difference before after)))
+    (let* ((before (mapcar #'trim-to-size (favorite-games interface)))
+           (after (mapcar #'trim-to-size after))
+           (to-add (set-difference after before))
+           (to-remove (set-difference before after)))
       (dolist (item to-add)
         (apply #'add-favorite-game interface item))
       (dolist (item to-remove)
@@ -144,13 +144,13 @@
             collect (cons (cffi:foreign-string-to-lisp key :encoding :utf-8)
                           (cffi:foreign-string-to-lisp value :encoding :utf-8))))))
 
-(defmethod member-data ((member friend) (lobby lobby) (key string))
+(defmethod member-data ((user friend) (lobby lobby) (key string))
   (check-empty-string (steam::matchmaking-get-lobby-member-data (iface* lobby) (handle lobby) (steam-id user) key)))
 
 (defmethod (setf member-data) ((value string) (member friend) (lobby lobby) (key string))
   (unless (= (steam-id member) (steam-id (interface 'steamuser member)))
     (error "FIXME: cannot set member data for others"))
-  (steam::matchmaking-set-lobby-member-data (iface* lobby) (handle lobby))
+  (steam::matchmaking-set-lobby-member-data (iface* lobby) (handle lobby) key value)
   value)
 
 (defmethod chat-entry ((index integer) (lobby lobby))

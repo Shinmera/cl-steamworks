@@ -39,7 +39,7 @@
         collect (cffi:with-foreign-objects ((id 'steam::app-id-t)
                                             (available :bool)
                                             (name :char 256))
-                  (unless (steam::apps-bget-dlcdata-by-index (handle steamapps) index id available name 256)
+                  (unless (steam::apps-bget-dlcdata-by-index (handle apps) i id available name 256)
                     (error "FIXME: could not retrieve dlc."))
                   (ensure-iface-obj 'dlc :interface apps
                                          :handle (cffi:mem-ref id 'steam::app-id-t)

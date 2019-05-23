@@ -124,13 +124,13 @@
   (:default-initargs :interface 'steaminventory))
 
 (defmethod consume ((item item-instance) &optional (quantity 1))
-  (with-inventory-result (iface* item)
+  (with-inventory-result (handle item)
     (unless (steam::inventory-consume-item (iface* item) handle (handle item) quantity)
       (error "FIXME: failed"))))
 
 (defmethod transfer ((source item-instance) (destination item-instance) &optional (quantity 1))
-  (with-inventory-result (iface* source)
-    (unless (steam::inventory-transfer-item-quantity (iface* item) handle (handle source) quantity (handle destination))
+  (with-inventory-result (handle source)
+    (unless (steam::inventory-transfer-item-quantity (iface* source) handle (handle source) quantity (handle destination))
       (error "FIXME: failed"))))
 
 (defmethod (setf property) (value (item item-instance) (property string))
@@ -142,34 +142,34 @@
   (:default-initargs :interface 'steaminventory))
 
 (defmethod grant-promo ((item item))
-  (with-inventory-result (iface* item)
+  (with-inventory-result (handle item)
     (unless (steam::inventory-add-promo-item (iface* item) handle (handle item))
       (error "FIXME: failed"))))
 
 (defmethod grant-promo ((items cons))
-  (with-inventory-result (iface* (car items))
+  (with-inventory-result (handle (car items))
     (cffi:with-foreign-object (g 'steam::steam-item-def-t (length items))
       (loop for i from 0
             for el in items
-            do (setf (cffi:mem-aref 'steam::steam-item-def-t i) (handle el)))
-      (unless (steam::inventory-add-promo-items (iface* (car items)) handle defs (length items))
+            do (setf (cffi:mem-aref g 'steam::steam-item-def-t i) (handle el)))
+      (unless (steam::inventory-add-promo-items (iface* (car items)) handle g (length items))
         (error "FIXME: failed")))))
 
 (defun generate-items (items)
-  (with-inventory-result (iface* (caar items))
+  (with-inventory-result (handle (caar items))
     (cffi:with-foreign-objects ((g 'steam::steam-item-def-t (length items))
                                 (q :uint32 (length items)))
       (loop for i from 0
             for item in items
             do (destructuring-bind (el qu) (enlist item 1)
                  (check-type el item)
-                 (setf (cffi:mem-aref 'steam::steam-item-def-t i) (handle el))
-                 (setf (cffi:mem-aref :uint32 i) qu)))
-      (unless (steam::inventory-add-promo-items (iface* (caar items)) handle defs (length items))
+                 (setf (cffi:mem-aref g 'steam::steam-item-def-t i) (handle el))
+                 (setf (cffi:mem-aref q :uint32 i) qu)))
+      (unless (steam::inventory-add-promo-items (iface* (caar items)) handle g (length items))
         (error "FIXME: failed")))))
 
 (defmethod exchange ((consume item-instance) (grant item))
-  (with-inventory-result (iface* consume)
+  (with-inventory-result (handle consume)
     (cffi:with-foreign-objects ((c 'steam::steam-item-def-t 1)
                                 (g 'steam::steam-item-def-t 1)
                                 (q :uint32 1))
@@ -180,7 +180,7 @@
         (error "FIXME: failed")))))
 
 (defmethod exchange ((consume cons) (grant item))
-  (with-inventory-result (iface* consume)
+  (with-inventory-result (handle consume)
     (cffi:with-foreign-objects ((c 'steam::steam-item-def-t (length consume))
                                 (g 'steam::steam-item-def-t 1)
                                 (q :uint32 (length consume)))
@@ -228,8 +228,8 @@
                                              (cffi:mem-ref price :uint64))))))
 
 (defmethod purchase-items ((items cons))
-  (with-c-objects ((p 'steam::steam-item-def-t (length items))
-                   (q :uint32 (length items)))
+  (cffi:with-foreign-objects ((p 'steam::steam-item-def-t (length items))
+                              (q :uint32 (length items)))
     (loop for i from 0
           for item in items
           do (destructuring-bind (el qu) (enlist item 1)
@@ -242,7 +242,7 @@
             :transaction-id (steam::steam-inventory-start-purchase-trans-id result)))))
 
 (defmethod trigger-item-drop ((item item))
-  (with-inventory-result (iface* item)
+  (with-inventory-result (handle item)
     (unless (steam::inventory-trigger-item-drop (iface* item) handle (handle item))
       (error "FIXME: failed"))))
 
@@ -288,12 +288,12 @@
   (cffi:with-foreign-object (count :uint32)
     (unless (steam::inventory-get-result-items (iface* result) (handle result) (cffi:null-pointer) count)
       (error "FIXME: failed"))
-    (cffi:with-foreign-object (array 'steam::steam-item-details (cffi:mem-ref count :uint32))
+    (cffi:with-foreign-object (array '(:struct steam::steam-item-details) (cffi:mem-ref count :uint32))
       (unless (steam::inventory-get-result-items (iface* result) (handle result) array count)
         (error "FIXME: failed"))
       (loop for i from 0 below (cffi:mem-ref count :uint32)
-            for details = (cffi:mem-aref array 'steam::steam-item-details i)
-            collect (list (ensure-iface-obj 'item :interface inventory :handle (steam::steam-item-details-definition details))
+            for details = (cffi:mem-aref array '(:struct steam::steam-item-details) i)
+            collect (list (ensure-iface-obj 'item :interface (iface result) :handle (steam::steam-item-details-definition details))
                           (steam::steam-item-details-quantity details)
                           (decode-flags 'steam::esteam-item-flags (steam::steam-item-details-flags details)))))))
 
@@ -301,7 +301,7 @@
   (cffi:with-foreign-object (count :uint32)
     (unless (steam::inventory-serialize-result (iface* result) (handle result) (cffi:null-pointer) count)
       (error "FIXME: failed"))
-    (let ((buffer (cffi:make-shareable-byte-vector count)))
+    (let ((buffer (cffi:make-shareable-byte-vector (cffi:mem-ref count :uint32))))
       (cffi:with-pointer-to-vector-data (data buffer)
         (unless (steam::inventory-serialize-result (iface* result) (handle result) data count)
           (error "FIXME: failed"))

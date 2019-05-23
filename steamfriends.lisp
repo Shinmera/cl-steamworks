@@ -18,6 +18,7 @@
 (define-interface-method steamfriends display-name (steam::friends-get-persona-name))
 (define-interface-method steamfriends state (steam::friends-get-persona-state))
 (define-interface-method steamfriends (setf display-name) (name steam::friends-set-persona-name))
+(define-interface-method steamfriends (setf listen-for-messages) (value steam::friends-set-listen-for-friends-messages))
 
 (defmethod restricted-p ((friends steamfriends))
   (< 0 (steam::friends-get-user-restrictions (handle friends))))
@@ -186,6 +187,16 @@
 (defmethod mark-as-played-with ((friend friend))
   (steam::friends-set-played-with (iface* friend) (handle friend)))
 
+(defmethod get-message ((friend friend) (index integer))
+  (cffi:with-foreign-objects ((buffer :uchar (+ 2048 1))
+                              (type steam::echat-entry-type)
+                              (user steam::steam-id))
+    (let ((count (steam::friends-get-friend-message (iface* friend) (handle clan) index buffer (+ 2048 1) type)))
+      (check-invalid 0 count)
+      (list :type (cffi:mem-ref type 'steam::echat-entry-type)
+            :user friend
+            :text (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8)))))
+
 (defclass friend-group (interface-object)
   ()
   (:default-initargs :interface 'steamfriends))
@@ -203,8 +214,6 @@
       (loop for i from 0 below count
             collect (ensure-iface-obj 'friend :interface (iface group)
                                               :handle (cffi:mem-aref members :unsigned-long i))))))
-
-;; FIXME: message stuff (only in callbacks)
 
 (defclass clan (interface-object)
   ()
@@ -244,37 +253,47 @@
                 :chatting (cffi:mem-ref chatting :int))))))
 
 (defmethod display-name ((clan clan))
-  (let ((name (steam::friends-get-clan-name (handle (iface clan)) (handle clan))))
+  (let ((name (steam::friends-get-clan-name (iface* clan) (handle clan))))
     (when (string/= name "") name)))
 
 (defmethod tag-name ((clan clan))
-  (let ((name (steam::friends-get-clan-tag (handle (iface clan)) (handle clan))))
+  (let ((name (steam::friends-get-clan-tag (iface* clan) (handle clan))))
     (when (string/= name "") name)))
 
 (defmethod refresh-clan ((clan clan) &key (block T))
   (with-call-result (result :poll block)
-      (steam::friends-request-clan-officer-list (handle (iface clan)) (handle clan))
+      (steam::friends-request-clan-officer-list (iface* clan) (handle clan))
     (declare (ignore result))))
 
 (defmethod officer ((clan clan) (index integer))
-  (let ((result (steam::friends-get-clan-officer-by-index (handle (iface clan)) (handle clan) index)))
+  (let ((result (steam::friends-get-clan-officer-by-index (iface* clan) (handle clan) index)))
     (when (= 0 result)
       (refresh-clan clan)
-      (setf result (steam::friends-get-clan-officer-by-index (handle (iface clan)) (handle clan) index))
+      (setf result (steam::friends-get-clan-officer-by-index (iface* clan) (handle clan) index))
       (when (= 0 result) (error "FIXME: No such clan officer.")))
     (ensure-iface-obj 'friend :interface (iface clan) :handle result)))
 
 (defmethod list-officers ((clan clan))
-  (let ((result (steam::friends-get-clan-officer-count (handle (iface clan)) (handle clan))))
+  (let ((result (steam::friends-get-clan-officer-count (iface* clan) (handle clan))))
     (when (= 0 result)
       (refresh-clan clan)
-      (setf result (steam::friends-get-clan-officer-count (handle (iface clan)) (handle clan))))
+      (setf result (steam::friends-get-clan-officer-count (iface* clan) (handle clan))))
     (loop for i from 0 below result
           collect (officer clan i))))
 
 (defmethod owner ((clan clan))
-  (let ((result (steam::friends-get-clan-owner (handle (iface clan)) (handle clan))))
+  (let ((result (steam::friends-get-clan-owner (iface* clan) (handle clan))))
     (when (= 0 result)
       (refresh-clan clan)
-      (setf result (steam::friends-get-clan-owner (handle (iface clan)) (handle clan))))
+      (setf result (steam::friends-get-clan-owner (iface* clan) (handle clan))))
     (ensure-iface-obj 'friend :interface (iface clan) :handle result)))
+
+(defmethod get-message ((clan clan) (index integer))
+  (cffi:with-foreign-objects ((buffer :uchar (+ 2048 1))
+                              (type steam::echat-entry-type)
+                              (user steam::steam-id))
+    (let ((count (steam::friends-get-clan-chat-message (iface* clan) (handle clan) index buffer (+ 2048 1) type user)))
+      (check-invalid 0 count)
+      (list :type (cffi:mem-ref type 'steam::echat-entry-type)
+            :user (ensure-iface-obj 'friend :interface (iface clan) :handle (cffi:mem-ref user 'steam::steam-id))
+            :text (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8)))))

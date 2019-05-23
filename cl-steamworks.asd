@@ -17,6 +17,7 @@
                (:file "toolkit")
                (:file "c-object")
                (:file "callback")
+               (:file "callback-class")
                (:file "steamworks")
                (:file "interface")
                (:file "steamclient")

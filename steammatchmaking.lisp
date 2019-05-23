@@ -143,7 +143,7 @@
       (loop for i from 0 below count
             collect (cons (cffi:foreign-string-to-lisp key :encoding :utf-8)
                           (cffi:foreign-string-to-lisp value :encoding :utf-8))))))
-8192
+
 (defmethod member-data ((member friend) (lobby lobby) (key string))
   (check-empty-string (steam::matchmaking-get-lobby-member-data (iface* lobby) (handle lobby) (steam-id user) key)))
 
@@ -244,29 +244,29 @@
                        (:internet (steam::matchmaking-servers-request-internet-server-list (handle interface) (handle app) array count (handle response)))
                        (:spectator (steam::matchmaking-servers-request-spectator-server-list (handle interface) (handle app) array count (handle response)))
                        (:lan (steam::matchmaking-servers-request-lanserver-list (handle interface) (handle app) (handle response))))))
-        (values (make-instance 'server-list-query :interface interface :handle handle)
+        (values (make-instance 'server-list-query :interface interface :handle handle :response response)
                 response)))))
 
 (defmethod ping-server ((interface steammatchmaking) (ip string) (port integer) &key response)
   (let* ((response (or response (make-instance 'ping-response)))
          (handle (steam::matchmaking-servers-ping-server (handle interface) (ipv4->int ip) port (handle response))))
-    (values (make-instance 'server-query :interface interface :handle handle)
+    (values (make-instance 'server-query :interface interface :handle handle :response response)
             response)))
 
 (defmethod player-details ((interface steammatchmaking) (ip string) (port integer) &key response)
   (let* ((response (or response (make-instance 'player-details-response)))
          (handle (steam::matchmaking-servers-player-details (handle interface) (ipv4->int ip) port (handle response))))
-    (values (make-instance 'server-query :interface interface :handle handle)
+    (values (make-instance 'server-query :interface interface :handle handle :response response)
             response)))
 
 (defmethod server-rules ((interface steammatchmaking) (ip string) (port integer) &key response)
   (let* ((response (or response (make-instance 'rules-response)))
          (handle (steam::matchmaking-servers-server-rules (handle interface) (ipv4->int ip) port (handle response))))
-    (values (make-instance 'server-query :interface interface :handle handle)
+    (values (make-instance 'server-query :interface interface :handle handle :response response)
             response)))
 
 (defclass server-query (c-managed-object interface-object)
-  ()
+  ((response :initarg :response :initform (error "RESPONSE required.") :reader response))
   (:default-initargs :interface 'steammatchmaking))
 
 (defmethod free-handle-function ((query server-query) handle)
@@ -274,8 +274,11 @@
     (lambda ()
       (steam::matchmaking-servers-cancel-server-query interface handle))))
 
+(defmethod status ((query server-query))
+  (status (response query)))
+
 (defclass server-list-query (c-managed-object interface-object)
-  ())
+  ((response :initarg :response :initform (error "RESPONSE required.") :reader response)))
 
 (defmethod free-handle-function ((query server-list-query) handle)
   (let ((interface (servers-handle (iface query))))

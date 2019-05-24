@@ -2,15 +2,56 @@
 This is a wrapper library to allow you to interface with the Valve SteamWorks API.
 
 ## Setup
-This library does //not// ship the SteamWorks and SteamClient binaries. You must get your own copy from "Valve"(https://partner.steamgames.com/). Once you have the SDK, load ``cl-steamworks-generator`` and run the ``setup`` function.
+This library does //not// ship the SteamWorks and SteamClient binaries. You must get your own copy from "Valve"(https://partner.steamgames.com/). Once you have the SDK, load ``cl-steamworks-generator`` and run the ``setup`` function. It should handle everything automatically from there. Once the files have been generated, restart your Lisp and load ``cl-steamworks``.
 
-# DON'T LOOK AAAAAAAAAAAAAAAAAAAAAAAAA
+### Client
+Typically you'll be running a client instance when you ship your game. To get SteamWorks started up and ready, simply create an instance of ``steamworks-client``, passing your game's AppID as the ``:app-id`` initarg. If your game was not launched through steam, or steam isn't running and the app-id file isn't set up, it will signal an error and prompt you to restart through steam. For testing purposes, if you don't have a valid AppID yet, you can use ``480``, the AppID of their example game.
+
+When you are about to shut the game down again, make sure to call ``(free (steamworks))`` in order to clean everything up properly.
+
+This is all you need to do to sell your game on Steam. If you want to access any other functionality that the SteamWorks API offers, please read their API documentation and, where available, the documentation of this library. Specifically, you should see "§Concepts"(link Concepts) below.
+
+### Server
+When you are running a server instance for your game, you should instead proceed as follows: create an instance of ``steamworks-server``. You must pass the following arguments: 
+
+- ``:app-id``
+- ``:ip-address``
+- ``:port``
+- ``:game-port``
+- ``:query-port``
+- ``:server-mode``
+- ``:version-string``
+- ``:server-depot``
+- ``:directory``
+
+When you are about to shut the server down again, make sure to call ``(free (steamworks))`` in order to clean everything up properly.
 
 ## Missing Parts
 The wrapper specifically does //not// include parts that have been marked as deprecated, superseded, or unused. If you find yourself in the unfortunate situation of having to access one of those functions anyway, you can always fall back to directly calling the C functions from the ``cl-steamworks-cffi`` package and retrieving relevant handles and IDs of the objects with ``handle``.
 
 ## This Wrapper is Outdated!
-Thanks for noticing! Please submit a pull request with the relevant fixes.
+Is it? Well, thanks for noticing! Please submit a pull request with the relevant fixes.
 
 ## Acknowledgements
 Thanks to Garry Newman's "blog entry"(https://garry.tv/2016/11/01/steamworks-sdk/) and the "Facepunch.Steamworks"(https://github.com/Facepunch/Facepunch.Steamworks) effort in general. It helped tremendously in figuring out some of the very obscure and annoying bits of the API.
+
+## A Note to Game Developers
+The steamworks API offers a //lot// of tools. I heavily recommend not building your game in a way that depends on them. This means using other, independent libraries where possible, and keeping the Steam functionality in a separate, optional system. The reason is that, if you write your game integrated tightly with the Steam API, then you won't be able to sell your game outside of steam, and if steam ever decides to shut down or remove your game, it will simply be lost to time. For the preservation of the medium and your own marketability, I thus heavily recommend investing the time into making your game extensible enough to keep the Steam parts an optional addition.
+
+## Concepts
+This library wraps the entirety of the SteamWorks API and tries to bridge the gap from Lisp to C++ as well as possible. For this reason it often diverges from the SteamWorks API. Most of the time however these divergences are simply convenience functions that automatically handle things like memory allocation, argument parsing, error checking, and aggregation. As such, typically you should be able to simply use the lisp functions exposed by this library and not worry any further.
+
+However, there are a few things that this library cannot do for you, due to a lack of insight into how your application operates. These details are described in the following sections.
+
+### Callbacks
+The first thing to note is that you should call the function ``run-callbacks`` regularly. This function will trigger callbacks //synchronously// within the calling thread. If you do not call it often enough you might be interpreting events too late. However, it is also not recommended to call it too often, such as once a frame, as that could degrade performance.
+
+The SteamWorks API defines a lot of callbacks over all of its interfaces. Unless specifically noted in the documentation of the respective interface, cl-steamworks will not handle the callback event at all. If there are events you care about, you should use ``define-callback`` to register a global callback function that can handle the event. If you want to track application context within a callback, you can use a dynamic variable and make sure to bind it when you call ``run-callbacks``, as the callback functions will be executed synchronously within the thread. Naturally you should also make sure not to call ``run-callbacks`` in time-critical code or implement time-consuming callback functions if you do.
+
+### Callresults
+In addition to callbacks, the SteamWorks API implements callresults. Callresults are handles for an asynchronous operation that you initiate. Most of the time when callresults are involved in the steam API, cl-steamworks will not expose them to you and instead implement a polling mechanism to wait for the result and then return synchronously. Sometimes the function will expose a ``:poll`` parameter to which you can pass ``NIL`` in order to retrieve the ``callresult`` instance instead of blocking. It is then up to you to retrieve the result at the opportune time.
+
+### Memory and GC
+
+
+### Low Level

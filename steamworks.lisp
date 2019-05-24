@@ -103,11 +103,14 @@
    (game-port :initarg :game-port :reader game-port)
    (query-port :initarg :query-port :reader query-port)
    (server-mode :initarg :server-mode :reader server-mode)
-   (version-string :initarg :version-string :reader version-string))
+   (version-string :initarg :version-string :reader version-string)
+   (server-depot :initarg :server-depot :reader server-depot))
   (:default-initargs :interfaces *default-server-interfaces*))
 
-(defmethod initialize-instance ((steamworks steamworks-server) &key ip-address port game-port query-port server-mode version-string)
+(defmethod initialize-instance ((steamworks steamworks-server) &key ip-address port game-port query-port server-mode version-string server-depot)
   (call-next-method)
+  (unless server-depot
+    (error "You must pass the :SERVER-DEPOT."))
   (unless (steam::game-server-init ip-address port game-port query-port server-mode version-string)
     (error "FIXME: failed to init game server."))
   (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (steam::game-server-get-hsteam-pipe)))
@@ -129,6 +132,3 @@
 
 (defmethod run-callbacks ((steamworks steamworks-server))
   (steam::game-server-run-callbacks))
-
-(defmethod server-depot ((steamworks steamworks-server))
-  (error "You must add a method on SERVER-DEPOT that returns a valid depot-id."))

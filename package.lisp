@@ -5,8 +5,11 @@
 |#
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (unless (find-package '#:org.shirakumo.fraf.steamworks.cffi)
-    (make-package '#:org.shirakumo.fraf.steamworks.cffi :use ())))
+  (let ((name '#:org.shirakumo.fraf.steamworks.cffi))
+    (unless (find-package name)
+      (make-package name :use ())
+      (intern (string '#:steamworks) name)
+      (intern (string '#:steamworks-shim) name))))
 
 (defpackage #:cl-steamworks
   (:nicknames #:org.shirakumo.fraf.steamworks)
@@ -118,10 +121,10 @@
   ;; steamcontroller.lisp
   (:export
    #:steamcontroller
-   #:action-set
-   #:analog-action
-   #:digital-action
-   #:controller
+   #:find-action-set
+   #:find-analog-action
+   #:find-digital-action
+   #:find-controller
    #:action-glyph
    #:action-label
    #:run-frame

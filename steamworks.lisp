@@ -7,10 +7,13 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defvar *steamworks* NIL)
-(defvar *default-interfaces*
-  '(steamclient steamutils steamuser steamfriends steamapps steamworkshop))
-(defvar *default-server-interfaces*
-  '(steamclient steamutils steamuser steamfriends steamapps steamgameserver))
+(defvar *default-interfaces* ; Does not include interfaces that need deallocation
+  '(steamclient steamutils steamuser steamfriends steamapps steammatchmaking steammusic
+    steamnetworking steamparties steamremotestorage steamscreenshots steamuserstats
+    steamvideo steamworkshop))
+(defvar *default-server-interfaces* ; Does not include interfaces that are client-only
+  '(steamclient steamutils steamuser steamfriends steamapps steamgameserver steamnetworking
+    steamremotestorage steamuserstats steamworkshop))
 
 (defun steamworks (&optional container)
   (if container

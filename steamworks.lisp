@@ -99,7 +99,7 @@
 
 (defclass steamworks-server (steamworks)
   ((ip-address :initarg :ip-address :reader ip-address)
-   (port :initarg :port :reader port)
+   (steam-port :initarg :steam-port :reader steam-port)
    (game-port :initarg :game-port :reader game-port)
    (query-port :initarg :query-port :reader query-port)
    (server-mode :initarg :server-mode :reader server-mode)
@@ -107,11 +107,11 @@
    (server-depot :initarg :server-depot :reader server-depot))
   (:default-initargs :interfaces *default-server-interfaces*))
 
-(defmethod initialize-instance ((steamworks steamworks-server) &key ip-address port game-port query-port server-mode version-string server-depot)
+(defmethod initialize-instance ((steamworks steamworks-server) &key ip-address steam-port game-port query-port server-mode version-string server-depot)
   (call-next-method)
   (unless server-depot
     (error "You must pass the :SERVER-DEPOT."))
-  (unless (steam::game-server-init ip-address port game-port query-port server-mode version-string)
+  (unless (steam::game-server-init ip-address steam-port game-port query-port server-mode version-string)
     (error "FIXME: failed to init game server."))
   (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (steam::game-server-get-hsteam-pipe)))
   (setf (slot-value steamworks 'user) (make-instance 'user :handle (steam::game-server-get-hsteam-user)

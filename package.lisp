@@ -606,9 +606,9 @@
    #:run-callbacks
    #:steamworks-server
    #:ip-address
-   #:port
+   #:steam-port
    #:game-port
-   #:query-part
+   #:query-port
    #:server-mode
    #:version-string
    #:server-depot)

@@ -14,29 +14,32 @@ This is all you need to do to sell your game on Steam. If you want to access any
 ### Server
 When you are running a server instance for your game, you should instead proceed as follows: create an instance of ``steamworks-server``. You must pass the following arguments: 
 
-- ``:app-id``
-- ``:ip-address``
-- ``:port``
-- ``:game-port``
-- ``:query-port``
-- ``:server-mode``
-- ``:version-string``
-- ``:server-depot``
-- ``:directory``
+- ``:app-id`` As before, the AppID of your game.
+- ``:ip-address`` The IP address to bind to, ``"0.0.0.0"`` to broadcast on all interfaces.
+- ``:steam-port`` The local port used to talk to the Steam servers.
+- ``:game-port`` The port to listen on for new client connections.
+- ``:query-port`` The port to listen on for server browser queries and pings.
+- ``:server-mode`` What level of authentication to require from players.
+- ``:version-string`` A version string for your server, to identify outdated servers.
+- ``:server-depot`` The depot id of your game.
+- ``:directory`` The directory name of your game.
+
+After that you should set any additional options on the server, and then call ``(logon (interface 'steamgameserver T))``, possibly with a ``:token`` argument to achieve a non-anonymous logon.
 
 When you are about to shut the server down again, make sure to call ``(free (steamworks))`` in order to clean everything up properly.
 
-## Missing Parts
+## Notes
+### Missing Parts
 The wrapper specifically does //not// include parts that have been marked as deprecated, superseded, or unused. If you find yourself in the unfortunate situation of having to access one of those functions anyway, you can always fall back to directly calling the C functions from the ``cl-steamworks-cffi`` package and retrieving relevant handles and IDs of the objects with ``handle``.
 
-## This Wrapper is Outdated!
+### This Wrapper is Outdated!
 Is it? Well, thanks for noticing! Please submit a pull request with the relevant fixes.
 
-## Acknowledgements
+### Acknowledgements
 Thanks to Garry Newman's "blog entry"(https://garry.tv/2016/11/01/steamworks-sdk/) and the "Facepunch.Steamworks"(https://github.com/Facepunch/Facepunch.Steamworks) effort in general. It helped tremendously in figuring out some of the very obscure and annoying bits of the API.
 
-## A Note to Game Developers
-The steamworks API offers a //lot// of tools. I heavily recommend not building your game in a way that depends on them. This means using other, independent libraries where possible, and keeping the Steam functionality in a separate, optional system. The reason is that, if you write your game integrated tightly with the Steam API, then you won't be able to sell your game outside of steam, and if steam ever decides to shut down or remove your game, it will simply be lost to time. For the preservation of the medium and your own marketability, I thus heavily recommend investing the time into making your game extensible enough to keep the Steam parts an optional addition.
+### A Note to Game Developers
+The steamworks API offers a //lot// of tools. However, I heavily recommend not building your game in a way that depends on them. This means using other, independent libraries where possible, and keeping the Steam functionality in a separate, optional system. The reason is that, if you write your game integrated tightly with the Steam API, then you won't be able to sell your game outside of steam, and if steam ever decides to shut down or remove your game, it will simply be lost to time. For the preservation of the medium and your own marketability, I thus heavily recommend investing the time into making your game extensible enough to keep the Steam parts an optional addition.
 
 ## Concepts
 This library wraps the entirety of the SteamWorks API and tries to bridge the gap from Lisp to C++ as well as possible. For this reason it often diverges from the SteamWorks API. Most of the time however these divergences are simply convenience functions that automatically handle things like memory allocation, argument parsing, error checking, and aggregation. As such, typically you should be able to simply use the lisp functions exposed by this library and not worry any further.
@@ -52,6 +55,15 @@ The SteamWorks API defines a lot of callbacks over all of its interfaces. Unless
 In addition to callbacks, the SteamWorks API implements callresults. Callresults are handles for an asynchronous operation that you initiate. Most of the time when callresults are involved in the steam API, cl-steamworks will not expose them to you and instead implement a polling mechanism to wait for the result and then return synchronously. Sometimes the function will expose a ``:poll`` parameter to which you can pass ``NIL`` in order to retrieve the ``callresult`` instance instead of blocking. It is then up to you to retrieve the result at the opportune time.
 
 ### Memory and GC
-
+Typically all objects that do require manual cleanup are wrapped as a ``c-managed-class``. This means that their resource will be automatically freed if the reference is lost and a GC cycle frees the Lisp object. However, you can, and are encouraged to, always free the objects manually with an explicit call to ``free`` whenever you know that it is safe to do so. In other words, the automatic GC should only be treated as a safety net, not an active feature to rely on. The reason for this is that the time at which the GC is completely unpredictable, so it is much harder to ensure the deallocation happens during an opportune time.
 
 ### Low Level
+The direct SteamWorks API functions, constants, enums, and structures are exposed through the ``org.shirakumo.fraf.steamworks.cffi`` package. This package does //not// export anything explicitly. If you find yourself needing to deal with it, then you should add a package local nickname to your package definition like so: ``(:local-nicknames (#:steam #:org.shirakumo.fraf.steamworks.cffi))`` and access the symbols through ``steam::x``.
+
+You can retrieve the underlying handles of objects with the ``handle`` function. For ``interface-object``s, you can use ``iface`` to retrieve its respective interface, and ``iface*`` to directly retrieve the handle of the interface.
+
+Structures are exposed through a respective C struct type, but are also automatically translated to an equivalent Lisp structure when dereferenced from memory. Structures that are used as a callback or callresult are also associated with an ID that's necessary for the API. This mapping is done through the ``callback-type-id`` function. The inverse, of looking up a structure for a callresult function is done through the ``function-callresult`` function. Typically you should not have to touch this stuff however, as the ``callresult`` mechanisms in the wrapper take care of the details.
+
+The callbacks in particular are handled through C structs that follow a very precise memory layout to emulate the C++ class instance that the SteamWorks API expects to see. You //really// should not have to deal with that yourself.
+
+The rest of the meddling with the low level interface simply deals with standard CFFI stuff. Please consult the "CFFI manual"(https://common-lisp.net/project/cffi/manual/cffi-manual.html).

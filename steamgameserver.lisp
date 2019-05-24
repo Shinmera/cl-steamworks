@@ -26,7 +26,7 @@
 (define-interface-method steamgameserver (setf password-protected) (protected steam::game-server-set-password-protected))
 (define-interface-method steamgameserver (setf region) ((region string) steam::game-server-set-region))
 (define-interface-method steamgameserver (setf spectator-port) ((port integer) steam::game-server-set-spectator-port))
-(define-interface-method steamgameserver was-restart-requested (steam::game-server-was-restart-requested))
+(define-interface-method steamgameserver restart-requested-p (steam::game-server-was-restart-requested))
 
 (defmethod logon ((gameserver steamgameserver) &key token dedicated)
   (steam::game-server-set-dedicated-server (handle gameserver) dedicated)
@@ -188,6 +188,9 @@
 (defmethod free-handle-function ((ticket server-session-ticket) handle)
   (let ((interface (iface* ticket)))
     (lambda () (steam::game-server-cancel-auth-ticket interface handle))))
+
+(defmethod begin-session ((interface steamgameserver) (ticket-payload vector) user)
+  (make-instance 'server-auth-session :interface interface :ticket-payload ticket-payload :user user))
 
 (defclass server-auth-session (auth-session)
   ()

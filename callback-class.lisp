@@ -59,7 +59,7 @@
 
 (define-callback-class server-list-response (results-response-object)
   ()
-  (server-list :void ((request steam::hserver-list-request) (server :int)))
+  (server-list-updated :void ((request steam::hserver-list-request) (server :int)))
   (server-list-failed :void ((request steam::hserver-list-request) (server :int)))
   (server-list-completed :void ((request steam::hserver-list-request) (response steam::ematch-making-server-response))
     (response-completed server-list-response)))
@@ -72,7 +72,7 @@
 
 (define-callback-class player-details-response (results-response-object)
   ()
-  (player-details :void ((name :string) (score :int) (time-played :float))
+  (player-details-updated :void ((name :string) (score :int) (time-played :float))
     (push (list :name name :score score :time-played time-played)
           (results player-details-response)))
   (response-failed :void ())
@@ -80,7 +80,7 @@
 
 (define-callback-class rules-response (results-response-object)
   ()
-  (rule :void ((rule :string) (value :string))
+  (rule-updated :void ((rule :string) (value :string))
     (push (cons rule value) (results rules-response)))
   (response-failed :void ())
   (response-completed :void ()))

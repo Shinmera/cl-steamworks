@@ -50,8 +50,8 @@
 (define-interface-submethod browser go-back (steam::htmlsurface-go-back))
 (define-interface-submethod browser go-forward (steam::htmlsurface-go-forward))
 (define-interface-submethod browser reload (steam::htmlsurface-reload))
-(define-interface-submethod browser (setf backgrounded) (value steam::htmlsurface-set-background-mode))
-(define-interface-submethod browser (setf focused) (value steam::htmlsurface-set-key-focus))
+(define-interface-submethod browser (setf backgrounded-p) (value steam::htmlsurface-set-background-mode))
+(define-interface-submethod browser (setf focused-p) (value steam::htmlsurface-set-key-focus))
 (define-interface-submethod browser stop (steam::htmlsurface-stop-load))
 (define-interface-submethod browser view-page-source (steam::htmlsurface-view-source))
 

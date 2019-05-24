@@ -55,7 +55,7 @@
   (unless result (error "FIXME: failed")))
 (define-interface-submethod http-request (setf soft-timeout) ((timeout integer) steam::http-set-httprequest-network-activity-timeout)
   (unless result (error "FIXME: failed")))
-(define-interface-submethod http-request (setf require-valid-certificate) (value steam::http-set-httprequest-requires-verified-certificate)
+(define-interface-submethod http-request (setf valid-certificate-required-p) (value steam::http-set-httprequest-requires-verified-certificate)
   (unless result (error "FIXME: failed")))
 (define-interface-submethod http-request (setf user-agent) ((value string) steam::http-set-httprequest-user-agent-info))
 

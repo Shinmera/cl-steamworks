@@ -112,7 +112,7 @@
 (define-interface-submethod lobby leave (steam::matchmaking-leave-lobby))
 (define-interface-submethod lobby refresh (steam::matchmaking-request-lobby-data)
   (unless result (error "FIXME: failed")))
-(define-interface-submethod lobby (setf joinable) (value steam::matchmaking-set-lobby-joinable)
+(define-interface-submethod lobby (setf joinable-p) (value steam::matchmaking-set-lobby-joinable)
   (unless result (error "FIXME: failed")))
 (define-interface-submethod lobby (setf lobby-type) (value steam::matchmaking-set-lobby-type)
   (unless result (error "FIXME: failed")))

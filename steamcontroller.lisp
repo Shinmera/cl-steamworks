@@ -21,7 +21,7 @@
 (defmethod free-handle-function ((steamcontroller steamcontroller) handle)
   (lambda () (steam::controller-shutdown handle)))
 
-(define-interface-method steamcontroller find-action-set (steam::controller-get-action-set-handle (name string))
+(define-interface-method steamcontroller action-set (steam::controller-get-action-set-handle (name string))
   (check-invalid 0 result "FIXME: no action set found")
   (ensure-iface-obj 'action-set :interface steamcontroller :handle result))
 

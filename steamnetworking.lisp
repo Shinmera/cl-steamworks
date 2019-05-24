@@ -58,7 +58,7 @@
 (defmethod user ((session p2p-session))
   (ensure-iface-obj 'friend :interface (interface 'steamfriends session) :handle (handle session)))
 
-(defmethod session-state ((session p2p-session))
+(defmethod state ((session p2p-session))
   (cffi:with-foreign-object (state '(:struct steam::p2psession-state))
     (unless (steam::networking-get-p2psession-state (iface* session) (handle session) state)
       (error "FIXME: failed"))

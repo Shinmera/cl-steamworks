@@ -13,7 +13,7 @@
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-parties
                                                   (t-or version steam::steamparties-interface-version))))
 
-(defmethod beacon-locations ((interface steamparties))
+(defmethod list-beacon-locations ((interface steamparties))
   (let ((count (with-foreign-value (count :uint32)
                  (unless (steam::parties-get-num-available-beacon-locations (handle interface) count)
                    (error "FIXME: failed")))))
@@ -24,7 +24,7 @@
             for struct = (cffi:mem-aref array '(:struct steam::steam-party-beacon-location) i)
             collect (ensure-iface-obj 'beacon-location :interface interface :handle struct)))))
 
-(defmethod beacons ((interface steamparties))
+(defmethod list-beacons ((interface steamparties))
   (loop for i from 0 below (steam::parties-get-num-active-beacons (handle interface))
         for struct = (steam::parties-get-beacon-by-index (handle interface) i)
         collect (ensure-iface-obj 'beacon :interface interface

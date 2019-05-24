@@ -76,6 +76,9 @@
   (let ((interface (iface* ticket)))
     (lambda () (steam::user-cancel-auth-ticket interface handle))))
 
+(defmethod begin-session ((interface steamuser) (ticket-payload vector) user)
+  (make-instance 'auth-session :interface interface :ticket-payload ticket-payload :user user))
+
 (defclass auth-session (c-managed-object interface-object)
   ()
   (:default-initargs :interface 'steamuser

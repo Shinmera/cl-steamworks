@@ -15,7 +15,7 @@
 
 (defmethod allocate-handle ((interface steamhtmlsurface) &key version steamworks)
   (get-interface-handle* steamworks 'steam::client-get-isteam-htmlsurface
-                         (t-or version steam::steamhtmlsurface-interface-version)))
+                         (t-or version STEAM::STEAMHTMLSURFACE-INTERFACE-VERSION)))
 
 (defmethod free-handle-function ((htmlsurface steamhtmlsurface) handle)
   (lambda () (steam::htmlsurface-shutdown handle)))

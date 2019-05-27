@@ -11,9 +11,9 @@
 
 (defmethod initialize-instance :after ((interface steammatchmaking) &key version servers-version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-matchmaking
-                                                  (t-or version steam::steammatchmaking-interface-version)))
+                                                  (t-or version STEAM::STEAMMATCHMAKING-INTERFACE-VERSION)))
   (setf (servers-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-matchmaking-servers
-                                                          (t-or servers-version steam::steammatchmakingservers-interface-version))))
+                                                          (t-or servers-version STEAM::STEAMMATCHMAKINGSERVERS-INTERFACE-VERSION))))
 
 (defmethod add-favorite-game ((interface steammatchmaking) (app app) (ip string) (connection-port integer) (query-port integer) &optional (list :favorite))
   (steam::matchmaking-add-favorite-game (handle interface) (app-id app) (ipv4->int ip) connection-port query-port

@@ -10,7 +10,7 @@
   ())
 
 (defmethod initialize-instance :after ((client steamclient) &key version)
-  (let ((handle (steam::create-interface (t-or version steam::steamclient-interface-version))))
+  (let ((handle (steam::create-interface (t-or version STEAM::STEAMCLIENT-INTERFACE-VERSION))))
     (when (cffi:null-pointer-p handle)
       (error "FIXME: failed to create steam client handle."))
     (setf (handle client) handle)

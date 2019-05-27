@@ -12,7 +12,7 @@
 (defmethod initialize-instance :after ((interface steamvideo) &key version steamworks)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-video
                                                  (handle (user steamworks)) (handle (pipe steamworks))
-                                                 (t-or version steam::steamvideo-interface-version))))
+                                                 (t-or version STEAM::STEAMVIDEO-INTERFACE-VERSION))))
 
 (define-interface-method steamvideo request-opf-settings (steam::video-get-opfsettings id))
 (define-interface-method steamvideo request-video-url (steam::video-get-video-url id))

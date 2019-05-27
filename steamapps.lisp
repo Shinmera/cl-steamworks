@@ -12,11 +12,11 @@
 
 (defmethod initialize-instance :after ((interface steamapps) &key version applist-version appticket-version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-apps
-                                                 (t-or version steam::steamapps-interface-version)))
+                                                 (t-or version STEAM::STEAMAPPS-INTERFACE-VERSION)))
   (setf (applist-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-app-list
-                                                         (t-or applist-version steam::steamapplist-interface-version)))
+                                                         (t-or applist-version STEAM::STEAMAPPLIST-INTERFACE-VERSION)))
   (setf (appticket-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-app-ticket
-                                                            (t-or appticket-version steam::steamappticket-interface-version))))
+                                                            (t-or appticket-version STEAM::STEAMAPPTICKET-INTERFACE-VERSION))))
 
 (define-interface-method steamapps low-violence-p (steam::apps-bis-low-violence))
 (define-interface-method steamapps subscribed-p (steam::apps-bis-subscribed))

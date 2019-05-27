@@ -17,7 +17,7 @@
 
 (defmethod initialize-instance :after ((interface steaminventory) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-inventory
-                                                  (t-or version steam::steaminventory-interface-version))))
+                                                  (t-or version STEAM::STEAMINVENTORY-INTERFACE-VERSION))))
 
 (define-interface-method steaminventory load-items (steam::inventory-load-item-definitions))
 

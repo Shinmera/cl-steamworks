@@ -11,7 +11,7 @@
 
 (defmethod initialize-instance :after ((interface steamnetworking) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-networking
-                                                  (t-or version steam::steamnetworking-interface-version))))
+                                                  (t-or version STEAM::STEAMNETWORKING-INTERFACE-VERSION))))
 
 (define-interface-method steamnetworking (setf p2p-packet-relay-allowed-p) (value steam::networking-allow-p2ppacket-relay))
 

@@ -11,7 +11,7 @@
 
 (defmethod initialize-instance :after ((interface steamparties) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-parties
-                                                  (t-or version steam::steamparties-interface-version))))
+                                                  (t-or version STEAM::STEAMPARTIES-INTERFACE-VERSION))))
 
 (defmethod list-beacon-locations ((interface steamparties))
   (let ((count (with-foreign-value (count :uint32)

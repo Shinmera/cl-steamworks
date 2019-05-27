@@ -11,7 +11,7 @@
 
 (defmethod initialize-instance :after ((interface steamremotestorage) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-remote-storage
-                                                  (t-or version steam::steamremotestorage-interface-version))))
+                                                  (t-or version STEAM::STEAMREMOTESTORAGE-INTERFACE-VERSION))))
 
 (define-interface-method steamremotestorage (setf cloud-enabled-p) (value steam::remote-storage-set-cloud-enabled-for-app))
 

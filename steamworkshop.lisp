@@ -12,7 +12,7 @@
 (defmethod initialize-instance :after ((interface steamworkshop) &key version steamworks content-directory)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-ugc
                                                  (handle (user steamworks)) (handle (pipe steamworks))
-                                                 (t-or version steam::steamugc-interface-version)))
+                                                 (t-or version STEAM::STEAMUGC-INTERFACE-VERSION)))
   (when content-directory
     (unless (steam::ugc-binit-workshop-for-game-server (handle interface) (server-depot steamworks)
                                                        (namestring content-directory))
@@ -239,12 +239,12 @@
 (define-interface-submethod workshop-update (setf visibility) (visibility steam::ugc-set-item-visibility))
 
 (defmethod (setf display-name) ((display-name string) (update workshop-update))
-  (when (< steam::published-document-title-max (length display-name))
+  (when (< STEAM::PUBLISHED-DOCUMENT-TITLE-MAX (length display-name))
     (error "FIXME: new display name is too long."))
   (steam::ugc-set-item-title (iface* update) (handle update) display-name))
 
 (defmethod (setf description) ((description string) (update workshop-update))
-  (when (< steam::published-document-description-max (length description))
+  (when (< STEAM::PUBLISHED-DOCUMENT-DESCRIPTION-MAX (length description))
     (error "FIXME: new description is too long."))
   (steam::ugc-set-item-description (iface* update) (handle update) description))
 

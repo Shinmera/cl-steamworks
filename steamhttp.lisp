@@ -11,7 +11,7 @@
 
 (defmethod initialize-instance :after ((interface steamhttp) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-http
-                                                  (t-or version steam::steamhttp-interface-version))))
+                                                  (t-or version STEAM::STEAMHTTP-INTERFACE-VERSION))))
 
 (defclass cookie-container (c-managed-object interface-object)
   ()

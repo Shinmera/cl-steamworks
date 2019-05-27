@@ -11,7 +11,7 @@
 
 (defmethod initialize-instance :after ((interface steammusic) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-music
-                                                  (t-or version steam::steammusic-interface-version))))
+                                                  (t-or version STEAM::STEAMMUSIC-INTERFACE-VERSION))))
 
 (define-interface-method steammusic enabled-p (steam::music-bis-enabled))
 (define-interface-method steammusic playing-p (steam::music-bis-playing))

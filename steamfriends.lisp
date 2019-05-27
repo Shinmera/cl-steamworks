@@ -11,7 +11,7 @@
 
 (defmethod initialize-instance :after ((interface steamfriends) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-friends
-                                                  (t-or version steam::steamfriends-interface-version))))
+                                                  (t-or version STEAM::STEAMFRIENDS-INTERFACE-VERSION))))
 
 (define-interface-method steamfriends clear-rich-presence (steam::friends-clear-rich-presence))
 (define-interface-method steamfriends close-clan-chat-window (steam::friends-close-clan-chat-window-in-steam chat-id))
@@ -90,9 +90,9 @@
                     (princ-to-string key)))))
         (value (let ((*print-case* :downcase))
                  (princ-to-string value))))
-    (when (< steam::max-rich-presence-key-length (length key))
+    (when (< STEAM::MAX-RICH-PRESENCE-KEY-LENGTH (length key))
       (error "FIXME: key too long"))
-    (when (< steam::max-rich-presence-value-length (length value))
+    (when (< STEAM::MAX-RICH-PRESENCE-VALUE-LENGTH (length value))
       (error "FIXME: value too long"))
     (unless (steam::friends-set-rich-presence (handle friends) key value)
       (error "FIXME: failed to set the rich presence.")))
@@ -179,7 +179,7 @@
   (steam::friends-has-friend (iface* friend) (handle friend) (apply #'flags 'steam::efriend-flags flags)))
 
 (defmethod invite ((friend friend) (message string))
-  (when (< steam::max-rich-presence-value-length (length message))
+  (when (< STEAM::MAX-RICH-PRESENCE-VALUE-LENGTH (length message))
     (error "FIXME: message too long"))
   (unless (steam::friends-invite-user-to-game (iface* friend) (handle friend) message)
     (error "FIXME: failed to invite the friend.")))

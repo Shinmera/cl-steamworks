@@ -16,7 +16,7 @@
 
 (defmethod allocate-handle ((interface steamcontroller) &key version steamworks)
   (get-interface-handle* steamworks 'steam::client-get-isteam-controller
-                         (t-or version steam::steamcontroller-interface-version)))
+                         (t-or version STEAM::STEAMCONTROLLER-INTERFACE-VERSION)))
 
 (defmethod free-handle-function ((steamcontroller steamcontroller) handle)
   (lambda () (steam::controller-shutdown handle)))
@@ -127,7 +127,7 @@
   (activate thing (handle controller)))
 
 (defmethod activate (thing (all (eql T)))
-  (activate thing steam::steam-controller-handle-all-controllers))
+  (activate thing STEAM::STEAM-CONTROLLER-HANDLE-ALL-CONTROLLERS))
 
 (defclass action-set-layer (interface-object)
   ()

@@ -12,7 +12,7 @@
 (defmethod initialize-instance :after ((interface steamutils) &key version steamworks)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-utils
                                                  (handle (pipe steamworks))
-                                                 (t-or version steam::steamutils-interface-version))))
+                                                 (t-or version STEAM::STEAMUTILS-INTERFACE-VERSION))))
 
 (define-interface-method steamutils app-id (steam::utils-get-app-id))
 (define-interface-method steamutils ipc-call-count (steam::utils-get-ipccall-count))

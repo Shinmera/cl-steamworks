@@ -15,7 +15,7 @@
 
 (defmethod allocate-handle ((interface steammusicremote) &key version steamworks)
   (get-interface-handle* steamworks 'steam::client-get-isteam-music-remote
-                         (t-or version steam::steammusicremote-interface-version)))
+                         (t-or version STEAM::STEAMMUSICREMOTE-INTERFACE-VERSION)))
 
 (defmethod free-handle-function ((interface steammusicremote) handle)
   (lambda () (steam::music-remote-deregister-steam-music-remote handle)))

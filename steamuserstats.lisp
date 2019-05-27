@@ -14,7 +14,7 @@
 
 (defmethod initialize-instance :after ((interface steamuserstats) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-user-stats
-                                                  (t-or version steam::steamuserstats-interface-version))))
+                                                  (t-or version STEAM::STEAMUSERSTATS-INTERFACE-VERSION))))
 
 (define-interface-method steamuserstats player-count (steam::user-stats-get-number-of-current-players))
 (define-interface-method steamuserstats store-stats (steam::user-stats-store-stats)
@@ -82,7 +82,7 @@
 (defmethod leaderboard ((name string) (interface steamuserstats) &key (if-does-not-exist :error)
                                                                       (sort-method :ascending)
                                                                       (display-type :nubmeric))
-  (check-utf8-size steam::leaderboard-name-max name)
+  (check-utf8-size STEAM::LEADERBOARD-NAME-MAX name)
   (ecase if-does-not-exist
     (:error
      (with-call-result (result :poll T) (steam::user-stats-find-leaderboard (handle interface) name)

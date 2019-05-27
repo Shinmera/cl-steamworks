@@ -11,7 +11,7 @@
 
 (defmethod initialize-instance :after ((interface steamscreenshots) &key version steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-screenshots
-                                                  (t-or version steam::steamscreenshots-interface-version))))
+                                                  (t-or version STEAM::STEAMSCREENSHOTS-INTERFACE-VERSION))))
 
 (define-interface-method steamscreenshots trigger (steam::screenshots-trigger-screenshot))
 (define-interface-method steamscreenshots hooked-p (steam::screenshots-is-screenshots-hooked))

@@ -10,7 +10,7 @@
 
 (defun global-callback (name &optional (errorp T))
   (or (gethash name *global-callbacks*)
-      (when errorp (error "FIXME: no such callback"))))
+      (when errorp (error 'no-such-callback :callback-name name))))
 
 (defun (setf global-callback) (callback name)
   (check-type name symbol)
@@ -129,7 +129,9 @@
       (if (steam::utils-get-apicall-result
            utils token result (cffi:foreign-type-size result-type) (callback-type-id (struct-type callresult)) failed)
           (cffi:mem-ref result result-type)
-          (error "FIXME: call failed: ~a" (steam::utils-get-apicall-failure-reason utils token))))))
+          (error 'api-call-failed
+                 :api-call (struct-type callresult)
+                 :error-code (steam::utils-get-apicall-failure-reason utils token))))))
 
 (cffi:defcallback result :void ((this :pointer) (parameter :pointer) (failed :bool))
   (let ((callback (pointer->object this)))

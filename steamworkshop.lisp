@@ -47,7 +47,8 @@
 
 (defmethod stop-tracking ((workshop steamworkshop))
   (with-call-result (result :poll T) (steam::ugc-stop-playtime-tracking-for-all-items (handle workshop))
-    (with-error-on-failure (steam::stop-playtime-tracking-result result))))
+    (check-result (steam::stop-playtime-tracking-result result)
+                  'steam::ugc-stop-playtime-tracking-for-all-items)))
 
 (defclass workshop-query (interface-object c-managed-object)
   ((app :initarg app :reader app))
@@ -102,11 +103,11 @@
 
 (defmethod execute ((query workshop-query) &key callback)
   (flet ((default-callback (result)
-           (with-error-on-failure (steam::steam-ugcquery-completed-result result))
+           (check-result (steam::steam-ugcquery-completed-result result)
+                         'steam::ugc-send-query-ugcrequest)
            (values (steam::steam-ugcquery-completed-num-results-returned result)
                    (steam::steam-ugcquery-completed-total-matching-results result))))
-    (with-call-result (result :poll (not (null callback)))
-        (steam::ugc-send-query-ugcrequest (iface* query) (handle query))
+    (with-call-result (result :poll (not (null callback))) (steam::ugc-send-query-ugcrequest (iface* query) (handle query))
       (funcall (or callback #'default-callback) result))))
 
 (defmethod get-previews ((query workshop-query) (index integer))
@@ -239,13 +240,11 @@
 (define-interface-submethod workshop-update (setf visibility) (visibility steam::ugc-set-item-visibility))
 
 (defmethod (setf display-name) ((display-name string) (update workshop-update))
-  (when (< STEAM::PUBLISHED-DOCUMENT-TITLE-MAX (length display-name))
-    (error "FIXME: new display name is too long."))
+  (check-utf8-size STEAM::PUBLISHED-DOCUMENT-TITLE-MAX display-name)
   (steam::ugc-set-item-title (iface* update) (handle update) display-name))
 
 (defmethod (setf description) ((description string) (update workshop-update))
-  (when (< STEAM::PUBLISHED-DOCUMENT-DESCRIPTION-MAX (length description))
-    (error "FIXME: new description is too long."))
+  (check-utf8-size STEAM::PUBLISHED-DOCUMENT-DESCRIPTION-MAX description)
   (steam::ugc-set-item-description (iface* update) (handle update) description))
 
 (defmethod (setf preview) ((file pathname) (update workshop-update))
@@ -256,8 +255,7 @@
 (defmethod (setf tags) (tags (update workshop-update))
   (let ((tagcount (length tags)))
     (dolist (tag tags)
-      (when (< 255 (length tag))
-        (error "FIXME: The tag ~s is too long." tag))
+      (check-utf8-size 255 tag)
       (when (loop for char across tag
                   thereis (or (char= char #\,)
                               (not (printable-char-p char))))
@@ -321,10 +319,8 @@
     (when (< 100 (length to-remove))
       (error "FIXME: cannot remove more than 100 in one update."))
     (loop for (key . value) in to-add
-          do (when (< 255 (length key))
-               (error "FIXME: key too long."))
-             (when (< 255 (length value))
-               (error "FIXME: value too long."))
+          do (check-utf8-size 255 key)
+             (check-utf8-size 255 value)
              (when (loop for c across key
                          thereis (not (or (alphanumericp c)
                                           (char= #\_ c))))
@@ -335,11 +331,11 @@
 
 (defmethod execute ((update workshop-update) &key callback)
   (flet ((complete (result)
-           (with-error-on-failure (steam::submit-item-update-result result))
+           (check-result (steam::submit-item-update-result result)
+                         'steam::ugc-submit-item-update)
            (steam::submit-item-update-user-needs-to-accept-workshop-legal-agreement result)))
-    (with-call-result (result :poll (null callback))
-        (steam::ugc-submit-item-update (iface* update) (handle update)
-                                       (or (change-note update) (cffi:null-pointer)))
+    (with-call-result (result :poll (null callback)) (steam::ugc-submit-item-update (iface* update) (handle update)
+                                                                                    (or (change-note update) (cffi:null-pointer)))
       (funcall (or callback #'complete) result))))
 
 (defmethod update-status ((update workshop-update))
@@ -362,7 +358,8 @@
     (with-call-result (result :poll T) (steam::ugc-create-item (iface* file) (handle app) kind)
       (when (steam::create-item-user-needs-to-accept-workshop-legal-agreement result)
         (warn "FIXME: user needs to accept agreement."))
-      (with-error-on-failure (steam::create-item-result result))
+      (check-result (steam::create-item-result result)
+                    'steam::ugc-create-item)
       (setf (handle file) (steam::create-item-published-file-id result))
       (setf (interface-object (handle file) (iface file)) file))))
 
@@ -409,7 +406,8 @@
                    for file = (pop files)
                    do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
              (with-call-result (result :poll T) (steam::ugc-start-playtime-tracking workshop buffer batch)
-               (with-error-on-failure (steam::start-playtime-tracking-result result))))))
+               (check-result (steam::start-playtime-tracking-result result)
+                             'steam::ugc-start-playtime-tracking)))))
 
 (defmethod stop-tracking ((files list))
   (cffi:with-foreign-object (buffer 'steam::published-file-id-t 100)
@@ -420,7 +418,8 @@
                    for file = (pop files)
                    do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
              (with-call-result (result :poll T) (steam::ugc-stop-playtime-tracking workshop buffer batch)
-               (with-error-on-failure (steam::stop-playtime-tracking-result result))))))
+               (check-result (steam::stop-playtime-tracking-result result)
+                             'steam::ugc-stop-playtime-tracking)))))
 
 (defmethod start-tracking ((file workshop-file))
   (start-tracking (list file)))
@@ -442,7 +441,8 @@
 (defmethod app-dependencies ((file workshop-file))
   (unless (slot-boundp file 'app-dependencies)
     (with-call-result (result :poll T) (steam::ugc-get-app-dependencies (iface* file) (handle file))
-      (with-error-on-failure (steam::get-app-dependencies-result result))
+      (check-result (steam::get-app-dependencies-result result)
+                    'steam::ugc-get-app-dependencies)
       ;; WTF: there's a "total num" field. Does this mean it can return less than
       ;;      everything? If so, how do I get the rest? There's no explicit pagination.
       ;;      does it split it across multiple call results? If so that's real bad...
@@ -467,23 +467,28 @@
 
 (defmethod favorite ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-add-item-to-favorites (iface* file) (app-id (app file)) (handle file))
-    (with-error-on-failure (steam::user-favorite-items-list-changed-result result))))
+    (check-result (steam::user-favorite-items-list-changed-result result)
+                  'steam::ugc-add-item-to-favorites)))
 
 (defmethod unfavorite ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-remove-item-from-favorites (iface* file) (app-id (app file)) (handle file))
-    (with-error-on-failure (steam::user-favorite-items-list-changed-result result))))
+    (check-result (steam::user-favorite-items-list-changed-result result)
+                  'steam::ugc-remove-item-from-favorites)))
 
 (defmethod destroy ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-delete-item (iface* file) (handle file))
-    (with-error-on-failure (steam::delete-item-result result))))
+    (check-result (steam::delete-item-result result)
+                  'steam::ugc-delete-item)))
 
 (defmethod subscribe ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-subscribe-item (iface* file) (handle file))
-    (with-error-on-failure (steam::remote-storage-subscribe-published-file-result result))))
+    (check-result (steam::remote-storage-subscribe-published-file-result result)
+                  'steam::ugc-subscribe-item)))
 
 (defmethod unsubscribe ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-unsubscribe-item (iface* file) (handle file))
-    (with-error-on-failure (steam::remote-storage-unsubscribe-published-file-result result))))
+    (check-result (steam::remote-storage-unsubscribe-published-file-result result)
+                  'steam::ugc-unsubscribe-item)))
 
 (defmethod download-status ((file workshop-file))
   (cffi:with-foreign-objects ((downloaded :uint64)
@@ -505,7 +510,8 @@
 
 (defmethod vote ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-get-user-item-vote (iface* file) (handle file))
-    (with-error-on-failure (steam::get-user-item-vote-result result))
+    (check-result (steam::get-user-item-vote-result result)
+                  'steam::ugc-get-user-item-vote)
     (cond ((steam::get-user-item-vote-voted-up result) :up)
           ((steam::get-user-item-vote-voted-down result) :down)
           ((steam::get-user-item-vote-vote-skipped result) :skipped)

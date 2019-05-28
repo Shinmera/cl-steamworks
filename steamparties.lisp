@@ -65,7 +65,8 @@
     (setf (cffi:foreign-slot-value locptr '(:struct steam::steam-party-beacon-location) 'steam::location-id) (handle location))
     (with-call-result (result :poll T) (steam::parties-create-beacon (iface* beacon) open-slots locptr
                                                                      connect-string (or metadata ""))
-      (with-error-on-failure (steam::create-beacon-callback-result result))
+      (check-result (steam::create-beacon-callback-result result)
+                    'steam::parties-create-beacon)
       (steam::create-beacon-callback-beacon-id result))))
 
 (defmethod free-handle-function ((beacon beacon) handle)
@@ -76,7 +77,8 @@
 (define-interface-submethod beacon (setf open-slots) ((value integer) steam::parties-change-num-open-slots))
 (define-interface-submethod beacon join (steam::parties-join-party)
   (let ((result (poll-for-result 'steam::join-party-callback result)))
-    (with-error-on-failure (steam::join-party-callback-result result))
+    (check-result (steam::join-party-callback-result result)
+                  'steam::parties-join-party)
     (steam::join-party-callback-connect-string result)))
 
 (defmethod complete-reservation ((beacon beacon) (user friend))

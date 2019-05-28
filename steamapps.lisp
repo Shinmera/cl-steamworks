@@ -53,7 +53,8 @@
 
 (defmethod file-details ((apps steamapps) file)
   (with-call-result (result :poll T) (steam::apps-get-file-details (namestring file))
-    (with-error-on-failure (steam::file-details-result result))
+    (check-result (steam::file-details-result result)
+                  'steam::apps-get-file-details)
     (list :size (steam::file-details-file-size result)
           :sha (steam::file-details-file-sha result)
           :flags (steam::file-details-flags result))))

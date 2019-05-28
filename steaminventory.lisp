@@ -24,7 +24,8 @@
 (defmethod ensure-prices-available ((inventory steaminventory) &key force)
   (when (or force (not (prices-available-p inventory)))
     (with-call-result (result :poll T) (steam::inventory-request-prices (handle inventory))
-      (with-error-on-failure (steam::steam-inventory-request-prices-result result))
+      (check-result (steam::steam-inventory-request-prices-result result)
+                    'steam::inventory-request-prices)
       (setf (local-currency inventory) (steam::steam-inventory-request-prices-currency result))
       (setf (prices-available-p inventory) T))))
 
@@ -44,7 +45,8 @@
 (defmethod list-items ((inventory steaminventory) &key prices user ids)
   (cond (user
          (with-call-result (result :poll T) (steam::inventory-request-eligible-promo-item-definitions-ids (handle inventory) (steam-id user))
-           (with-error-on-failure (steam::steam-inventory-eligible-promo-item-def-ids-result result))
+           (check-result (steam::steam-inventory-eligible-promo-item-def-ids-result result)
+                         'steam::inventory-request-eligible-promo-item-definitions-ids)
            (let ((count (steam::steam-inventory-eligible-promo-item-def-ids-eligible-promo-item-defs result)))
              (cffi:with-foreign-object (array 'steam::steam-item-def-t count)
                (unless (steam::inventory-get-eligible-promo-item-definition-ids (handle inventory) (steam-id user) array count)
@@ -237,7 +239,8 @@
                (setf (cffi:mem-aref p 'steam::steam-item-def-t i) (handle el))
                (setf (cffi:mem-aref q :uint32 i) qu)))
     (with-call-result (result :poll T) (steam::inventory-start-purchase (iface* (caar items)) p q (length items))
-      (with-error-on-failure (steam::steam-inventory-start-purchase-result result))
+      (check-result (steam::steam-inventory-start-purchase-result result)
+                    'steam::inventory-start-purchase)
       (list :order-id (steam::steam-inventory-start-purchase-order-id result)
             :transaction-id (steam::steam-inventory-start-purchase-trans-id result)))))
 

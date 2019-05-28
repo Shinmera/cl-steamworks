@@ -90,7 +90,7 @@
                   (integer user)
                   (friend (steam-id user)))))
     (cffi:with-pointer-to-vector-data (buffer ticket-payload)
-      (with-error-on-failure (steam::user-begin-auth-session (iface* session) buffer (length ticket-payload) handle)))
+      (with-valid-check :ok (steam::user-begin-auth-session (iface* session) buffer (length ticket-payload) handle)))
     handle))
 
 (defmethod free-handle-function ((session auth-session) handle)

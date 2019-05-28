@@ -44,11 +44,13 @@
 
 (defmethod associate-with-clan ((clan clan) (gameserver steamgameserver))
   (with-call-result (result :poll T) (steam::game-server-associate-with-clan (handle gameserver) (handle clan))
-    (with-error-on-failure (steam::associate-with-clan-result result))))
+    (check-result (steam::associate-with-clan-result result)
+                  'steam::game-server-associate-with-clan)))
 
 (defmethod compute-player-compatibility ((user friend) (gameserver steamgameserver))
   (with-call-result (result :poll T) (steam::game-server-compute-new-player-compatibility (handle gameserver) (steam-id user))
-    (with-error-on-failure (steam::associate-with-clan-result result))))
+    (check-result (steam::associate-with-clan-result result)
+                  'steam::game-server-compute-new-player-compatibility)))
 
 (defmethod next-outgoing-packet ((gameserver steamgameserver))
   (cffi:with-foreign-objects ((buffer :uint8 (* 16 1024))
@@ -122,7 +124,8 @@
 
 (defmethod user-stats ((user friend) (gameserver steamgameserver) &key stats achievements)
   (with-call-result (result :poll T) (steam::game-server-stats-request-user-stats (stats-handle gameserver) (steam-id user))
-    (with-error-on-failure (steam::gsstats-received-result result))
+    (check-result (steam::gsstats-received-result result)
+                  'steam::game-server-stats-request-user-stats)
     (list :stats
           (cffi:with-foreign-object (data :int32)
             (loop for stat in stats
@@ -146,7 +149,8 @@
 
 (defmethod (setf user-stats) ((value cons) (user friend) (gameserver steamgameserver) &key sync)
   (with-call-result (result :poll T)  (steam::game-server-stats-request-user-stats (stats-handle gameserver) (steam-id user))
-    (with-error-on-failure (steam::gsstats-received-result result))
+    (check-result (steam::gsstats-received-result result)
+                  'steam::game-server-stats-request-user-stats)
     (destructuring-bind (&key stats achievements avgrates) value
       (loop for (stat . value) in stats
             do (unless (etypecase value
@@ -202,7 +206,7 @@
                   (integer user)
                   (friend (steam-id user)))))
     (cffi:with-pointer-to-vector-data (buffer ticket-payload)
-      (with-error-on-failure (steam::game-server-begin-auth-session (iface* session) buffer (length ticket-payload) handle)))
+      (with-valid-check :ok (steam::game-server-begin-auth-session (iface* session) buffer (length ticket-payload) handle)))
     handle))
 
 (defmethod free-handle-function ((session server-auth-session) handle)

@@ -55,7 +55,8 @@
 
 (defmethod follower-count ((friends steamfriends) (user integer))
   (with-call-result (result :poll T) (steam::friends-get-follower-count (handle friends) user)
-    (with-error-on-failure (steam::friends-get-follower-count-result result))
+    (check-result (steam::friends-get-follower-count-result result)
+                  'steam::friends-get-follower-count)
     (steam::friends-get-follower-count-count result)))
 
 (defmethod list-friend-groups ((friends steamfriends))
@@ -90,10 +91,8 @@
                     (princ-to-string key)))))
         (value (let ((*print-case* :downcase))
                  (princ-to-string value))))
-    (when (< STEAM::MAX-RICH-PRESENCE-KEY-LENGTH (length key))
-      (error "FIXME: key too long"))
-    (when (< STEAM::MAX-RICH-PRESENCE-VALUE-LENGTH (length value))
-      (error "FIXME: value too long"))
+    (check-utf8-size STEAM::MAX-RICH-PRESENCE-KEY-LENGTH key)
+    (check-utf8-size STEAM::MAX-RICH-PRESENCE-VALUE-LENGTH value)
     (unless (steam::friends-set-rich-presence (handle friends) key value)
       (error "FIXME: failed to set the rich presence.")))
   value)
@@ -179,8 +178,7 @@
   (steam::friends-has-friend (iface* friend) (handle friend) (apply #'flags 'steam::efriend-flags flags)))
 
 (defmethod invite ((friend friend) (message string))
-  (when (< STEAM::MAX-RICH-PRESENCE-VALUE-LENGTH (length message))
-    (error "FIXME: message too long"))
+  (check-utf8-size STEAM::MAX-RICH-PRESENCE-VALUE-LENGTH message)
   (unless (steam::friends-invite-user-to-game (iface* friend) (handle friend) message)
     (error "FIXME: failed to invite the friend.")))
 
@@ -190,8 +188,7 @@
 (defmethod get-message ((friend friend) (index integer))
   (cffi:with-foreign-objects ((buffer :uchar (+ 2048 1))
                               (type 'steam::echat-entry-type))
-    (let ((count (steam::friends-get-friend-message (iface* friend) (handle friend) index buffer (+ 2048 1) type)))
-      (check-invalid 0 count)
+    (let ((count (with-invalid-check 0 (steam::friends-get-friend-message (iface* friend) (handle friend) index buffer (+ 2048 1) type))))
       (list :type (cffi:mem-ref type 'steam::echat-entry-type)
             :user friend
             :text (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8)))))
@@ -291,8 +288,7 @@
   (cffi:with-foreign-objects ((buffer :uchar (+ 2048 1))
                               (type 'steam::echat-entry-type)
                               (user 'steam::steam-id))
-    (let ((count (steam::friends-get-clan-chat-message (iface* clan) (handle clan) index buffer (+ 2048 1) type user)))
-      (check-invalid 0 count)
+    (let ((count (with-invalid-check 0 (steam::friends-get-clan-chat-message (iface* clan) (handle clan) index buffer (+ 2048 1) type user))))
       (list :type (cffi:mem-ref type 'steam::echat-entry-type)
             :user (ensure-iface-obj 'friend :interface (iface clan) :handle (cffi:mem-ref user 'steam::steam-id))
             :text (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8)))))

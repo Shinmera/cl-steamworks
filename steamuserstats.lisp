@@ -41,21 +41,24 @@
   (when (or force (< (global-stats-days-available interface) days))
     (ensure-current-stats interface :force force)
     (with-call-result (result :poll T) (steam::user-stats-request-global-stats (handle interface) days)
-      (with-error-on-failure (steam::global-stats-received-result result)))
+      (check-result (steam::global-stats-received-result result)
+                    'steam::user-stats-request-global-stats))
     (setf (global-stats-days-available interface) days)))
 
 (defun ensure-global-percentages (interface &key force)
   (when (or force (null (global-percentages-available-p interface)))
     (ensure-current-stats interface :force force)
     (with-call-result (result :poll T) (steam::user-stats-request-global-achievement-percentages (handle interface))
-      (with-error-on-failure (steam::global-achievement-percentages-ready-result result)))
+      (check-result (steam::global-achievement-percentages-ready-result result)
+                    'steam::user-stats-request-global-achievement-percentages))
     (setf (global-percentages-available-p interface) T)))
 
 (defun ensure-user-stats (interface user &key force)
   (when (or force (null (gethash (steam-id user) (user-stats-available-cache interface))))
     (ensure-current-stats interface :force force)
     (with-call-result (result :poll T) (steam::user-stats-request-user-stats (handle interface) (steam-id user))
-      (with-error-on-failure (steam::user-stats-received-result result)))
+      (check-result (steam::user-stats-received-result result)
+                    'steam::user-stats-request-user-stats))
     (setf (gethash (steam-id user) (user-stats-available-cache interface)) T)))
 
 (defmethod most-achieved ((interface steamuserstats) &key (max 100))
@@ -63,9 +66,8 @@
   (cffi:with-foreign-objects ((name :char 128)
                               (percent :float)
                               (achieved :bool))
-    (let ((iterator (steam::user-stats-get-most-achieved-achievement-info (handle interface) name 128 percent achieved))
+    (let ((iterator (with-invalid-check -1 (steam::user-stats-get-most-achieved-achievement-info (handle interface) name 128 percent achieved)))
           (list ()))
-      (check-invalid -1 iterator)
       (flet ((commit ()
                (let ((handle (cffi:foreign-string-to-lisp name :count 128 :encoding :utf-8)))
                  (push (ensure-iface-obj 'achievement :interface interface :handle handle) list))))
@@ -86,7 +88,7 @@
   (ecase if-does-not-exist
     (:error
      (with-call-result (result :poll T) (steam::user-stats-find-leaderboard (handle interface) name)
-       (check-invalid 0 (steam::leaderboard-find-leaderboard-found result))
+       (check-invalid 0 (steam::leaderboard-find-leaderboard-found result) 'steam::user-stats-find-leaderboard)
        (ensure-iface-obj 'leaderboard :interface interface :handle (steam::leaderboard-find-steam-leaderboard result))))
     (:create
      (with-call-result (result :poll T) (steam::user-stats-find-or-create-leaderboard (handle interface) name sort-method display-type)
@@ -102,7 +104,7 @@
     (let ((count (ecase (stat-type stat)
                    (integer (steam::user-stats-get-global-stat-history (iface* stat) (handle stat) data (* days 8)))
                    (float (steam::user-stats-get-global-stat-history0 (iface* stat) (handle stat) data (* days 8))))))
-      (check-invalid 0 count)
+      (check-invalid 0 count 'steam::user-stats-get-global-stat-history)
       (ecase (stat-type stat)
         (integer (loop for i from 0 below count
                        collect (cffi:mem-aref data :int64 i)))
@@ -150,7 +152,7 @@
   (:default-initargs :interface 'steamuserstats))
 
 (define-interface-submethod achievement icon (steam::user-stats-get-achievement-icon)
-  (check-invalid 0 result "FIXME: failed")
+  (check-invalid 0 result 'steam::user-stats-get-achievement-icon)
   (make-instance 'image :interface (interface 'steamutils achievement) :handle result))
 (define-interface-submethod achievement show-progress (steam::user-stats-indicate-achievement-progress progress total)
   (unless result (error "FIXME: failed")))
@@ -219,7 +221,8 @@
 
 (defmethod (setf ugc) ((ugc ugc) (leaderboard leaderboard))
   (with-call-result (result :poll T) (steam::user-stats-attach-leaderboard-ugc (iface* leaderboard) (handle leaderboard) (handle ugc))
-    (with-error-on-failure (steam::leaderboard-ugcset-result result))))
+    (check-result (steam::leaderboard-ugcset-result result)
+                  'steam::user-stats-attach-leaderboard-ugc)))
 
 (defun decode-leaderboard-entries (iface result)
   (cffi:with-foreign-object (entry '(:struct steam::leaderboard-entry))

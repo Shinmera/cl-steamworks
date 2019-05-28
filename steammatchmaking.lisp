@@ -95,7 +95,8 @@
   (unless (handle lobby)
     (assert (<= 0 max-members 250) (max-members))
     (with-call-result (result :poll T) (steam::matchmaking-create-lobby (iface lobby) type max-members)
-      (with-error-on-failure (steam::lobby-created-result result))
+      (check-result (steam::lobby-created-result result)
+                    'steam::matchmaking-create-lobby)
       (setf (handle lobby) (steam::lobby-created-steam-idlobby result)))))
 
 (defmethod steam-id ((lobby lobby))
@@ -183,8 +184,8 @@
           collect (ensure-iface-obj 'friend :handle handle :interface (interface 'steamfriends lobby)))))
 
 (defmethod send-message ((message string) (lobby lobby))
+  (check-utf8-size 4096 message)
   (cffi:with-foreign-string ((buffer size) message :encoding :utf-8)
-    (when (< 4096 size) (error "FIXME: message too long"))
     (unless (steam::matchmaking-send-lobby-chat-msg (iface* lobby) (handle lobby) buffer size)
       (error "FIXME: failed"))))
 

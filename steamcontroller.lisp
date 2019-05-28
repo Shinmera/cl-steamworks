@@ -22,19 +22,19 @@
   (lambda () (steam::controller-shutdown handle)))
 
 (define-interface-method steamcontroller find-action-set (steam::controller-get-action-set-handle (name string))
-  (check-invalid 0 result "FIXME: no action set found")
+  (check-invalid 0 result 'steam::controller-get-action-set-handle)
   (ensure-iface-obj 'action-set :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller find-analog-action (steam::controller-get-analog-action-handle (name string))
-  (check-invalid 0 result "FIXME: no action set found")
+  (check-invalid 0 result 'steam::controller-get-analog-action-handle)
   (ensure-iface-obj 'analog-action :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller find-digital-action (steam::controller-get-digital-action-handle (name string))
-  (check-invalid 0 result "FIXME: no action set found")
+  (check-invalid 0 result 'steam::controller-get-digital-action-handle)
   (ensure-iface-obj 'digital-action :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller find-controller (steam::controller-get-controller-for-gamepad-index (index integer))
-  (check-invalid 0 result "FIXME: no action set found")
+  (check-invalid 0 result 'steam::controller-get-controller-for-gamepad-index)
   (ensure-iface-obj 'controller :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller action-glyph (steam::controller-get-glyph-for-action-origin origin)

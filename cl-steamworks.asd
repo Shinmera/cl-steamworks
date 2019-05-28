@@ -13,6 +13,7 @@
   :homepage "https://github.com/Shinmera/cl-steamworks"
   :serial T
   :components ((:file "package")
+               (:file "conditions")
                (:file "c-support")
                (:file "toolkit")
                (:file "c-object")

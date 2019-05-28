@@ -20,12 +20,6 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
          (when ,err
            ,cleanup)))))
 
-(defmacro with-error-on-failure (form)
-  (let ((result (gensym "RESULT")))
-    `(let ((,result ,form))
-       (unless (eql :ok ,result)
-         (error "FIXME: failed ~a" ,result)))))
-
 (defun calloc (type &optional (count 1))
   (let ((ptr (cffi:foreign-alloc type :count count)))
     (dotimes (i (* count (cffi:foreign-type-size type)) ptr)
@@ -176,10 +170,6 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
   ;; which is in the steam api for some reason.
   (find char "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"))
 
-(defun check-utf8-size (length string)
-  (when (<= length (babel:string-size-in-octets string :encoding :utf-8))
-    (error "FIXME: string too long.")))
-
 (declaim (inline microsecs))
 (defun microsecs (s)
   (floor (* s 1000000)))
@@ -256,13 +246,32 @@ Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
      (values ,@(loop for (var type) in bindings
                      collect `(cffi:mem-ref ,var ,type)))))
 
-(defun check-invalid (invalid value &optional (datum "FIXME: failed") &rest args)
+(defun check-invalid (invalid value &optional call)
   (if (equal invalid value)
-      (apply #'error datum args)
+      (error 'api-call-failed :api-call call)
       value))
 
-(defun check-empty-string (string &optional (datum "FIXME: failed") &rest args)
-  (apply #'check-invalid "" string datum args))
+(defun check-valid (valid value &optional call)
+  (if (equal valid value)
+      value
+      (error 'api-call-failed :api-call call)))
+
+(defun check-empty-string (string &optional call)
+  (check-invalid "" string call))
+
+(defun check-utf8-size (length string)
+  (when (<= length (babel:string-size-in-octets string :encoding :utf-8))
+    (error 'string-too-long :oversized-string string :octet-limit length)))
+
+(defun check-result (result &optional call)
+  (unless (eql :ok result)
+    (error 'api-call-failed :api-call call :error-code result)))
+
+(defmacro with-valid-check (valid (call &rest args))
+  `(check-valid ,valid (,call ,@args) ',call))
+
+(defmacro with-invalid-check (invalid (call &rest args))
+  `(check-invalid ,invalid (,call ,@args) ',call))
 
 (defun fill-foreign-ascii (pointer string &optional length)
   (dotimes (i (max (or length 0) (length string)))

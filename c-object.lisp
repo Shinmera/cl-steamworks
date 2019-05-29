@@ -77,8 +77,19 @@
       (funcall (free-handle-function object handle)))))
 
 (defmacro with-c-objects (bindings &body body)
-  `(let ,bindings
-     (unwind-protect (progn
-                       ,@body)
-       ,@(loop for binding in bindings
-               collect `(free ,(first binding))))))
+  (let ((gensyms (loop for binding in bindings
+                       collect (gensym (string (first binding)))))
+        (thunk (gensym "THUNK")))
+    `(let ,gensyms
+       (unwind-protect
+            (flet ((,thunk ()
+                     (let ,(loop for binding in bindings
+                                 for var in gensyms
+                                 collect `(,(first binding) ,var))
+                       ,@body)))
+              ,@(loop for binding in bindings
+                      for var in gensyms
+                      collect `(setf ,var ,(second binding)))
+              (,thunk))
+         ,@(loop for var in gensyms
+                 collect `(when ,var (free ,var)))))))

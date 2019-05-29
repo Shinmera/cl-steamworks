@@ -61,6 +61,45 @@
    #:closure-callresult
    #:poll-for-result
    #:with-call-result)
+  ;; conditions.lisp
+  (:export
+   #:steamworks-condition
+   #:argument-missing
+   #:argument
+   #:api-call-failed
+   #:api-call
+   #:error-code
+   #:string-too-long
+   #:oversized-string
+   #:octet-limit
+   #:no-such-callback
+   #:callback-name
+   #:no-such-file
+   #:file-handle
+   #:no-such-user
+   #:user-handle
+   #:buffer-too-short
+   #:required-bytes
+   #:voice-data-corrupted
+   #:interface-creation-failed
+   #:interface-name
+   #:not-an-image-file
+   #:file-handle
+   #:string-malformed
+   #:malformed-string
+   #:pathname-not-a-directory
+   #:file-handle
+   #:too-many-requests
+   #:request-limit
+   #:workshop-agreement-not-accepted
+   #:file-seeking-impossible
+   #:request-denied
+   #:cannot-set-member-data-for-others
+   #:steamworks-not-initialized
+   #:steamworks-already-initialized
+   #:initialization-failed
+   #:user-stats-not-ready
+   #:low-level-not-loaded)
   ;; interface.lisp
   (:export
    #:interface

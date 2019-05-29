@@ -6,8 +6,6 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
-;; FIXME: Implement all missing conditions
-
 (define-condition steamworks-condition (condition)
   ())
 

@@ -18,22 +18,30 @@
 
 (defun callback-type-id (callback)
   (or (gethash callback steam::*callback-id-map*)
-      (error "Not a callback: ~s" callback)))
+      (if *low-level-present*
+          (error "Not a callback: ~s" callback)
+          0)))
 
 (define-compiler-macro callback-type-id (&whole whole callback &environment env)
   (if (constantp callback env)
       `(load-time-value (or (gethash ,callback steam::*callback-id-map*)
-                            (error "Not a callback: ~s" ,callback)))
+                            (if *low-level-present*
+                                (error "Not a callback: ~s" ,callback)
+                                0)))
       whole))
 
 (defun function-callresult (function)
   (or (gethash function steam::*function-callresult-map*)
-      (error "Not a callresult function: ~s" function)))
+      (if *low-level-present*
+          (error "Not a callresult function: ~s" function)
+          NIL)))
 
 (define-compiler-macro function-callresult (&whole whole function &environment env)
   (if (constantp function env)
       `(load-time-value (or (gethash ,function steam::*function-callresult-map*)
-                            (error "Not a callresult function: ~s" ,function)))
+                            (if *low-level-present*
+                                (error "Not a callresult function: ~s" ,function)
+                                NIL)))
       whole))
 
 (defun c-slot-value-extractor (struct slotdef)
@@ -106,6 +114,8 @@
 
 (cffi:defctype steam::steam-id :unsigned-long)
 
+(defvar *low-level-present* NIL)
+
 (defun maybe-load-low-level (&optional file)
   (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
     (when (probe-file file)
@@ -120,7 +130,7 @@
         (if (probe-file fasl)
             (load fasl :verbose NIL :print NIL)
             (load file :verbose NIL :print NIL)))
-      T)))
+      (setf *low-level-present* T))))
 
 (defun maybe-compile-low-level (&optional file)
   (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))

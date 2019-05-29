@@ -16,7 +16,7 @@
         (stream (gensym "STREAM")))
     `(define-condition ,name (,@direct-superclasses steamworks-condition)
        ,(loop for arg in format-args
-              for (name . default) = (enlist arg)
+              for (name . default) = (if (listp arg) arg (list arg))
               for initarg = (intern (string name) "KEYWORD")
               collect (list name
                             :initarg initarg
@@ -27,7 +27,7 @@
        (:report (lambda (,condition ,stream)
                   (format ,stream ,format-string
                           ,@(loop for arg in format-args
-                                  collect `(,(delist arg) ,condition))))))))
+                                  collect `(,(if (listp arg) (car arg) arg) ,condition))))))))
 
 (define-simple-condition argument-missing (error)
   "The argument ~s is required, but was not passed."
@@ -105,3 +105,7 @@ Is Steam running and the app-id set up properly?")
 (define-simple-condition user-stats-not-ready (warning)
   "The stats for the current user have been requested but are not yet ready.
 You might need to call (run-callbacks T)")
+
+(define-simple-condition low-level-not-loaded (error)
+  "The low-level file is not present.
+Please follow the instructions in the documentation to set up this library properly.")

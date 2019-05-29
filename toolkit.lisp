@@ -7,9 +7,47 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (or (maybe-load-low-level)
-      (alexandria:simple-style-warning "No low-level file present. Please install the SteamWorks SDK:
-Load cl-steamworks-generator and then run (cl-steamworks-generator:setup)")))
+  (unless (maybe-load-low-level)
+    (alexandria:simple-style-warning "No low-level file present.
+Please follow the instructions in the documentation to set up this library properly.")
+    ;; KLUDGE: stub out types that are required to compile the library without the low-level file
+    (macrolet ((define-stub-types (&body body)
+                 `(progn ,@(loop for name in body collect
+                                 (if (listp name)
+                                     `(cffi:defcstruct ,(second name) ,@(cddr name))
+                                     `(cffi:defctype ,name :int))))))
+      (define-stub-types
+        steam::hserver-list-request
+        steam::hsteam-pipe
+        steam::depot-id-t
+        steam::app-id-t
+        steam::published-file-id-t
+        steam::controller-handle-t
+        steam::controller-action-set-handle-t
+        steam::steam-apicall-t
+        steam::steam-inventory-result-t
+        steam::steam-item-def-t
+        steam::steam-item-instance-id-t
+        steam::ematch-making-server-response
+        steam::echat-entry-type
+        steam::eitem-preview-type
+        steam::econtroller-action-origin
+        (:struct steam::gameserveritem)
+        (:struct steam::match-making-key-value-pair)
+        (:struct steam::p2psession-state)
+        (:struct steam::leaderboard-entry)
+        (:struct steam::steam-party-beacon-location
+                 (steam::type :int)
+                 (steam::location-id :int))
+        (:struct steam::steam-item-details)
+        (:struct steam::friend-game-info)
+        (:struct steam::steam-param-string-array
+                 (steam::strings :pointer)
+                 (steam::num-strings :int))
+        (:struct steam::steam-ugcdetails)
+        (:struct steam::input-digital-action-data)
+        (:struct steam::input-analog-action-data)
+        (:struct steam::input-motion-data)))))
 
 (defmacro with-cleanup-on-failure (cleanup &body body)
   (let ((err (gensym "ERROR")))

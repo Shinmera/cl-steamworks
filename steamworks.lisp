@@ -33,6 +33,8 @@
    (pipe :initform NIL :reader pipe)))
 
 (defmethod initialize-instance :before ((steamworks steamworks) &key app-id)
+  (unless *low-level-present*
+    (error 'low-level-not-loaded))
   (when *steamworks*
     (cerror "Replace the previous steamworks instance."
             'steamworks-already-initialized))

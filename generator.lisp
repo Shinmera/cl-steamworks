@@ -455,12 +455,15 @@
 
 (defun setup (&optional (sdk-directory (query-directory)))
   (when sdk-directory
-    (format *query-io* "~&Copying binaries...")
+    (format *query-io* "~&> Copying binaries...")
     (copy-directory-contents
      (pathname-utils:subdirectory sdk-directory "redistributable_bin")
      (ensure-directories-exist (pathname-utils:subdirectory *this* "static")))
-    (format *query-io* "~&Generating bindings...")
+    (format *query-io* "~&> Generating bindings...")
     (cffi:load-foreign-library 'steam::steamworks)
     (generate sdk-directory)
+    (format *query-io* "~&> Generating shim library...")
     (generate-shim sdk-directory)
-    (format *query-io* "~&Done. You can now use cl-steamworks!~%")))
+    #+asdf (format *query-io* "~&> Recompiling wrapper library...")
+    #+asdf (asdf:load-system :cl-steamworks :force T)
+    (format *query-io* "~&> Done. You can now use cl-steamworks!~%")))

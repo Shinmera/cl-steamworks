@@ -7,6 +7,13 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defvar *global-callbacks* (make-hash-table :test 'eq))
+(defvar *instantiated-callbacks* (make-hash-table :test 'eq))
+
+(defclass global-callback (closure-callback)
+  ((name :initarg :name :reader name)))
+
+(defmethod initialize-instance :after ((callback global-callback) &key name)
+  (setf (gethash name *instantiated-callbacks*) callback))
 
 (defun global-callback (name &optional (errorp T))
   (or (gethash name *global-callbacks*)
@@ -15,10 +22,17 @@
 (defun (setf global-callback) (callback name)
   (check-type name symbol)
   (check-type callback (cons symbol (cons function null)))
-  (setf (gethash name *global-callbacks*) callback))
+  (when (gethash name *instantiated-callbacks*)
+    (free (gethash name *instantiated-callbacks*)))
+  (setf (gethash name *global-callbacks*) callback)
+  (when *steamworks*
+    (make-instance 'global-callback :name name :struct-type (first callback) :closure (second callback))))
 
 (defun remove-global-callback (name)
-  (remhash name *global-callbacks*))
+  (remhash name *global-callbacks*)
+  (when (gethash name *instantiated-callbacks*)
+    (free (gethash name *instantiated-callbacks*))
+    (remhash name *instantiated-callbacks*)))
 
 (defmacro define-callback (struct-type (result &rest slots) &body body)
   (destructuring-bind (name type) (enlist struct-type struct-type)
@@ -31,8 +45,9 @@
              (list ',type #'callback-thunk)))))
 
 (defun create-global-callbacks ()
-  (loop for (struct-type thunk) being the hash-values of *global-callbacks*
-        do (make-instance 'closure-callback :closure thunk :struct-type struct-type)))
+  (loop for name being the hash-keys of *global-callbacks*
+        for (struct-type thunk) being the hash-values of *global-callbacks*
+        do (make-instance 'global-callback :name name :struct-type struct-type :closure thunk)))
 
 (defclass %callback (c-registered-object c-managed-object)
   ((struct-type :initarg :struct-type :accessor struct-type)))

@@ -39,8 +39,7 @@
                                 (flags :uint32)
                                 (last-played :uint32))
       (loop for i from 0 below count
-            do (unless (steam::matchmaking-get-favorite-game (handle interface) i app ip connection-port query-port flags last-played)
-                 (error "FIXME: failed"))
+            do (with-invalid-check NIL (steam::matchmaking-get-favorite-game (handle interface) i app ip connection-port query-port flags last-played))
             collect (list (ensure-iface-obj 'app :interface (interface 'steamapps interface)
                                                  :handle (cffi:mem-ref app 'steam::app-id-t))
                           (int->ipv4 (cffi:mem-ref ip :uint32))
@@ -106,36 +105,32 @@
   (check-empty-string result))
 (define-interface-submethod lobby member-limit (steam::matchmaking-get-lobby-member-limit))
 (define-interface-submethod lobby (setf member-limit) ((max integer) steam::matchmaking-set-lobby-member-limit)
-  (unless result (error "FIXME: failed")))
+  (check-invalid NIL result 'steam::matchmaking-set-lobby-member-limit))
 (define-interface-submethod lobby owner (steam::matchmaking-get-lobby-owner)
   (ensure-iface-obj 'friend :handle result :interface (interface 'steamfriends lobby)))
 (define-interface-submethod lobby member-count (steam::matchmaking-get-num-lobby-members))
 (define-interface-submethod lobby leave (steam::matchmaking-leave-lobby))
 (define-interface-submethod lobby refresh (steam::matchmaking-request-lobby-data)
-  (unless result (error "FIXME: failed")))
+  (check-invalid NIL result 'steam::matchmaking-request-lobby-data))
 (define-interface-submethod lobby (setf joinable-p) (value steam::matchmaking-set-lobby-joinable)
-  (unless result (error "FIXME: failed")))
+  (check-invalid NIL result 'steam::matchmaking-set-lobby-joinable))
 (define-interface-submethod lobby (setf lobby-type) (value steam::matchmaking-set-lobby-type)
-  (unless result (error "FIXME: failed")))
+  (check-invalid NIL result 'steam::matchmaking-set-lobby-type))
 
 (defmethod join ((lobby lobby))
   (with-call-result (result :poll T) (steam::matchmaking-join-lobby (iface lobby) (handle lobby))
-    (unless (= 1 (steam::lobby-enter-echat-room-enter-response result))
-      (error "FIXME: failed"))))
+    (with-valid-check 1 (steam::lobby-enter-echat-room-enter-response result))))
 
 (defmethod invite ((friend friend) (lobby lobby))
-  (unless (steam::matchmaking-invite-user-to-lobby (iface* lobby) (handle lobby) (handle friend))
-    (error "FIXME: failed")))
+  (with-invalid-check NIL (steam::matchmaking-invite-user-to-lobby (iface* lobby) (handle lobby) (handle friend))))
 
 (defmethod (setf data) ((value null) (lobby lobby) (key string))
-  (unless (steam::matchmaking-delete-lobby-data (iface* lobby) (handle lobby) key)
-    (error "FIXME: failed")))
+  (with-invalid-check NIL (steam::matchmaking-delete-lobby-data (iface* lobby) (handle lobby) key)))
 
 (defmethod (setf data) ((value string) (lobby lobby) (key string))
   (check-utf8-size 255 key)
   (check-utf8-size 8192 value)
-  (unless (steam::matchmaking-set-lobby-data (iface* lobby) (handle lobby) key value)
-    (error "FIXME: failed")))
+  (with-invalid-check NIL (steam::matchmaking-set-lobby-data (iface* lobby) (handle lobby) key value)))
 
 (defmethod list-data ((lobby lobby))
   (let ((count (steam::matchmaking-get-lobby-data-count (iface* lobby) (handle lobby))))
@@ -150,7 +145,7 @@
 
 (defmethod (setf member-data) ((value string) (member friend) (lobby lobby) (key string))
   (unless (= (steam-id member) (steam-id (interface 'steamuser member)))
-    (error "FIXME: cannot set member data for others"))
+    (error 'cannot-set-member-data-for-others))
   (steam::matchmaking-set-lobby-member-data (iface* lobby) (handle lobby) key value)
   value)
 
@@ -166,8 +161,7 @@
   (cffi:with-foreign-objects ((ip :uint32)
                               (port :uint16)
                               (id 'steam::steam-id))
-    (unless (steam::matchmaking-get-lobby-game-server (iface* lobby) (handle lobby) ip port id)
-      (error "FIXME: failed"))
+    (with-invalid-check NIL (steam::matchmaking-get-lobby-game-server (iface* lobby) (handle lobby) ip port id))
     (list (int->ipv4 (cffi:mem-ref ip :uint32))
           (cffi:mem-ref port :uint16)
           (cffi:mem-ref id 'steam::steam-id))))
@@ -186,12 +180,10 @@
 (defmethod send-message ((message string) (lobby lobby))
   (check-utf8-size 4096 message)
   (cffi:with-foreign-string ((buffer size) message :encoding :utf-8)
-    (unless (steam::matchmaking-send-lobby-chat-msg (iface* lobby) (handle lobby) buffer size)
-      (error "FIXME: failed"))))
+    (with-invalid-check NIL (steam::matchmaking-send-lobby-chat-msg (iface* lobby) (handle lobby) buffer size))))
 
 (defmethod (setf owner) ((friend friend) (lobby lobby))
-  (unless (steam::matchmaking-set-lobby-owner (iface* lobby) (handle lobby) (handle friend))
-    (error "FIXME: failed"))
+  (with-invalid-check NIL (steam::matchmaking-set-lobby-owner (iface* lobby) (handle lobby) (handle friend)))
   friend)
 
 (defun compute-filters-count (filters)
@@ -267,7 +259,7 @@
             response)))
 
 (defclass server-query (c-managed-object interface-object)
-  ((response :initarg :response :initform (error "RESPONSE required.") :reader response))
+  ((response :initarg :response :initform (error 'argument-missing :argument :response) :reader response))
   (:default-initargs :interface 'steammatchmaking
                      :free-on-gc T))
 
@@ -280,7 +272,7 @@
   (status (response query)))
 
 (defclass server-list-query (c-managed-object interface-object)
-  ((response :initarg :response :initform (error "RESPONSE required.") :reader response))
+  ((response :initarg :response :initform (error 'argument-missing :argument :response) :reader response))
   (:default-initargs :interface 'steammatchmaking
                      :free-on-gc T))
 

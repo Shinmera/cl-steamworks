@@ -53,10 +53,11 @@
             (:no-data
              0)
             (:data-corrupted
-             (warn "FIXME: corrupted voice data.")
+             (warn 'voice-data-corrupted)
              0)
             (T
-             (error "FIXME: failed to get voice data: ~a" result))))))))
+             (error 'api-call-failed :api-call 'steam::user-get-voice
+                                     :error-code result))))))))
 
 (defmethod make-session-ticket ((interface steamuser))
   (make-instance 'session-ticket :interface interface))

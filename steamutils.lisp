@@ -36,8 +36,7 @@
 (defmethod input-text ((utils steamutils))
   (let ((length (steam::utils-get-entered-gamepad-text-length (handle utils))))
     (cffi:with-foreign-object (data :char length)
-      (unless (steam::utils-get-entered-gamepad-text-input (handle utils) data length)
-        (error "FIXME: failed to retrieve entered text. Was there any text to receive and are you in the callback?"))
+      (with-invalid-check NIL (steam::utils-get-entered-gamepad-text-input (handle utils) data length))
       (cffi:foreign-string-to-lisp data :count length :encoding :utf-8))))
 
 (defmacro with-input-text ((text utils &rest args) &body body)
@@ -70,8 +69,7 @@
 (defmethod initialize-instance :after ((image image) &key handle)
   (cffi:with-foreign-objects ((width :uint32)
                               (height :uint32))
-    (unless (steam::utils-get-image-size (iface* image) handle width height)
-      (error "FIXME: not a valid image handle."))
+    (with-invalid-check NIL (steam::utils-get-image-size (iface* image) handle width height))
     (setf (slot-value image 'width) (cffi:mem-ref width :uint32))
     (setf (slot-value image 'height) (cffi:mem-ref height :uint32))))
 
@@ -86,6 +84,5 @@
       (let* ((size (* 4 (width image) (height image)))
              (rgba (make-array size :element-type '(unsigned-byte 8))))
         (cffi:with-pointer-to-vector-data (data rgba)
-          (unless (steam::utils-get-image-rgba (iface* image) (handle image) data size)
-            (error "FIXME: failed to receive image data.")))
+          (with-invalid-check NIL (steam::utils-get-image-rgba (iface* image) (handle image) data size)))
         (setf (slot-value image 'rgba) rgba))))

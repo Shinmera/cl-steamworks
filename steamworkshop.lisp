@@ -14,9 +14,8 @@
                                                  (handle (user steamworks)) (handle (pipe steamworks))
                                                  (t-or version STEAM::STEAMUGC-INTERFACE-VERSION)))
   (when content-directory
-    (unless (steam::ugc-binit-workshop-for-game-server (handle interface) (server-depot steamworks)
-                                                       (namestring content-directory))
-      (error "FIXME: failed to set workshop content folder."))))
+    (with-invalid-check NIL (steam::ugc-binit-workshop-for-game-server (handle interface) (server-depot steamworks)
+                                                                       (namestring content-directory)))))
 
 (define-interface-method steamworkshop (setf downloads-suspended-p) (value steam::ugc-suspend-downloads))
 
@@ -57,14 +56,11 @@
 
 (defmethod initialize-instance :after ((query workshop-query) &key exclude require key-value-tags request search any-tag rank-by-trend-days)
   (dolist (tag exclude)
-    (unless (add-excluded-tag tag query)
-      (error "FIXME: could not add excluded tag.")))
+    (add-excluded-tag tag query))
   (dolist (tag require)
-    (unless (add-required-tag tag query)
-      (error "FIXME: could not add excluded tag.")))
+    (add-required-tag tag query))
   (loop for (key . value) in key-value-tags
-        do (unless (add-key-value-tag key value query)
-             (error "FIXME: could not add required tag.")))
+        do (add-key-value-tag key value query))
   (set-match-any-tag query any-tag)
   (set-ranked-by-trend-days query rank-by-trend-days)
   (set-request-all-previews query (find :all-previews request))
@@ -83,9 +79,12 @@
     (lambda ()
       (steam::ugc-release-query-ugcrequest workshop handle))))
 
-(define-interface-submethod workshop-query add-excluded-tag ((tag string) steam::ugc-add-excluded-tag))
-(define-interface-submethod workshop-query add-required-tag ((tag string) steam::ugc-add-required-tag))
-(define-interface-submethod workshop-query add-key-value-tag ((key string) (value string) steam::ugc-add-required-key-value-tag))
+(define-interface-submethod workshop-query add-excluded-tag ((tag string) steam::ugc-add-excluded-tag)
+  (check-invalid NIL result 'steam::ugc-add-excluded-tag))
+(define-interface-submethod workshop-query add-required-tag ((tag string) steam::ugc-add-required-tag)
+  (check-invalid NIL result 'steam::ugc-add-required-tag))
+(define-interface-submethod workshop-query add-key-value-tag ((key string) (value string) steam::ugc-add-required-key-value-tag)
+  (check-invalid NIL result 'steam::ugc-add-required-key-value-tag))
 (define-interface-submethod workshop-query (setf cached-response-allowed-p) (max-age-in-seconds steam::ugc-set-allow-cached-response))
 (define-interface-submethod workshop-query (setf cloud-file-name-filter) ((file-name string) steam::ugc-set-cloud-file-name-filter))
 (define-interface-submethod workshop-query (setf any-tag-matches-p) (value steam::ugc-set-match-any-tag))
@@ -125,8 +124,7 @@
 
 (defmethod get-children ((query workshop-query) (index integer) count)
   (cffi:with-foreign-object (buffer 'steam::published-file-id-t count)
-    (unless (steam::ugc-get-query-ugcchildren (iface* query) (handle query) index buffer count)
-      (error "FIXME: failed to get children."))
+    (with-invalid-check NIL (steam::ugc-get-query-ugcchildren (iface* query) (handle query) index buffer count))
     (loop for i from 0 below count
           collect (ensure-iface-obj 'workshop-file :interface (iface query)
                                                    :handle (cffi:mem-aref buffer 'steam::published-file-id-t i)
@@ -144,8 +142,7 @@
 
 (defmethod get-metadata ((query workshop-query) (index integer))
   (cffi:with-foreign-object (buffer :char 256)
-    (unless (steam::ugc-get-query-ugcmetadata (iface* query) (handle query) index buffer 256)
-      (error "FIXME: failed to get metadata."))
+    (with-invalid-check NIL (steam::ugc-get-query-ugcmetadata (iface* query) (handle query) index buffer 256))
     (cffi:foreign-string-to-lisp buffer :count 256 :encoding :utf-8)))
 
 (defmethod get-statistics ((query workshop-query) (index integer))
@@ -158,8 +155,7 @@
 
 (defmethod get-details ((query workshop-query) (index integer))
   (with-foreign-value (buffer '(:struct steam::steam-ugcdetails))
-    (unless (steam::ugc-get-query-ugcresult (iface* query) (handle query) index buffer)
-      (error "FIXME: failed to get details."))))
+    (with-invalid-check NIL (steam::ugc-get-query-ugcresult (iface* query) (handle query) index buffer))))
 
 (defmethod get-workshop-file ((query workshop-query) (index integer))
   (let* ((id (steam::steam-ugcdetails-published-file-id (get-details query index)))
@@ -249,7 +245,7 @@
 
 (defmethod (setf preview) ((file pathname) (update workshop-update))
   (unless (find (pathname-type file) '("png" "jpg" "jpeg" "gif" "svg") :test #'string=)
-    (error "FIXME: preview file must be an image."))
+    (error 'not-an-image-file :file-handle file))
   (steam::ugc-set-item-preview (iface* update) (handle update) file))
 
 (defmethod (setf tags) (tags (update workshop-update))
@@ -259,7 +255,7 @@
       (when (loop for char across tag
                   thereis (or (char= char #\,)
                               (not (printable-char-p char))))
-        (error "FIXME: The tag ~s contains prohibited characters." tag)))
+        (error 'string-malformed :malformed-string tag)))
     (cffi:with-foreign-objects ((stringptr :pointer tagcount)
                                 (strings :char (* 255 tagcount))
                                 (struct '(:struct steam::steam-param-string-array)))
@@ -275,7 +271,7 @@
 (defmethod (setf content) (directory (update workshop-update))
   (let ((directory (pathname directory)))
     (when (or (pathname-name directory) (pathname-type directory))
-      (error "FIXME: need to pass a directory."))
+      (error 'pathname-not-a-directory :file-handle directory))
     (steam::ugc-set-item-content (iface* update) (handle update) (namestring directory))))
 
 (defmethod (setf previews) (previews (update workshop-update))
@@ -317,14 +313,14 @@
          (to-add (set-difference key-value-tags previous :test #'equal))
          (to-remove (set-difference previous key-value-tags :test #'equal)))
     (when (< 100 (length to-remove))
-      (error "FIXME: cannot remove more than 100 in one update."))
+      (error 'too-many-requests :request-limit 100))
     (loop for (key . value) in to-add
           do (check-utf8-size 255 key)
              (check-utf8-size 255 value)
              (when (loop for c across key
                          thereis (not (or (alphanumericp c)
                                           (char= #\_ c))))
-               (error "FIXME: invalid key"))
+               (error 'string-malformed :malformed-string key))
              (steam::ugc-add-item-key-value-tag workshop handle key value))
     (loop for (key . value) in to-remove
           do (steam::ugc-remove-item-key-value-tags workshop handle key))))
@@ -357,7 +353,7 @@
   (unless (handle file)
     (with-call-result (result :poll T) (steam::ugc-create-item (iface* file) (handle app) kind)
       (when (steam::create-item-user-needs-to-accept-workshop-legal-agreement result)
-        (warn "FIXME: user needs to accept agreement."))
+        (warn 'workshop-agreement-not-accepted))
       (check-result (steam::create-item-result result)
                     'steam::ugc-create-item)
       (setf (handle file) (steam::create-item-published-file-id result))

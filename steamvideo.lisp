@@ -28,5 +28,4 @@
     (setf (cffi:mem-ref size :int32) 0)
     (steam::video-get-opfstring-for-app (handle video) id (cffi:null-pointer) size)
     (cffi:with-foreign-object (buffer :char (cffi:mem-ref size :int32))
-      (unless (steam::video-get-opfstring-for-app (handle video) id buffer size)
-        (error "FIXME: failed")))))
+      (with-invalid-check NIL (steam::video-get-opfstring-for-app (handle video) id buffer size)))))

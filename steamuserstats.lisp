@@ -18,7 +18,7 @@
 
 (define-interface-method steamuserstats player-count (steam::user-stats-get-number-of-current-players))
 (define-interface-method steamuserstats store-stats (steam::user-stats-store-stats)
-  (unless result (error "FIXME: failed")))
+  (check-invalid NIL result 'steam::user-stats-store-stats))
 
 (define-callback steam::user-stats-received (_ result)
   (when (eql :ok result)
@@ -30,12 +30,12 @@
         for handle = (steam::user-stats-get-achievement-name (handle interface) i)
         collect (ensure-iface-obj 'achievement :interface interface :handle handle)))
 
+;; FIXME: restarts that run callbacks and retry
 (defun ensure-current-stats (interface &key force)
   ;; KLUDGE: FUCK, we can't poll for this, so the other ensure-* calls won't work right.
   (when (or force (null (current-stats-available-p interface)))
-    (unless (steam::user-stats-request-current-stats (handle interface))
-      (error "FIXME: failed"))
-    (error "FIXME: Please wait a while until the user stats have come in.")))
+    (with-invalid-check NIL (steam::user-stats-request-current-stats (handle interface)))
+    (warn 'user-stats-not-ready)))
 
 (defun ensure-global-stats (interface &key force days)
   (when (or force (< (global-stats-days-available interface) days))
@@ -78,8 +78,7 @@
         (nreverse list)))))
 
 (defmethod reset-stats ((interface steamuserstats) &key achievements)
-  (unless (steam::user-stats-reset-all-stats (handle interface) achievements)
-    (error "FIXME: failed")))
+  (with-invalid-check NIL (steam::user-stats-reset-all-stats (handle interface) achievements)))
 
 (defmethod leaderboard ((name string) (interface steamuserstats) &key (if-does-not-exist :error)
                                                                       (sort-method :ascending)
@@ -117,16 +116,21 @@
     ((eql :local) (ensure-current-stats (iface stat)))
     (friend (ensure-user-stats (iface stat) for)))
   (cffi:with-foreign-object (data :int64)
-    (unless (ecase (stat-type stat)
-              (integer (etypecase for
-                         ((eql :global) (steam::user-stats-get-global-stat (iface* stat) (handle stat) data))
-                         ((eql :local) (steam::user-stats-get-stat (iface* stat) (handle stat) data))
-                         (friend (steam::user-stats-get-user-stat (iface* stat) (steam-id for) (handle stat) data))))
-              (float (etypecase for
-                       ((eql :global) (steam::user-stats-get-global-stat0 (iface* stat) (handle stat) data))
-                       ((eql :local) (steam::user-stats-get-stat0 (iface* stat) (handle stat) data))
-                       (friend (steam::user-stats-get-user-stat0 (iface* stat) (steam-id for) (handle stat) data)))))
-      (error "FIXME: failed"))
+    (ecase (stat-type stat)
+      (integer (etypecase for
+                 ((eql :global)
+                  (with-invalid-check NIL (steam::user-stats-get-global-stat (iface* stat) (handle stat) data)))
+                 ((eql :local)
+                  (with-invalid-check NIL (steam::user-stats-get-stat (iface* stat) (handle stat) data)))
+                 (friend
+                  (with-invalid-check NIL (steam::user-stats-get-user-stat (iface* stat) (steam-id for) (handle stat) data)))))
+      (float (etypecase for
+               ((eql :global)
+                (with-invalid-check NIL (steam::user-stats-get-global-stat0 (iface* stat) (handle stat) data)))
+               ((eql :local)
+                (with-invalid-check NIL (steam::user-stats-get-stat0 (iface* stat) (handle stat) data)))
+               (friend
+                (with-invalid-check NIL (steam::user-stats-get-user-stat0 (iface* stat) (steam-id for) (handle stat) data))))))
     (case for
       (:global
        (ecase (stat-type stat)
@@ -139,10 +143,10 @@
 
 (defmethod (setf stat-value) (value (stat stat) &key sync)
   (ensure-current-stats (iface stat))
-  (unless (etypecase value
-            (integer (steam::user-stats-set-stat (iface* stat) (handle stat) value))
-            (float (steam::user-stats-set-stat0 (iface* stat) (handle stat) (coerce value 'single-float))))
-    (error "FIXME: failed"))
+  (check-invalid NIL (etypecase value
+                       (integer (steam::user-stats-set-stat (iface* stat) (handle stat) value))
+                       (float (steam::user-stats-set-stat0 (iface* stat) (handle stat) (coerce value 'single-float))))
+                 'steam::user-stats-set-stat)
   (when sync
     (store-stats (iface stat)))
   value)
@@ -155,43 +159,37 @@
   (check-invalid 0 result 'steam::user-stats-get-achievement-icon)
   (make-instance 'image :interface (interface 'steamutils achievement) :handle result))
 (define-interface-submethod achievement show-progress (steam::user-stats-indicate-achievement-progress progress total)
-  (unless result (error "FIXME: failed")))
+  (check-invalid NIL result 'steam::user-stats-indicate-achievement-progress))
 
 (defmethod display-name ((achievement achievement))
-  (check-empty-string (steam::user-stats-get-achievement-display-attribute (iface* achievement) (handle achievement) "name")
-                      "FIXME: failed"))
+  (with-invalid-check "" (steam::user-stats-get-achievement-display-attribute (iface* achievement) (handle achievement) "name")))
 
 (defmethod description ((achievement achievement))
-  (check-empty-string (steam::user-stats-get-achievement-display-attribute (iface* achievement) (handle achievement) "desc")
-                      "FIXME: failed"))
+  (with-invalid-check "" (steam::user-stats-get-achievement-display-attribute (iface* achievement) (handle achievement) "desc")))
 
 (defmethod hidden-p ((achievement achievement))
-  (string= (check-empty-string (steam::user-stats-get-achievement-display-attribute (iface* achievement) (handle achievement) "hidden")
-                               "FIXME: failed")
+  (string= (with-invalid-check "" (steam::user-stats-get-achievement-display-attribute (iface* achievement) (handle achievement) "hidden"))
            "1"))
 
 (defmacro define-achievement-method (name (method &rest args) &body body)
   `(defmethod ,name ((achievement achievement))
      (cffi:with-foreign-objects ,args
-       (unless (,method (iface* achievement) (handle achievement) ,@(mapcar #'first args))
-         (error "FIXME: failed"))
+       (with-invalid-check NIL (,method (iface* achievement) (handle achievement) ,@(mapcar #'first args)))
        (let ,(loop for (var type) in args
                    collect `(,var (cffi:mem-ref ,var ,type)))
          ,@(or body (list (car (first args))))))))
 
 (defmethod achieved-p ((achievement achievement) &optional user)
   (cffi:with-foreign-object (achieved-p :bool)
-    (unless (if user
-                (steam::user-stats-get-user-achievement (iface* achievement) (steam-id user) (handle achievement) achieved-p)
-                (steam::user-stats-get-achievement (iface* achievement) (handle achievement) achieved-p))
-      (error "FIXME: failed"))
+    (if user
+        (with-invalid-check NIL (steam::user-stats-get-user-achievement (iface* achievement) (steam-id user) (handle achievement) achieved-p))
+        (with-invalid-check NIL (steam::user-stats-get-achievement (iface* achievement) (handle achievement) achieved-p)))
     (cffi:mem-ref achieved-p :bool)))
 
 (defmethod (setf achieved-p) (value (achievement achievement) &key sync)
-  (unless (if value
-              (steam::user-stats-set-achievement (iface* achievement) (handle achievement))
-              (steam::user-stats-clear-achievement (iface* achievement) (handle achievement)))
-    (error "FIXME: failed"))
+  (if value
+      (with-invalid-check NIL (steam::user-stats-set-achievement (iface* achievement) (handle achievement)))
+      (with-invalid-check NIL (steam::user-stats-clear-achievement (iface* achievement) (handle achievement))))
   (when sync
     (store-stats (iface achievement)))
   value)
@@ -199,16 +197,14 @@
 (defmethod unlock-time ((achievement achievement) &optional user)
   (cffi:with-foreign-objects ((achieved-p :bool)
                               (time :uint32))
-    (unless (if user
-                (steam::user-stats-get-user-achievement-and-unlock-time (iface* achievement) (steam-id user) (handle achievement) achieved-p time)
-                (steam::user-stats-get-achievement-and-unlock-time (iface* achievement) (handle achievement) achieved-p time))
-      (error "FIXME: failed"))
+    (if user
+        (with-invalid-check NIL (steam::user-stats-get-user-achievement-and-unlock-time (iface* achievement) (steam-id user) (handle achievement) achieved-p time))
+        (with-invalid-check NIL (steam::user-stats-get-achievement-and-unlock-time (iface* achievement) (handle achievement) achieved-p time)))
     (unix->universal (cffi:mem-ref time :uint32))))
 
 (defmethod achieved-percentage ((stat stat))
   (with-foreign-value (percentage :float)
-    (unless (steam::user-stats-get-achievement-achieved-percent (iface* stat) (handle stat) percentage)
-      (error "FIXME: failed"))))
+    (with-invalid-check NIL (steam::user-stats-get-achievement-achieved-percent (iface* stat) (handle stat) percentage))))
 
 (defclass leaderboard (interface-object)
   ()
@@ -228,8 +224,7 @@
   (cffi:with-foreign-object (entry '(:struct steam::leaderboard-entry))
     (loop with entries = (steam::leaderboard-scores-downloaded-steam-leaderboard-entries result)
           for i from 0 below (steam::leaderboard-scores-downloaded-entry-count result)
-          do (unless (steam::user-stats-get-downloaded-leaderboard-entry iface entries i entry (cffi:null-pointer) 0)
-               (error "FIXME: failed"))
+          do (with-invalid-check NIL (steam::user-stats-get-downloaded-leaderboard-entry iface entries i entry (cffi:null-pointer) 0))
           collect (cffi:mem-aref entry '(:struct steam::leaderboard-entry)))))
 
 (defmethod entries ((leaderboard leaderboard) type &key (start 0) (end 100) users)
@@ -251,7 +246,7 @@
                                                                                    (:if-better :keep-best)
                                                                                    (:always :force-update))
                                                                                  score (cffi:null-pointer) 0)
-    (check-invalid 0 (steam::leaderboard-score-uploaded-success result))
+    (with-invalid-check 0 (steam::leaderboard-score-uploaded-success result))
     (values score
             (steam::leaderboard-score-uploaded-score-changed result)
             (steam::leaderboard-score-uploaded-global-rank-previous result)

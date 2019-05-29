@@ -19,14 +19,10 @@
   (if container
       (%steamworks container)
       (or *steamworks*
-          (error "FIXME: steamworks is not initialised."))))
+          (error 'steamworks-not-initialized))))
 
 (defclass pipe (c-object)
   ())
-
-(defmethod initialize-instance :after ((pipe pipe) &key)
-  (when (= 0 (handle pipe))
-    (error "FIXME: Pipe creation failed.")))
 
 (defclass user (c-object)
   ((pipe :initarg :pipe :reader pipe)))
@@ -39,7 +35,7 @@
 (defmethod initialize-instance :before ((steamworks steamworks) &key app-id)
   (when *steamworks*
     (cerror "Replace the previous steamworks instance."
-            "FIXME: Steamworks is already initialized."))
+            'steamworks-already-initialized))
   (when app-id
     (setup-app-id app-id)))
 
@@ -71,6 +67,9 @@
 (defmethod list-interfaces ((steamworks steamworks))
   (alexandria:hash-table-values (interfaces steamworks)))
 
+(defmethod run-callbacks ((default (eql T)))
+  (run-callbacks (steamworks)))
+
 (defclass steamworks-client (steamworks)
   ())
 
@@ -78,12 +77,12 @@
   (call-next-method)
   (unless (steam::init)
     (restart-case
-        (error "FIXME: Failed to call INIT. Is Steam running and the app-id ready?")
+        (error 'initialization-failed :api-call 'steam::init)
       (restart (&optional (app-id app-id) (exit-code 2))
         :report "Restart the application through Steam."
         (when (steam::restart-app-if-necessary app-id)
           (quit exit-code)))))
-  (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (steam::get-hsteam-pipe)))
+  (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (with-invalid-check 0 (steam::get-hsteam-pipe))))
   (setf (slot-value steamworks 'user) (make-instance 'user :handle (steam::get-hsteam-user)
                                                            :pipe (pipe steamworks))))
 
@@ -111,9 +110,8 @@
   (call-next-method)
   (unless server-depot
     (error "You must pass the :SERVER-DEPOT."))
-  (unless (steam::game-server-init ip-address steam-port game-port query-port server-mode version-string)
-    (error "FIXME: failed to init game server."))
-  (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (steam::game-server-get-hsteam-pipe)))
+  (with-invalid-check NIL (steam::game-server-init ip-address steam-port game-port query-port server-mode version-string))
+  (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (with-invalid-check 0 (steam::game-server-get-hsteam-pipe))))
   (setf (slot-value steamworks 'user) (make-instance 'user :handle (steam::game-server-get-hsteam-user)
                                                            :pipe (pipe steamworks))))
 

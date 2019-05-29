@@ -15,11 +15,9 @@
 
 (defmethod list-beacon-locations ((interface steamparties))
   (let ((count (with-foreign-value (count :uint32)
-                 (unless (steam::parties-get-num-available-beacon-locations (handle interface) count)
-                   (error "FIXME: failed")))))
+                 (with-invalid-check NIL (steam::parties-get-num-available-beacon-locations (handle interface) count)))))
     (cffi:with-foreign-object (array '(:struct steam::steam-party-beacon-location) count)
-      (unless (steam::parties-get-available-beacon-locations (handle interface) array count)
-        (error "FIXME: failed"))
+      (with-invalid-check NIL (steam::parties-get-available-beacon-locations (handle interface) array count))
       (loop for i from 0 below count
             for struct = (cffi:mem-aref array '(:struct steam::steam-party-beacon-location) i)
             collect (ensure-iface-obj 'beacon-location :interface interface :handle struct)))))
@@ -32,7 +30,7 @@
                                           :handle (steam::steam-party-beacon-location-location-id struct))))
 
 (defclass beacon-location (interface-object)
-  ((type :initarg :type :initform (error "FIXME: type required") :reader location-type))
+  ((type :initarg :type :initform (error 'argument-missing :argument :type) :reader location-type))
   (:default-initargs :interface 'steamparties))
 
 (defclass beacon (c-managed-object interface-object)
@@ -47,8 +45,7 @@
                               (location '(:struct steam::steam-party-beacon-location))
                               ;; We have no idea of knowing how big this should be.
                               (metadata :uchar 4096))
-    (unless (steam::parties-get-beacon-details (iface* beacon) (handle beacon) owner location metadata 4096)
-      (error "FIXME: failed"))
+    (with-invalid-check NIL (steam::parties-get-beacon-details (iface* beacon) (handle beacon) owner location metadata 4096))
     (setf (slot-value beacon 'owner) (ensure-iface-obj 'friend :handle (cffi:mem-ref owner 'steam::steam-id)
                                                                :interface (interface 'steamfriends beacon)))
     (let ((struct (cffi:mem-ref location '(:struct steam::steam-party-beacon-location))))

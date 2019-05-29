@@ -32,7 +32,7 @@
                         (if thumbnail (uiop:native-namestring thumbnail) (cffi:null-pointer))
                         width height))
                       (T
-                       (error "FIXME: required args not present.")))))
+                       (error 'argument-missing :argument '(or pixels vr file))))))
     (check-invalid 0 handle)
     (make-instance 'screenshot :interface interface :handle handle)))
 
@@ -41,12 +41,10 @@
   (:default-initargs :interface 'steamscreenshots))
 
 (define-interface-submethod screenshot (setf location) ((location string) steam::screenshots-set-location)
-  (unless result (error "FIXME: failed")))
+  (check-invalid NIL result 'steam::screenshots-set-location))
 
 (defmethod add-tag ((user friend) (screenshot screenshot))
-  (unless (steam::screenshots-tag-user (iface* screenshot) (handle screenshot) (steam-id user))
-    (error "FIXME: failed")))
+  (with-invalid-check NIL (steam::screenshots-tag-user (iface* screenshot) (handle screenshot) (steam-id user))))
 
 (defmethod add-tag ((file workshop-file) (screenshot screenshot))
-  (unless (steam::screenshots-tag-published-file (iface* screenshot) (handle screenshot) (handle file))
-    (error "FIXME: failed")))
+  (with-invalid-check NIL (steam::screenshots-tag-published-file (iface* screenshot) (handle screenshot) (handle file))))

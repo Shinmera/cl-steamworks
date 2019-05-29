@@ -32,8 +32,6 @@
                   (:game-group "officialgamegroup")
                   (:stats "stats")
                   (:achievements "achievements"))))
-    (when (< 1 (+ (if user 1 0) (if lobby 1 0) (if app 1 0) (if url 1 0)))
-      (error "FIXME: Can't display more than one dialog at the same time."))
     (cond (lobby
            (steam::friends-activate-game-overlay-invite-dialog (handle friends) lobby))
           (app
@@ -93,8 +91,7 @@
                  (princ-to-string value))))
     (check-utf8-size STEAM::MAX-RICH-PRESENCE-KEY-LENGTH key)
     (check-utf8-size STEAM::MAX-RICH-PRESENCE-VALUE-LENGTH value)
-    (unless (steam::friends-set-rich-presence (handle friends) key value)
-      (error "FIXME: failed to set the rich presence.")))
+    (with-invalid-check NIL (steam::friends-set-rich-presence (handle friends) key value)))
   value)
 
 (defclass friend (interface-object)
@@ -179,8 +176,7 @@
 
 (defmethod invite ((friend friend) (message string))
   (check-utf8-size STEAM::MAX-RICH-PRESENCE-VALUE-LENGTH message)
-  (unless (steam::friends-invite-user-to-game (iface* friend) (handle friend) message)
-    (error "FIXME: failed to invite the friend.")))
+  (with-invalid-check NIL (steam::friends-invite-user-to-game (iface* friend) (handle friend) message)))
 
 (defmethod mark-as-played-with ((friend friend))
   (steam::friends-set-played-with (iface* friend) (handle friend)))
@@ -266,7 +262,7 @@
     (when (= 0 result)
       (refresh-clan clan)
       (setf result (steam::friends-get-clan-officer-by-index (iface* clan) (handle clan) index))
-      (when (= 0 result) (error "FIXME: No such clan officer.")))
+      (when (= 0 result) (error 'no-such-user :user-handle index)))
     (ensure-iface-obj 'friend :interface (iface clan) :handle result)))
 
 (defmethod list-officers ((clan clan))

@@ -42,7 +42,7 @@
 (defun get-interface-handle (steamworks function &rest args)
   (let ((handle (apply function (handle (interface 'steamclient steamworks)) args)))
     (when (cffi:null-pointer-p handle)
-      (error "FIXME: failed to create steam utils handle."))
+      (error 'interface-creation-failed))
     handle))
 
 (defun get-interface-handle* (steamworks function version)

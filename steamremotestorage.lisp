@@ -71,7 +71,7 @@
 
 (defgeneric read-file (file vector &key start end &allow-other-keys))
 (defmethod read-file ((file file) (vector vector) &key start end)
-  (unless (= 0 start) (error 'cannot-seek))
+  (unless (= 0 start) (error 'file-seeking-impossible))
   (cffi:with-pointer-to-vector-data (buffer vector)
     (let ((end (or end (size file))))
       (when (< (length vector) end)
@@ -144,8 +144,7 @@
                               (name :pointer)
                               (size :int32)
                               (owner 'steam::steam-id))
-    (unless (steam::remote-storage-get-ugcdetails (iface* ugc) (handle ugc) app name size owner)
-      (error "FIXME: failed"))
+    (with-invalid-check NIL (steam::remote-storage-get-ugcdetails (iface* ugc) (handle ugc) app name size owner))
     (setf (slot-value ugc 'app) (ensure-iface-obj 'app :handle (cffi:mem-ref app 'steam::app-id-t)
                                                        :interface (interface 'steamapps ugc)))
     (setf (slot-value ugc 'name) (cffi:foreign-string-to-lisp (cffi:mem-ref name :pointer) :encoding :utf-8))

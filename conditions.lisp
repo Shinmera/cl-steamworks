@@ -49,9 +49,59 @@
   "The file~%  ~a~%does not exist."
   file-handle)
 
+(define-simple-condition no-such-user (error)
+  "The user~%  ~a~%does not exist."
+  user-handle)
+
 (define-simple-condition buffer-too-short (error)
   "The buffer needs to be able to hold at least ~d bytes."
   required-bytes)
 
-(define-simple-condition cannot-seek (error)
-  "Cannot seek to a file position when reading the entire file.")
+(define-simple-condition voice-data-corrupted (warning)
+  "The voice data was corrupted and has been lost.")
+
+(define-simple-condition interface-creation-failed (error)
+  "Failed to create a handle ~:[for an interface.~;~:*to the ~a interface~]."
+  (interface-name NIL))
+
+(define-simple-condition not-an-image-file (error)
+  "The given file ~a does not appear to be an image (PNG, JPG, GIF, SVG) file."
+  file-handle)
+
+(define-simple-condition string-malformed (error)
+  "The string~%  ~s~%contains invalid characters."
+  malformed-string)
+
+(define-simple-condition pathname-not-a-directory (error)
+  "The pathname~%  ~a~%does not designate a directory."
+  file-handle)
+
+(define-simple-condition too-many-requests (error)
+  "The function call would incur too many requests.~@[ The limit is at ~d~]"
+  (request-limit NIL))
+
+(define-simple-condition workshop-agreement-not-accepted (warning)
+  "The user has not yet accepted the Steam Workshop agreement.")
+
+(define-simple-condition file-seeking-impossible (error)
+  "Cannot seek when reading the entire file.")
+
+(define-simple-condition request-denied (error)
+  "You do not have permission to perform the request.")
+
+(define-simple-condition cannot-set-member-data-for-others (request-denied)
+  "You cannot set the member data for users other than the local user.")
+
+(define-simple-condition steamworks-not-initialized (error)
+  "The SteamWorks API has not yet been initialized.")
+
+(define-simple-condition steamworks-already-initialized (error)
+  "The SteamWorks API has already been initialized before.")
+
+(define-simple-condition initialization-failed (api-call-failed)
+  "SteamWorks initialization failed.
+Is Steam running and the app-id set up properly?")
+
+(define-simple-condition user-stats-not-ready (warning)
+  "The stats for the current user have been requested but are not yet ready.
+You might need to call (run-callbacks T)")

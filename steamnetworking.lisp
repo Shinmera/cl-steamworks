@@ -24,8 +24,7 @@
   (cffi:with-foreign-objects ((size :uint32)
                               (remote 'steam::steam-id))
     (cffi:with-pointer-to-vector-data (data buffer)
-      (unless (steam::networking-read-p2ppacket (handle interface) data (length buffer) size remote channel)
-        (error "FIXME: no data"))
+      (with-invalid-check NIL (steam::networking-read-p2ppacket (handle interface) data (length buffer) size remote channel))
       (values (interface-object (cffi:mem-ref remote 'steam::steam-id) interface)
               (cffi:mem-ref size :uint32)))))
 
@@ -40,8 +39,7 @@
                      :free-on-gc T))
 
 (defmethod initialize-instance :after ((session p2p-session) &key)
-  (unless (steam::networking-accept-p2psession-with-user (iface* session) (handle session))
-    (error "FIXME: failed")))
+  (with-invalid-check NIL (steam::networking-accept-p2psession-with-user (iface* session) (handle session))))
 
 (defmethod allocate-handle ((session p2p-session) &key user)
   (handle user))
@@ -60,8 +58,7 @@
 
 (defmethod state ((session p2p-session))
   (cffi:with-foreign-object (state '(:struct steam::p2psession-state))
-    (unless (steam::networking-get-p2psession-state (iface* session) (handle session) state)
-      (error "FIXME: failed"))
+    (with-invalid-check NIL (steam::networking-get-p2psession-state (iface* session) (handle session) state))
     (cffi:mem-ref state '(:struct steam::p2psession-state))))
 
 (defmethod send-packet ((session p2p-session) (buffer vector) &key (transmission :reliable) (channel 0) start end)
@@ -70,5 +67,4 @@
     (when start
       (cffi:incf-pointer data start)
       (decf end start))
-    (unless (steam::networking-send-p2ppacket (iface* session) (handle session) data end transmission channel)
-      (error "FIXME: failed"))))
+    (with-invalid-check NIL (steam::networking-send-p2ppacket (iface* session) (handle session) data end transmission channel))))

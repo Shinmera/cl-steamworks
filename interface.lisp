@@ -6,6 +6,8 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
+;; FIXME: go through interfaces and check we use the correct handle for merged interfaces
+
 (defclass interface (c-object)
   ((steamworks :initarg :steamworks :initform (error "STEAMWORKS required.") :reader %steamworks)
    (object-cache :initform (tg:make-weak-hash-table :weakness :value :test 'eql) :reader object-cache)))

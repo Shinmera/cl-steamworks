@@ -134,33 +134,93 @@ a callresult."))
 ;; callback-class.lisp
 (docs:define-docs
   (type response-object
-    "")
+    "Class used to represent callback response results as used in the steam matchmaking servers interface.
+
+See STATUS
+See RESPONSE-FAILED
+See RESPONSE-COMPLETED")
 
   (function status
-    "")
+    "Returns the current status of the object
+
+The returned value is a keyword describing the current status.
+For a RESPONSE-OBJECT, the status can be one of
+  :PENDING :FAILED :COMPLETE
+
+See RESPONSE-OBJECT
+See SERVER-QUERY
+See INVENTORY-RESULT
+See STEAMMUSIC")
 
   (function response-failed
-    "")
+    "Function called when it is known the callback request has failed.
+
+This sets the STATUS of the RESPONSE-OBJECT and can be used
+to attempt and respond to the failure somehow.
+
+See RESPONSE-OBJECT")
 
   (function response-completed
-    "")
+    "Function called when ti is known the callback request has completed.
+
+This sets the STATUS of the RESPONSE-OBJECT and can be used
+to attempt and respond to it.
+
+See RESPONSE-OBJECT")
 
   (type results-response-object
-    "")
+    "Superclass for a response that accumulates results it receives.
+
+See RESPONSE-OBJECT
+See RESULTS")
 
   (function results
-    ""))
+    "Returns the list of accumulated results of the response.
+
+See RESULTS-RESPONSE-OBJECT"))
 
 ;; callback.lisp
 (docs:define-docs
   (function global-callback
-    "")
+    "Accessor for a globally registered callback.
+
+The key must be a symbol naming the callback.
+The value must be a list composed of a symbol and a function.
+The symbol must name the struct-type to register the callback on.
+The function must be a function of one argument: the callback struct
+instance.
+
+Callbacks registered through this mechanism will be instantiated and
+registered when steamworks is initialised.
+
+See REMOVE-GLOBAL-CALLBACK
+See DEFINE-CALLBACK")
 
   (function remove-global-callback
-    "")
+    "Removes the global callback tied to the given name.
+
+See GLOBAL-CALLBACK")
 
   (function define-callback
-    "")
+    "Defines a new global callback function.
+
+STRUCT-TYPE should either be a symbol naming the struct-type to
+register the callback for, or a list of the struct-type and the name
+of the callback. When no name is explicitly given, the name is the
+same as the struct-type.
+
+RESULT will be bound to the callback result instance, which must be of
+the same type as the given struct-type. SLOTS may be a list of
+bindings to slots to establish. Each binding may either be the name of
+a slot, or a list of a variable name and a slot name. If no variable
+name is given, it is the same as the slot name.
+
+Note that the slot names are automatically interned to the
+ORG.SHIRAKUMO.FRAF.STEAMWORKS.CFFI package, so there is no need to
+prefix the package.
+
+See GLOBAL-CALLBACK
+See REMOVE-GLOBAL-CALLBACK")
 
   (function struct-type
     "")

@@ -28,13 +28,17 @@ After that you should set any additional options on the server, and then call ``
 
 When you are about to shut the server down again, make sure to call ``(free (steamworks))`` in order to clean everything up properly.
 
-## Notes
-### Missing Parts
+## Q&A
+### Why are some of the functions not wrapped?
 The wrapper specifically does //not// include parts that have been marked as deprecated, superseded, or unused. If you find yourself in the unfortunate situation of having to access one of those functions anyway, you can always fall back to directly calling the C functions from the ``cl-steamworks-cffi`` package and retrieving relevant handles and IDs of the objects with ``handle``.
 
-### This Wrapper is Outdated!
-Is it? Well, thanks for noticing! Please submit a pull request with the relevant fixes.
+### This Wrapper is Broken!
+Huh. Please "let me know"(https://github.com/shinmera/cl-steamworks/issues/new) what's broken. It's entirely possible that a wide set of things don't work quite right yet, as I don't have the time to thoroughly test everything.
 
+### SteamWorks updated and the new stuff is missing!
+Thanks for noticing! Please "submit a pull request"(https://github.com/shinmera/cl-steamworks/pulls) with the relevant fixes.
+
+## Misc
 ### Acknowledgements
 Thanks to Garry Newman's "blog entry"(https://garry.tv/2016/11/01/steamworks-sdk/) and the "Facepunch.Steamworks"(https://github.com/Facepunch/Facepunch.Steamworks) effort in general. It helped tremendously in figuring out some of the very obscure and annoying bits of the API.
 

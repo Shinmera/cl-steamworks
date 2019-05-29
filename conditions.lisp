@@ -52,3 +52,6 @@
 (define-simple-condition buffer-too-short (error)
   "The buffer needs to be able to hold at least ~d bytes."
   required-bytes)
+
+(define-simple-condition cannot-seek (error)
+  "Cannot seek to a file position when reading the entire file.")

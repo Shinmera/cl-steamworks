@@ -71,7 +71,7 @@
 
 (defgeneric read-file (file vector &key start end &allow-other-keys))
 (defmethod read-file ((file file) (vector vector) &key start end)
-  (unless (= 0 start) (error "FIXME: cannot seek in file."))
+  (unless (= 0 start) (error 'cannot-seek))
   (cffi:with-pointer-to-vector-data (buffer vector)
     (let ((end (or end (size file))))
       (when (< (length vector) end)
@@ -116,8 +116,7 @@
 
 (defmethod trivial-gray-streams:stream-write-sequence ((stream file-write-stream) (vector vector) start end &key)
   (cffi:with-pointer-to-vector-data (buffer vector)
-    (unless (steam::remote-storage-file-write-stream-write-chunk (iface* stream) (handle stream) (cffi:inc-pointer buffer start) (- start end))
-      (error "FIXME: failed"))))
+    (with-invalid-check NIL (steam::remote-storage-file-write-stream-write-chunk (iface* stream) (handle stream) (cffi:inc-pointer buffer start) (- start end)))))
 
 (defmethod cl:open-stream-p ((stream file-write-stream))
   (not (null (handle stream))))
@@ -127,10 +126,9 @@
 
 (defmethod cl:close ((stream file-write-stream) &key abort)
   (when (handle stream)
-    (unless (if abort
-                (steam::remote-storage-file-write-stream-cancel (iface* stream) (handle stream))
-                (steam::remote-storage-file-write-stream-close (iface* stream) (handle stream)))
-      (error "FIXME: failed"))
+    (if abort
+        (with-invalid-check NIL (steam::remote-storage-file-write-stream-cancel (iface* stream) (handle stream)))
+        (with-invalid-check NIL (steam::remote-storage-file-write-stream-close (iface* stream) (handle stream))))
     (tg:cancel-finalization stream)
     (setf (handle stream) NIL)))
 

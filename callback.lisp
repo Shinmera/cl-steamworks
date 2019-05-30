@@ -162,15 +162,17 @@
   (unwind-protect (funcall (closure callresult) (if failed NIL parameter))
     (free callresult)))
 
-(defun poll-for-result (type handle &key (pause 0.01))
+(defun poll-for-result (type handle &key (pause 0.1))
   (let ((instance (make-instance 'closure-callresult
                                  :token handle
                                  :struct-type type
                                  :closure (constantly NIL))))
-    (loop for result = (maybe-result instance)
-          do (if result
-                 (return result)
-                 (sleep pause)))))
+    (unwind-protect
+         (loop for result = (maybe-result instance)
+               do (if result
+                      (return result)
+                      (sleep pause)))
+      (free instance))))
 
 (defmacro with-call-result ((result &key poll) (method interface &rest args) &body body &environment env)
   ;; KLUDGE: in order to infer the struct-type we need access to the method name
@@ -191,12 +193,13 @@
                                        :register ,(null poll)))
              (,interval (let ((,interval ,poll))
                           (etypecase ,interval
-                            
-                            ((eql T) 0.01)
-                            (integer ,interval)))))
+                            ((eql T) 0.1)
+                            (real ,interval)))))
          (if ,interval
-             (loop for ,result = (maybe-result ,instance)
-                   do (if ,result
-                          (return (,thunk ,result))
-                          (sleep ,interval)))
+             (unwind-protect
+                  (loop for ,result = (maybe-result ,instance)
+                        do (if ,result
+                               (return (,thunk ,result))
+                               (sleep ,interval)))
+               (free ,instance))
              ,instance)))))

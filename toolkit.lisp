@@ -87,6 +87,20 @@ Please follow the instructions in the documentation to set up this library prope
   #+mkcl (#.(or (find-symbol* 'getenv :si nil) (find-symbol* 'getenv :mk-ext nil)) x)
   #+sbcl (sb-ext:posix-getenv x))
 
+(defun cwd ()
+  #+(or abcl genera mezzano) (truename *default-pathname-defaults*)
+  #+allegro (excl::current-directory)
+  #+clisp (ext:default-directory)
+  #+clozure (ccl:current-directory)
+  #+(or cmucl scl) (#+cmucl parse-unix-namestring* #+scl lisp::parse-unix-namestring
+                    (strcat (nth-value 1 (unix:unix-current-directory)) "/"))
+  #+(or clasp ecl) (ext:getcwd)
+  #+gcl (let ((*default-pathname-defaults* #p"")) (truename #p""))
+  #+lispworks (hcl:get-working-directory)
+  #+mkcl (mk-ext:getcwd)
+  #+sbcl (sb-ext:parse-native-namestring (sb-unix:posix-getcwd/))
+  #+xcl (extensions:current-directory))
+
 (defun chdir (x)
   #+(or abcl xcl) (setf *default-pathname-defaults* (truename x))
   #+allegro (excl:chdir x)
@@ -118,13 +132,14 @@ Please follow the instructions in the documentation to set up this library prope
   #-windows #p"/tmp/")
 
 (defun setup-app-id (app-id)
-  (let ((directory (merge-pathnames "cl-steamworks/" (temp-directory))))
-    (chdir (ensure-directories-exist directory))
-    (with-open-file (stream (merge-pathnames #p"steam_appid.txt" directory)
-                            :direction :output
-                            :if-exists :supersede
-                            :element-type 'character)
-      (format stream "~a~%" app-id))))
+  (unless (probe-file (merge-pathnames #p"steam_appid.txt" (cwd)))
+    (let ((directory (merge-pathnames "cl-steamworks/" (temp-directory))))
+      (chdir (ensure-directories-exist directory))
+      (with-open-file (stream (merge-pathnames #p"steam_appid.txt" directory)
+                              :direction :output
+                              :if-exists :supersede
+                              :element-type 'character)
+        (format stream "~a~%" app-id)))))
 
 (defun enlist (a &rest items)
   (if (listp a) a (list* a items)))

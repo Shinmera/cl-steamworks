@@ -751,58 +751,234 @@ clients.
 See CREATE-INTERFACES")
   
   (function steamworks
-    "")
+    "Returns the global SteamWorks instance.
+
+If a container is given, it will return the reference stored in that
+container, otherwise it will return the global instance. If no global
+instance exists, an error of type STEAMWORKS-NOT-INITIALIZED is
+signalled.
+
+See STEAMWORKS (type)")
 
   (type pipe
-    "")
+    "Wrapper for a Steam Pipe.
+
+What this pipe is or does isn't described by the documentation.
+It seems to only be used to retrieve interfaces. Thus, consider it
+internal.
+
+See C-OBJECT")
 
   (type user
-    "")
+    "Wrapper for a Steam User.
+
+What this user is or does isn't described by the documentation.
+It seems to only be used to retrieve interfaces. Thus, consider it
+internal.
+
+You probably want the FRIEND class instead.
+
+See C-OBJECT
+See PIPE (function)
+See FRIEND")
 
   (function pipe
-    "")
+    "Returns the pipe object to this object.
+
+See PIPE (type)
+See USER (type)
+See STEAMWORKS (type)")
 
   (type steamworks
-    "")
+    "Representation of the SteamWorks API connection.
+
+An instance of this object represents the connection to the SteamWorks
+API. There can only ever be one connection at a time per process, and
+thus only one instance of this class should exist at one time.
+
+Attempting to create multiple instances will signal an error of type
+STEAMWORKS-ALREADY-INITIALIZED. This error is continuable, however you
+should be very sure that you know what you're doing when invoking
+CONTINUE.
+
+You should NOT create an instance of this class directly. See
+STEAMWORKS-CLIENT and STEAMWORKS-SERVER instead.
+
+When you are about to shut down your application, or want to
+explicitly shut down the connection to the SteamWorks API, you should
+call FREE on the current instance.
+
+Other than for holding the references to the interfaces, you should
+not need direct access to an instance of this class.
+
+You may pass the :INTERFACES initarg to specify which interfaces to
+create and which versions thereof. See CREATE-INTERFACES for more.
+
+You may pass the :APP-ID initarg to specify your game's App ID. If
+there is no steam_appid.txt file next to your executable, it will
+create one in a temporary directory and change the current working
+directory there so that Steam may find it. This is done to avoid
+development situations where the implementation executable may be
+located in places that cannot be written to under normal
+circumstances.
+
+See *DEFAULT-INTERFACES*
+See USER
+See PIPE
+See STEAMWORKS-CLIENT
+See STEAMWORKS-SERVER
+See FREE
+See STEAMWORKS (function)
+See CREATE-INTERFACES
+See INTERFACE (function)
+See LIST-INTERFACES
+See RUN-CALLBACKS")
 
   (function user
-    "")
+    "Returns the user instance associated with the given instance.
+
+In the case of STEAMWORKS, it is an actual USER instance. Otherwise,
+it should be a FRIEND instance.
+
+See STEAMWORKS (type)
+See AUTH-SESSION
+See P2P-SESSION")
 
   (function create-interfaces
-    "")
+    "Creates instances of the requested interfaces and stores them in the steamworks client.
+
+INTERFACES should be a list, where each item is either the name or
+class of an interface to create, or a list of the name or class and a
+requested version string. If no explicit version is passed, the
+default version is used, which should be the latest version that has
+been crawled from the steamworks API sources.
+
+It is heavily recommended that you explicitly specify the versions of
+the interfaces, fixed to the ones taken at the time of initial
+development. This should ensure that updates to the SteamWorks SDK do
+not change behaviour of your application.
+
+Note that by default it is safe to call this function multiple times
+throughout the lifetime of your application. Existing interfaces will
+not be re-allocated or removed, only new ones are added.
+
+Returns a list of the newly created interfaces.
+
+You may add methods to this function in order to place hard
+constraints on which interfaces are created and how.
+
+You may pass T as the argument to use the default SteamWorks instance.
+
+See STEAMWORKS (type)
+See STEAMWORKS (function)")
 
   (function list-interfaces
-    "")
+    "Returns a fresh list of the currently active SteamWorks interface instances.
+
+You may pass T as the argument to use the default SteamWorks instance.
+
+See STEAMWORKS (type)")
 
   (type steamworks-client
-    "")
+    "Represents a SteamWorks client connection.
+
+This is typically what you want to run when you are distributing a
+standalone game.
+
+If the initialisation of the SteamWorks API fails, an error of type
+INITIALIZATION-FAILED is signalled, with a RESTART restart active.
+Invoking this restart will restart the application through Steam,
+which may be desired for deployed applications. When invoking that
+restart, you should pass your game's APP-ID as the first argument, and
+may pass a process exit code as the second argument.
+
+See STEAMWORKS (type)")
 
   (function run-callbacks
-    "")
+    "Runs all pending callbacks synchronously.
+
+This will cause CALLBACK functions to be invoked in the same thread.
+You should call this function regularly in order to keep up with
+events coming in from Steam. Please see the documentation for further
+explanation of callbacks and their behaviour.
+
+You may pass T as the argument to use the default SteamWorks instance.
+
+See STEAMWORKS (type)")
 
   (type steamworks-server
-    "")
+    "Represents a SteamWorks server connection.
+
+This is typically what you want to run when you are distributing a
+game server host application that integrates with the steam
+matchmaking and lobby systems.
+
+You must pass the following initargs:
+
+- :app-id         The AppID of your game.
+- :ip-address     The IP address to bind to, \"0.0.0.0\" to broadcast
+                  on all interfaces.
+- :steam-port     The local port used to talk to the Steam servers.
+- :game-port      The port to listen on for new client connections.
+- :query-port     The port to listen on for server browser queries and
+                  pings.
+- :server-mode    What level of authentication to require from players.
+- :version-string A version string for your server, to identify
+                  outdated servers.
+- :server-depot   The depot id of your game.
+- :directory      The directory name of your game.
+
+If the initialisation fails, an error of type API-CALL-FAILED is
+signalled.
+
+Unlike the STEAMWORKS-CLIENT, this by default uses the
+*DEFAULT-SERVER-INTERFACES* variable to determine which interfaces to
+initialise.
+
+See *DEFAULT-SERVER-INTERFACES*
+See STEAMWORKS (type)
+See IP-ADDRESS
+See STEAM-PORT
+See GAME-PORT
+See QUERY-PORT
+See SERVER-MODE
+See VERSION-STRING
+See SERVER-DEPOT")
 
   (function ip-address
-    "")
+    "Returns the IP address as a v4-formatted string.
+
+See STEAMWORKS-SERVER")
 
   (function steam-port
-    "")
+    "Returns the local port used for communication with the steam servers.
+
+See STEAMWORKS-SERVER")
 
   (function game-port
-    "")
+    "Returns the port used to listen to for new game connections.
+
+See STEAMWORKS-SERVER")
 
   (function query-port
-    "")
+    "Returns the port used to listen for browser queries and pings.
+
+See STEAMWORKS-SERVER")
 
   (function server-mode
-    "")
+    "Returns the authentication level required for the server.
+
+See STEAMWORKS-SERVER")
 
   (function version-string
-    "")
+    "Returns the version string the server is currently running.
+
+See STEAMWORKS-SERVER")
 
   (function server-depot
-    ""))
+    "Returns the depot ID of the game.
+
+See STEAMWORKS-SERVER"))
 
 ;; steamworkshop.lisp
 (docs:define-docs)

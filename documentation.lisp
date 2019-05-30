@@ -223,188 +223,454 @@ See GLOBAL-CALLBACK
 See REMOVE-GLOBAL-CALLBACK")
 
   (function struct-type
-    "")
+    "Accessor to the struct-type that the callback is registered on.
+
+See CALLBACK")
 
   (function callback
-    "")
+    "Function called when a callback is triggered.
+
+CALLBACK is a specific callback instance.
+PARAMETER is the callback struct instance.
+FAILED, if passed, indicates whether the callback failed. In that
+case the PARAMETER may not be passed a useful value.
+API-CALL, if passed, identifies the api-call that initiated the
+callback.
+
+See CALLBACK (type)")
 
   (type callback
-    "")
+    "Base class for global callbacks.
+
+Global callbacks are callbacks from the SteamWorks API that may be
+triggered at any time, even without an API call to initiate the
+callback. When this callback is triggered, the CALLBACK function is
+called.
+
+Note that while this is a C-MANAGED-OBJECT, FREE-ON-GC is /not/ set
+to T by default.
+
+See C-REGISTERED-OBJECT
+See C-MANAGED-OBJECT
+See CALLBACK (function)")
 
   (type closure-callback
-    "")
+    "A global callback that invokes a closure on callback.
+
+This allows easy runtime callback construction without having to
+register a new class.
+
+See CALLBACK (type)
+See CLOSURE")
 
   (function closure
-    "")
+    "Returns the closure to invoke on callback.
+
+The closure must take a single argument, the callback structure.
+This structure may be NIL if the callback failed. Otherwise it must
+be of the type registered as the STRUCT-TYPE.
+
+See CLOSURE-CALLBACK
+See CLOSURE-CALLRESULT")
 
   (type callresult
-    "")
+    "A one-time callresult that is tied to a specific API call.
+
+Callresults are callbacks in the SteamWorks API that are tied to a
+specific callresult token or handle. When creating an instance of this
+class you must pass the token as returned by the API call function as
+the :TOKEN initarg.
+
+Note that while this is a C-MANAGED-OBJECT, FREE-ON-GC is /not/ set
+to T by default. This is to prevent the object being freed before the
+callresult hits.
+
+See C-REGISTERED-OBJECT
+See C-MANAGED-OBJECT
+See MAYBE-RESULT
+See RESULT
+See TOKEN
+See POLL-FOR-RESULT
+See WITH-CALL-RESULT")
 
   (function token
-    "")
+    "Returns the specific callresult token the callresult is registered for.
+
+This token cannot be re-used.
+
+See CALLRESULT")
 
   (function maybe-result
-    "")
+    "If the callresult is ready, return the result structure.
+
+See RESULT
+See CALLRESULT")
 
   (function result
-    "")
+    "Returns the callresult structure.
+
+If the callresult is not yet ready, an error of type API-CALL-FAILED
+is signalled.
+
+See CALLRESULT")
 
   (type closure-callresult
-    "")
+    "A callresult that invokes a closure on callback.
+
+See CALLRESULT
+See CLOSURE")
 
   (function poll-for-result
-    "")
+    "Polls for the callresult structure for the given type and handle.
+
+This constructs a new closure-callresult, then repeatedly calls
+MAYBE-RESULT with a pause of PAUSE between each try. Once MAYBE-RESULT
+returns successfully, the result structure is returned.
+
+This effectively turns the asynchronous callresult into a synchronous
+operation.
+
+See CLOSURE-CALLRESULT
+See WITH-CALL-RESULT")
 
   (function with-call-result
-    ""))
+    "Constructs the appropriate callresult structure for the SteamWorks API call.
+
+METHOD must be a SteamWorks API function name that returns a
+callresult handle. INTERFACE must be the instance of the respective
+interface. RESULT will be bound to the result structure when the
+callresult completes.
+
+If POLL is non-NIL (at compile-time), WITH-CALL-RESULT becomes
+synchronous and will block the current thread until the callresult
+completes. The BODY is then invoked with the result bound. POLL
+may also be set to a real number, designating the number of seconds to
+wait between polling attempts.
+
+If POLL is NIL, the body is bound as the callresult's closure, and the
+callresult instance is returned instead. The body may then be invoked
+at any time when the callresult completes. However, this can only
+happen when RUN-CALLBACKS is invoked. In this case, you must also make
+sure to call FREE on the returned callresult when you are done with
+it.
+
+See FREE
+See POLL-FOR-RESULT
+See RUN-CALLBACKS"))
 
 ;; conditions.lisp
 (docs:define-docs
   (type steamworks-condition
-    "")
+    "Superclass for all steamworks related conditions.")
 
   (type argument-missing
-    "")
+    "Error signalled when a required argument is missing.
+
+See ARGUMENT")
 
   (function argument
-    "")
+    "Returns the argument that was missing from the call.
+
+See ARGUMENT-MISSING")
 
   (type api-call-failed
-    "")
+    "Error signalled when a call to a SteamWorks API fails.
+
+See API-CALL
+See ERROR-CODE")
 
   (function api-call
-    "")
+    "Returns the name of the API call that failed, if known.
+
+See API-CALL-FAILED")
 
   (function error-code
-    "")
+    "Returns an error code or failure explanation for why the call failed, if known.
+
+See API-CALL-FAILED")
 
   (type string-too-long
-    "")
+    "Error signalled when a string is too long for an API call.
+
+Typically string length in the SteamWorks API is measured in UTF-8
+octets rather than characters, so the length limit can be difficult to
+estimate from random user input.
+
+See OVERSIZED-STRING
+See OCTET-LIMIT")
 
   (function oversized-string
-    "")
+    "Returns the oversized string that caused the error.
+
+See STRING-TOO-LONG")
 
   (function octet-limit
-    "")
+    "Returns the maximum number of octets allowed for the API call, if known.
+
+See STRING-TOO-LONG")
 
   (type no-such-callback
-    "")
+    "Error signalled when an inexistent callback is referenced.
+
+See CALLBACK-NAME")
 
   (function callback-name
-    "")
+    "Returns the name of the callback that does not exist.
+
+See NO-SUCH-CALLBACK")
 
   (type no-such-file
-    "")
+    "Error signalled when a file is referenced that does not exist.
+
+See FILE-HANDLE")
 
   (function file-handle
-    "")
+    "Returns the name or pathname of the file that does not exist.
+
+See NO-SUCH-FILE
+See NOT-AN-IMAGE-FILE
+See PATHNAME-NOT-A-DIRECTORY")
 
   (type no-such-user
-    "")
+    "Error signalled when a user is referenced that does not exist.
+
+See USER-HANDLE")
 
   (function user-handle
-    "")
+    "The handle/reference to the inexistent user.
+
+See NO-SUCH-USER")
 
   (type buffer-too-short
-    "")
+    "Error signalled when a data buffer is not long enough to receive the data.
+
+See REQUIRED-BYTES")
 
   (function required-bytes
-    "")
+    "Returns the number of octets that are required to hold the data.
+
+See BUFFER-TOO-SHORT")
 
   (type voice-data-corrupted
-    "")
+    "Warning signalled when the voice data could not be decoded as it is corrupted.")
 
   (type interface-creation-failed
-    "")
+    "Error signalled when the creation of a SteamWorks interface
+    failed.
+
+See INTERFACE-NAME")
 
   (function interface-name
-    "")
+    "Returns the name of the interface that failed to be created, if
+    known.
+
+See INTERFACE-CREATION-FAILED")
 
   (type not-an-image-file
-    "")
+    "Error signalled when a file does not designate a required image file.
+
+See FILE-HANDLE")
 
   (type string-malformed
-    "")
+    "Error signalled when a string is malformed for an API.
+
+This may be if the string has a bad structure, or contains illegal
+characters that the API can't deal with.
+
+See MALFORMED-STRING")
 
   (function malformed-string
-    "")
+    "Returns the malformed string that the API can't process.
+
+See STRING-MALFORMED")
 
   (type pathname-not-a-directory
-    "")
+    "Error signalled when a pathname does not designate a required
+    directory.
+
+See FILE-HANDLE")
 
   (type too-many-requests
-    "")
+    "Error signalled when a function would invoke too many API calls at once.
+
+See REQUEST-LIMIT")
 
   (function request-limit
-    "")
+    "Returns the maximum number of requests that can be sent.
+
+See TOO-MANY-REQUESTS")
 
   (type workshop-agreement-not-accepted
-    "")
+    "Warning signalled if the user should accept the Steam Workshop agreement.")
 
   (type file-seeking-impossible
-    "")
+    "Error signalled when a seeking parameter is passed, but the file cannot be seeked.")
 
   (type request-denied
-    "")
+    "Error signalled when an API request was denied due to insufficient permissions.")
 
   (type cannot-set-member-data-for-others
-    "")
+    "Error signalled when an attempt is made to set user data for users other than the local one.")
 
   (type steamworks-not-initialized
-    "")
+    "Error signalled when a SteamWorks operation is attempted to be performed, but the API is not yet initialised.")
 
   (type steamworks-already-initialized
-    "")
+    "Error signalled when the SteamWorks API is attempted to be initialised again, but an old instance is still present.")
 
   (type initialization-failed
-    "")
+    "Error signalled when the SteamWorks API initialisation fails.
+
+This usually happens when Steam is not running in the background
+or the APP-ID file is not properly set up.")
 
   (type user-stats-not-ready
-    "")
+    "Warning signalled when the stats for the current user are not yet known.
+
+This can be a problem, as other stats fetch requests must occur
+after the current user stats are known.")
 
   (type low-level-not-loaded
-    ""))
+    "Error signalled when the library has not yet been properly set up.
+
+Please read the documentation on how to properly set up the
+library."))
 
 ;; interface.lisp
 (docs:define-docs
   (type interface
-    "")
+    "Superclass for all SteamWorks interface classes.
+
+An interface will cache instances of objects related to it in order to
+preserve object identity over instances that designate the same object
+on the Steam side.
+
+See C-OBJECT
+See ENSURE-IFACE-OBJ
+See INTERFACE-OBJECT (function)
+See REMOVE-INTERFACE-OBJECT
+See GET-INTERFACE-HANDLE
+See GET-INTERFACE-HANDLE*
+See CALL-WITH
+See DEFINE-INTERFACE-METHOD
+See DEFINE-INTERFACE-SUBMETHOD
+See INTERFACE-OBJECT (type)
+See INTERFACE (function)
+See STEAMWORKS (function)")
 
   (function ensure-iface-obj
-    "")
+    "Ensures the given object is either returned from cache or created and stored.
+
+The initargs HANDLE and INTERFACE must be passed.
+
+See INTERFACE-OBJECT")
 
   (function interface
-    "")
+    "Returns the interface instance of the given name.
+
+The container argument may be T for the global SteamWorks instance, or
+another interface instance, or another interface-object instance.
+
+If the interface does not exist, NIL is returned instead.
+
+See INTERFACE (type)")
 
   (function interface-object
-    "")
+    "Accesses the interface object tied to the given handle.
+
+See INTERFACE (type)
+See REMOVE-INTERFACE-OBJECT")
 
   (function remove-interface-object
-    "")
+    "Removes the interface object tied to the given handle.
+
+See INTERFACE (type)
+See INTERFACE-OBJECT (function)")
 
   (function get-interface-handle
-    "")
+    "Returns the handle for an interface using the given SteamWorks function and args.
+
+If the interface creation fails, an error of type
+INTERFACE-CREATION-FAILED is signalled.")
 
   (function get-interface-handle*
-    "")
+    "Same as GET-INTERFACE-HANDLE but uses the common arguments.
+
+Uses the SteamWorks USER, and PIPE, and the VERSION as arguments.
+
+See GET-INTERFACE-HANDLE")
 
   (function call-with
-    "")
+    "Shorthand function to call the given function of the given interface.
+
+See INTERFACE
+See HANDLE")
 
   (function define-interface-method
-    "")
+    "Shorthand to define an interface method.
+
+INTERFACE may either be the name of the interface to bind to, or a
+list of that name and the function used to retrieve the interface's
+handle.
+METHOD should be the name of the lisp generic function to add a method
+to.
+CALL must be a list describing the API function and its arguments. If
+the METHOD is a SETF function, the API function must be the second
+item in the list, otherwise the first. The rest should be the
+arguments of the method definition, which will be passed to the API
+function in order, with the interface handle as the first argument.
+
+If TRANSFORM is given, it should be a body of forms with RESULT bound
+to the return value of the API function call. The return value of this
+body is then returned from the method. Otherwise, if the METHOD is a
+setf function, the first argument is returned again, and otherwise
+RESULT is returned verbatim.
+
+See INTERFACE (type)
+See DEFINE-INTERFACE-SUBMETHOD")
 
   (function define-interface-submethod
-    "")
+    "Shorthand to define a method on an interface-object.
+
+SUB may either be the name of the interface-object class to bind to,
+or a list of that name and the function used to retrieve the
+interface's handle.
+METHOD should be the name of the lisp generic function to add a method
+to.
+CALL must be a list describing the API function and its arguments. If
+the METHOD is a SETF function, the API function must be the second
+item in the list, otherwise the first. The rest should be the
+arguments of the method definition, which will be passed to the API
+function in order, with the interface handle and the interface-object
+handle as the first two arguments.
+
+If TRANSFORM is given, it should be a body of forms with RESULT bound
+to the return value of the API function call. The return value of this
+body is then returned from the method. Otherwise, if the METHOD is a
+setf function, the first argument is returned again, and otherwise
+RESULT is returned verbatim.
+
+See INTERFACE-OBJECT (type)
+See DEFINE-INTERFACE-METHOD")
 
   (type interface-object
-    "")
+    "Superclass for classes representing SteamWorks objects tied to a certain interface.
+
+See INTERFACE (type)
+See IFACE
+See IFACE*")
 
   (function iface
-    "")
+    "Returns the interface instance the object is tied to.
+
+See INTERFACE-OBJECT")
 
   (function iface*
-    ""))
+    "Returns the handle of the interface instance the object is tied
+    to.
+
+See IFACE
+See INTERFACE-OBJECT"))
 
 ;; steamapps.lisp
 (docs:define-docs)

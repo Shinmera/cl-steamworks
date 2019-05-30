@@ -71,3 +71,6 @@ Structures are exposed through a respective C struct type, but are also automati
 The callbacks in particular are handled through C structs that follow a very precise memory layout to emulate the C++ class instance that the SteamWorks API expects to see. You //really// should not have to deal with that yourself.
 
 The rest of the meddling with the low level interface simply deals with standard CFFI stuff. Please consult the "CFFI manual"(https://common-lisp.net/project/cffi/manual/cffi-manual.html).
+
+### Octet Buffers
+Some API calls expect you to pass an octet vector to copy data into. If this is the case, the vector //must// be ready to be passed to C without copying. In effect this means that you must allocate the vector using ``cffi:make-shareable-byte-vector``. On some implementations, like SBCL, any simple-array octet vector is equivalent to one created using the above function. In general though, if portability is important, you must use ``cffi:make-shareable-byte-vector``.

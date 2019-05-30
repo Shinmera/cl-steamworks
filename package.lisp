@@ -645,6 +645,7 @@
    #:interface
    #:list-interfaces
    #:steamworks-client
+   #:restart
    #:run-callbacks
    #:steamworks-server
    #:ip-address

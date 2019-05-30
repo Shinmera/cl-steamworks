@@ -60,6 +60,9 @@
     (mapc #'maybe-create interfaces)
     (list-interfaces steamworks)))
 
+(defmethod create-interfaces ((steamworks (eql T)) interfaces)
+  (create-interfaces (steamworks) interfaces))
+
 (defmethod interface ((name symbol) (steamworks steamworks))
   (gethash name (interfaces steamworks)))
 
@@ -68,6 +71,9 @@
 
 (defmethod list-interfaces ((steamworks steamworks))
   (alexandria:hash-table-values (interfaces steamworks)))
+
+(defmethod list-interfaces ((steamworks (eql T)))
+  (list-interfaces (steamworks)))
 
 (defmethod run-callbacks ((default (eql T)))
   (run-callbacks (steamworks)))

@@ -36,7 +36,8 @@
                           :float :double
                           :bool :boolean
                           :void)
-            do (setf (gethash (to-c-name type) map) type))
+            do (setf (gethash (to-c-name type) map) type)
+               (setf (gethash (format NIL "~a_t" (to-c-name type)) map) type))
       (loop for type in '(:char :short :int :long :long-long)
             do (setf (gethash (to-c-name type) map) type)
                (setf (gethash (to-c-name (format NIL "SIGNED-~a" type)) map) type)
@@ -44,14 +45,15 @@
                  (setf (gethash (to-c-name type) map) type)))
       map)))
 
-(defvar *bad-types* #("ValvePackingSentinel_t"))
+(defparameter *bad-types* #("ValvePackingSentinel_t"))
 
-(defvar *bad-consts* #("k_cchPersonaNameMax" "VALVE_BIG_ENDIAN" "X64BITS" "POSIX" "__cdecl"))
+(defparameter *bad-consts* #("k_cchPersonaNameMax" "VALVE_BIG_ENDIAN" "X64BITS" "POSIX" "__cdecl"))
 
-(defvar *bad-structs* #("CSteamID" "CGameID" "CSteamAPIContext" "CCallResult"
-                        "CCallback" "CCallbackBase" "ValvePackingSentinel_t"))
+(defparameter *bad-structs* #("CSteamID" "CGameID" "CSteamAPIContext" "CCallResult"
+                              "CCallback" "CCallbackBase" "ValvePackingSentinel_t"
+                              "servernetadr_t"))
 
-(defvar *large-structs* #("LeaderboardEntry_t"))
+(defparameter *large-structs* #("LeaderboardEntry_t"))
 
 (defun prefix-p (prefix string)
   (and (<= (length prefix) (length string))
@@ -167,10 +169,18 @@
                          (setf type `(:struct ,(name (strip-struct-name (pop parts))))))
                         ((string= "_Bool" specstring)
                          (setf type :bool))
+                        ((or (string= part "CSteamID")
+                             (string= part "CGameID"))
+                         (setf type :unsigned-long))
+                        ((string= part "servernetadr_t")
+                         (setf type :uint64))
+                        ((string= part "SteamAPIWarningMessageHook_t")
+                         (setf type :pointer))
                         (T
-                         (let* ((parts (list* part (loop for part = (car parts)
-                                                         until (or (null part) (find (char part 0) "*[(E"))
-                                                         collect part do (pop parts))))
+                         (let* ((parts (list* part
+                                              (loop for part = (car parts)
+                                                    until (or (null part) (find (char part 0) "*&[(E"))
+                                                    collect part do (pop parts))))
                                 (name (format NIL "~{~a~^ ~}" parts)))
                            (setf type (or (gethash name *c-type-map*)
                                           (name name)))))))))
@@ -184,7 +194,8 @@
          ,@(when (getf def :desc) (list (getf def :desc))))))
 
 (defun compile-enum (def)
-  (let ((name (getf def :enumname)))
+  (let ((name (or (getf def :fqname)
+                  (getf def :enumname))))
     `(cffi:defcenum ,(name name)
        ,@(when (getf def :desc) (list (getf def :desc)))
        ,@(loop for entry in (getf def :values)
@@ -203,20 +214,21 @@
            ,@(when (getf def :desc) (list (getf def :desc)))))))
 
 (defun compile-callback (def)
-  (if (and (string= (getf def :struct) "callbackname")
-           (string= (getf def :constname) "callbackid"))
+  (if (or (string= (getf def :struct) "callbackname")
+          (string= (getf def :constname) "callbackid"))
       (values NIL "Ignored callback definition scanned from preprocessor directive.")
       `(cl:setf (cl:gethash ',(name (strip-struct-name (getf def :struct))) steam::*callback-id-map*)
                 (+ ,(name (strip-constant-name (getf def :constname)))
                    ,(parse-integer (getf def :offset))))))
 
 (defun compile-callresult (def)
-  (cond ((and (equal "SteamAPICall_t" (getf def :returntype))
-              (null (getf def :callresult)))
-         (values NIL (format NIL "Missing callresult declaration for method ~a::~a"
-                             (getf def :classname) (getf def :methodname))))
-        ((getf def :callresult)
-         (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
+  (let ((name (or (getf def :methodname_flat)
+                  (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname)))))
+    (cond ((and (equal "SteamAPICall_t" (getf def :returntype))
+                (null (getf def :callresult)))
+           (values NIL (format NIL "Missing callresult declaration for method ~a::~a"
+                               (getf def :classname) (getf def :methodname))))
+          ((getf def :callresult)
            `(cl:setf (cl:gethash ',(name (strip-function-name name)) steam::*function-callresult-map*)
                      ',(name (strip-struct-name (getf def :callresult))))))))
 
@@ -252,13 +264,19 @@
 (defun %structure-types-p (method)
   (flet ((struct-type-p (type)
            (let ((type (parse-typespec type)))
-             (and (listp type) (eql :struct (car type))))))
+             (or (and (listp type) (eql :struct (car type)))
+                 (find type '(STEAM::STEAM-PARTY-BEACON-LOCATION-T
+                              STEAM::STEAM-IPADDRESS-T
+                              STEAM::INPUT-DIGITAL-ACTION-DATA-T
+                              STEAM::INPUT-ANALOG-ACTION-DATA-T
+                              STEAM::INPUT-MOTION-DATA-T))))))
     (or (struct-type-p (getf method :returntype))
         (loop for param in (getf method :params)
               thereis (struct-type-p (getf param :paramtype))))))
 
 (defun compile-method (def cache)
-  (let ((name (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname))))
+  (let ((name (or (getf def :methodname_flat)
+                  (format NIL "SteamAPI_~a_~a" (getf def :classname) (getf def :methodname)))))
     (when (<= 0 (incf (gethash name cache -2)))
       (setf name (format NIL "~a~d" name (gethash name cache))))
     (if (and (%structure-types-p def)
@@ -322,7 +340,9 @@
                  (when value (add-constant name value)))))
       (cl-ppcre:do-register-groups (name value) ("#define ([\\w_]+)\\s+([^\\n]+?)(\\r|\\n)" content)
         (maybe-add-constant name value))
-      (cl-ppcre:do-register-groups (name value) ("const\\s+[\\w\\d]+\\s+(k_[\\w_]+)\\s+=\\s(.*?);" content)
+      (cl-ppcre:do-register-groups (name value) ("const\\s+[\\w\\d]+\\s+(k_[\\w_]+)\\s*=\\s*(.*?);" content)
+        (maybe-add-constant name value))
+      (cl-ppcre:do-register-groups (name value) ("enum\\s*\\{\\s*(k_[\\w_]+)\\s*=\\s*(.*?)\\s*\\};" content)
         (maybe-add-constant name value)))
     results))
 
@@ -338,8 +358,16 @@
                                 :consts constants)))))
 
 (defun read-steam-api-spec (source)
-  (yason:parse source :object-key-fn #'kw
-                      :object-as :plist))
+  (let ((parsed (yason:parse source :object-key-fn #'kw
+                                    :object-as :plist)))
+    ;; normalise
+    (loop for interface in (getf parsed :interfaces)
+          do (flet ((merge-field (field)
+                      (setf (getf parsed field) (nconc (getf parsed field) (getf interface field)))))
+               (merge-field :methods)
+               (merge-field :enums)))
+    (remf parsed :interfaces)
+    parsed))
 
 (defun merge-steam-api-spec (into &rest things)
   (dolist (thing things)
@@ -353,7 +381,8 @@
                  for (res note) = (multiple-value-list (funcall compiler definition))
                  do (cond (res
                            (handler-bind ((style-warning #'muffle-warning))
-                             (eval res)))
+                             (with-simple-restart (continue "Ignore the failed evaluation")
+                               (eval res))))
                           (note
                            (warn note)))
                  when res collect res)))
@@ -460,7 +489,8 @@
      (pathname-utils:subdirectory sdk-directory "redistributable_bin")
      (ensure-directories-exist (pathname-utils:subdirectory *this* "static")))
     (format *query-io* "~&> Generating bindings...")
-    (cffi:load-foreign-library 'steam::steamworks)
+    (unless (cffi:foreign-library-loaded-p 'steam::steamworks)
+      (cffi:load-foreign-library 'steam::steamworks))
     (generate sdk-directory)
     (format *query-io* "~&> Generating shim library...")
     (generate-shim sdk-directory)

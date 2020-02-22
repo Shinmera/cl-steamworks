@@ -1,5 +1,30 @@
 #include "isteamcontroller.h"
 extern "C"{
+  // FIXME: do this, also don't forget to include in extra.json
+  /* bool shim_SteamAPI_ISteamInput_GetMotionData(ISteamInput *self, SteamPartyBeaconLocation_t *beacon, ESteamPartyBeaconLocationData data, char *out, int length){ */
+    
+  /* } */
+  
+  /* void shim_SteamAPI_ISteamInput_GetAnalogActionData(ISteamInput *self,){ */
+    
+  /* } */
+  
+  /* void shim_SteamAPI_ISteamInput_GetDigitalActionData(ISteamInput *self,){ */
+    
+  /* } */
+  
+  /* void shim_SteamAPI_ISteamNetworking_CreateConnectionSocket(ISteamNetworking *self,){ */
+    
+  /* } */
+  
+  /* void shim_SteamAPI_ISteamNetworking_CreateListenSocket(ISteamNetworking *self,){ */
+    
+  /* } */
+  
+  /* void shim_SteamAPI_ISteamParties_GetBeaconLocationData(ISteamParties *self,){ */
+    
+  /* } */
+  
   void shim_ISteamController_GetDigitalActionData(ISteamController *self, ControllerHandle_t controller, ControllerDigitalActionHandle_t action, InputDigitalActionData_t *out){
     InputDigitalActionData_t in = self->GetDigitalActionData(controller, action);
     out->bState = in.bState;

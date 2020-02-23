@@ -128,7 +128,7 @@ Please follow the instructions in the documentation to set up this library prope
   #+sbcl (sb-ext:exit :code code))
 
 (defun temp-directory ()
-  #+windows (parse-namestring (env-var "TEMP"))
+  #+windows (parse-namestring (format NIL "~a\\" (env-var "TEMP")))
   #-windows #p"/tmp/")
 
 (defun setup-app-id (app-id)

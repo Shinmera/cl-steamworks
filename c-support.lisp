@@ -92,7 +92,7 @@
    "steam_api.dll"
    :search-path #.(merge-pathnames "/" *static*))
   ((:and :windows :x86-64)
-   "steam_api.dll"
+   (:or "steam_api64.dll" "steam_api.dll")
    :search-path #.(merge-pathnames "win64/" *static*)))
 
 (cffi:define-foreign-library steam::steamworks-shim

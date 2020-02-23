@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "isteamcontroller.h"
 extern "C"{
   // FIXME: do this, also don't forget to include in extra.json

@@ -83,13 +83,19 @@
 
 (defmethod initialize-instance ((steamworks steamworks-client) &key app-id)
   (call-next-method)
-  (unless (steam::init)
-    (restart-case
-        (error 'initialization-failed :api-call 'steam::init)
-      (restart (&optional (app-id app-id) (exit-code 2))
-        :report "Restart the application through Steam."
-        (when (steam::restart-app-if-necessary app-id)
-          (quit exit-code)))))
+  (tagbody retry
+     (unless (steam::init)
+       (restart-case
+           (error 'initialization-failed :api-call 'steam::init)
+         (retry (&optional new-app-id)
+           :report "Retry initialising."
+           (when new-app-id
+             (setup-app-id new-app-id))
+           (go retry))
+         (restart (&optional (app-id app-id) (exit-code 2))
+           :report "Restart the application through Steam."
+           (when (steam::restart-app-if-necessary app-id)
+             (quit exit-code))))))
   (setf (slot-value steamworks 'pipe) (make-instance 'pipe :handle (with-invalid-check 0 (steam::get-hsteam-pipe))))
   (setf (slot-value steamworks 'user) (make-instance 'user :handle (steam::get-hsteam-user)
                                                            :pipe (pipe steamworks))))

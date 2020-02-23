@@ -10,12 +10,12 @@
   ((applist-handle :initarg :applist-handle :accessor applist-handle)
    (appticket-handle :initarg :appticket-handle :accessor appticket-handle)))
 
-(defmethod initialize-instance :after ((interface steamapps) &key version applist-version appticket-version steamworks)
+(defmethod initialize-instance :after ((interface steamapps) &key (version T) (applist-version T) (appticket-version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-apps
                                                  (t-or version STEAM::STEAMAPPS-INTERFACE-VERSION)))
   (setf (applist-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-app-list
                                                          (t-or applist-version STEAM::STEAMAPPLIST-INTERFACE-VERSION)))
-  (setf (appticket-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-app-ticket
+  (setf (appticket-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-generic-interface
                                                             (t-or appticket-version STEAM::STEAMAPPTICKET-INTERFACE-VERSION))))
 
 (define-interface-method steamapps low-violence-p (steam::apps-bis-low-violence))
@@ -36,12 +36,12 @@
 
 (defmethod list-dlcs ((apps steamapps))
   (loop for i from 0 below (steam::apps-get-dlccount (handle apps))
-        collect (cffi:with-foreign-objects ((id 'steam::app-id-t)
+        collect (cffi:with-foreign-objects ((id 'steam::app-id)
                                             (available :bool)
                                             (name :char 256))
                   (with-invalid-check NIL (steam::apps-bget-dlcdata-by-index (handle apps) i id available name 256))
                   (ensure-iface-obj 'dlc :interface apps
-                                         :handle (cffi:mem-ref id 'steam::app-id-t)
+                                         :handle (cffi:mem-ref id 'steam::app-id)
                                          :available (cffi:mem-ref available :bool)
                                          :display-name (cffi:foreign-string-to-lisp name :count 256 :encoding :utf-8)))))
 
@@ -65,9 +65,9 @@
 
 (defmethod list-apps ((apps steamapps))
   (let ((count (steam::app-list-get-num-installed-apps (applist-handle apps))))
-    (cffi:with-foreign-object (buffer 'steam::app-id-t count)
+    (cffi:with-foreign-object (buffer 'steam::app-id count)
       (loop for i from 0 below (steam::app-list-get-installed-apps (applist-handle apps) buffer count)
-            collect (ensure-iface-obj 'app :interface apps :handle (cffi:mem-aref buffer 'steam::app-id-t i))))))
+            collect (ensure-iface-obj 'app :interface apps :handle (cffi:mem-aref buffer 'steam::app-id i))))))
 
 (defmethod find-app ((apps steamapps) (handle integer))
   (ensure-iface-obj 'app :interface apps :handle handle))
@@ -98,9 +98,9 @@
       (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8))))
 
 (defmethod list-installed-depots ((app app))
-  (cffi:with-foreign-object (buffer 'steam::depot-id-t 256)
+  (cffi:with-foreign-object (buffer 'steam::depot-id 256)
     (loop for i from 0 below (steam::apps-get-installed-depots (iface* app) (handle app) buffer 256)
-          for handle = (cffi:mem-aref buffer 'steam::depot-id-t i)
+          for handle = (cffi:mem-aref buffer 'steam::depot-id i)
           collect handle)))
 
 (defmethod ticket-data ((app app))

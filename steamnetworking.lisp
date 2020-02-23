@@ -9,7 +9,7 @@
 (defclass steamnetworking (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamnetworking) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamnetworking) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-networking
                                                   (t-or version STEAM::STEAMNETWORKING-INTERFACE-VERSION))))
 

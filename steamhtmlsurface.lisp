@@ -13,7 +13,7 @@
 (defmethod initialize-instance :after ((interface steamhtmlsurface) &key version steamworks)
   (steam::htmlsurface-init (handle interface)))
 
-(defmethod allocate-handle ((interface steamhtmlsurface) &key version steamworks)
+(defmethod allocate-handle ((interface steamhtmlsurface) &key (version T) steamworks)
   (get-interface-handle* steamworks 'steam::client-get-isteam-htmlsurface
                          (t-or version STEAM::STEAMHTMLSURFACE-INTERFACE-VERSION)))
 

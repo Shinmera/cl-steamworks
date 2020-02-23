@@ -53,7 +53,7 @@
   ((struct-type :initarg :struct-type :accessor struct-type)))
 
 (defmethod initialize-instance :before ((callback %callback) &key struct-type)
-  (unless (and struct-type (boundp struct-type) (foreign-type-p struct-type))
+  (unless (and struct-type (foreign-type-p struct-type))
     (error "~s is not a valid callback struct type." struct-type)))
 
 (defmethod allocate-handle ((callback %callback) &key)

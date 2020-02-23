@@ -9,11 +9,12 @@
 (defclass steamgameserver (interface)
   ((stats-handle :initarg :stats-handle :accessor stats-handle)))
 
-(defmethod initialize-instance :after ((interface steamgameserver) &key version stats-version steamworks)
+(defmethod initialize-instance :after ((interface steamgameserver) &key (version T) (stats-version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-game-server
                                                   (t-or version STEAM::STEAMGAMESERVER-INTERFACE-VERSION)))
   (setf (stats-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-game-server-stats
                                                         (t-or version STEAM::STEAMGAMESERVERSTATS-INTERFACE-VERSION))))
+
 (define-interface-method steamgameserver logged-on-p (steam::game-server-blogged-on))
 (define-interface-method steamgameserver secure-p (steam::game-server-bsecure))
 (define-interface-method steamgameserver heartbeat (steam::game-server-force-heartbeat))

@@ -14,7 +14,7 @@
 (defmethod initialize-instance :after ((interface steamcontroller) &key)
   (steam::controller-init (handle interface)))
 
-(defmethod allocate-handle ((interface steamcontroller) &key version steamworks)
+(defmethod allocate-handle ((interface steamcontroller) &key (version T) steamworks)
   (get-interface-handle* steamworks 'steam::client-get-isteam-controller
                          (t-or version STEAM::STEAMCONTROLLER-INTERFACE-VERSION)))
 
@@ -54,10 +54,10 @@
             (call-next-method))))
 
 (defmethod list-controllers ((steamcontroller steamcontroller))
-  (cffi:with-foreign-object (handles 'steam::controller-handle-t steam::steam-controller-max-count)
+  (cffi:with-foreign-object (handles 'steam::controller-handle steam::steam-controller-max-count)
     (let ((count (steam::controller-get-connected-controllers (handle steamcontroller) handles)))
       (loop for i from 0 below count
-            for handle = (cffi:mem-aref handles 'steam::controller-handle-t i)
+            for handle = (cffi:mem-aref handles 'steam::controller-handle i)
             collect (ensure-iface-obj 'controller :interface steamcontroller :handle handle)))))
 
 (defclass controller (interface-object)
@@ -65,10 +65,10 @@
   (:default-initargs :interface 'steamcontroller))
 
 (defmethod list-action-set-layers ((controller controller))
-  (cffi:with-foreign-object (handles 'steam::controller-action-set-handle-t steam::steam-controller-max-count)
+  (cffi:with-foreign-object (handles 'steam::controller-action-set-handle steam::steam-controller-max-count)
     (let ((count (steam::controller-get-active-action-set-layers (iface* controller) (handle controller) handles)))
       (loop for i from 0 below count
-            for handle = (cffi:mem-aref handles 'steam::controller-action-set-handle-t i)
+            for handle = (cffi:mem-aref handles 'steam::controller-action-set-handle i)
             collect (ensure-iface-obj 'action-set-layer :interface (iface controller) :handle handle)))))
 
 (define-interface-submethod controller action-set (steam::controller-get-current-action-set)

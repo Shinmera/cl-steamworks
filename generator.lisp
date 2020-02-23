@@ -157,7 +157,7 @@
                 (setf type :pointer)
                 (loop-finish))
                (#\E
-                (setf type (name part)))
+                (setf type (name (strip-suffixes part "_t"))))
                (T (cond ((string= part "const"))
                         ((string= part "enum"))
                         ((string= part "class")
@@ -181,7 +181,7 @@
                                               (loop for part = (car parts)
                                                     until (or (null part) (find (char part 0) "*&[(E"))
                                                     collect part do (pop parts))))
-                                (name (format NIL "~{~a~^ ~}" parts)))
+                                (name (strip-suffixes (format NIL "~{~a~^ ~}" parts) "_t")))
                            (setf type (or (gethash name *c-type-map*)
                                           (name name)))))))))
     (values type count)))
@@ -189,14 +189,14 @@
 (defun compile-typedef (def)
   (if (or (find (getf def :typedef) *bad-types* :test #'string=))
       (values NIL (format NIL "Ignored type definition ~s" (getf def :typedef)))
-      `(cffi:defctype ,(name (getf def :typedef))
+      `(cffi:defctype ,(name (strip-suffixes (getf def :typedef) "_t"))
            ,(parse-typespec (getf def :type))
          ,@(when (getf def :desc) (list (getf def :desc))))))
 
 (defun compile-enum (def)
   (let ((name (or (getf def :fqname)
                   (getf def :enumname))))
-    `(cffi:defcenum ,(name name)
+    `(cffi:defcenum ,(name (strip-suffixes name "_t"))
        ,@(when (getf def :desc) (list (getf def :desc)))
        ,@(loop for entry in (getf def :values)
                collect (list (kw (translate-name (strip-prefixes (strip-prefixes (getf entry :name) "k_n" "k_e" "k_" "dc_")
@@ -218,8 +218,9 @@
           (string= (getf def :constname) "callbackid"))
       (values NIL "Ignored callback definition scanned from preprocessor directive.")
       `(cl:setf (cl:gethash ',(name (strip-struct-name (getf def :struct))) steam::*callback-id-map*)
-                (+ ,(name (strip-constant-name (getf def :constname)))
-                   ,(parse-integer (getf def :offset))))))
+                ,(or (getf def :callback_id)
+                     `(+ ,(name (strip-constant-name (getf def :constname)))
+                         ,(getf def :offset))))))
 
 (defun compile-callresult (def)
   (let ((name (or (getf def :methodname_flat)
@@ -267,6 +268,7 @@
              (or (and (listp type) (eql :struct (car type)))
                  (find type '(STEAM::STEAM-PARTY-BEACON-LOCATION-T
                               STEAM::STEAM-IPADDRESS-T
+                              STEAM::STEAM-UGCDETAILS-T
                               STEAM::INPUT-DIGITAL-ACTION-DATA-T
                               STEAM::INPUT-ANALOG-ACTION-DATA-T
                               STEAM::INPUT-MOTION-DATA-T))))))
@@ -323,7 +325,7 @@
                (cond ((eql #\# (char value 0))
                       NIL)
                      ((eql #\" (char value 0))
-                      (subseq value 0 (1- (length value))))
+                      (subseq value 1 (1- (length value))))
                      ((string= "UINT64_MAX" value)
                       (1- (ash 1 64)))
                      ((string= "((uint16)-1)" value)
@@ -354,18 +356,20 @@
           for content = (alexandria:read-file-into-string path :external-format :latin-1)
           append (scan-for-callbacks content) into callbacks
           append (scan-for-constants content) into constants
-          finally (return (list :callbacks callbacks
+          finally (return (list ;; :callbacks callbacks
                                 :consts constants)))))
 
 (defun read-steam-api-spec (source)
   (let ((parsed (yason:parse source :object-key-fn #'kw
                                     :object-as :plist)))
     ;; normalise
-    (loop for interface in (getf parsed :interfaces)
-          do (flet ((merge-field (field)
-                      (setf (getf parsed field) (nconc (getf parsed field) (getf interface field)))))
-               (merge-field :methods)
-               (merge-field :enums)))
+    (flet ((merge-field (object field)
+             (setf (getf parsed field) (nconc (getf parsed field) (getf object field)))))
+      (loop for interface in (getf parsed :interfaces)
+            do (merge-field interface :methods)
+               (merge-field interface :enums))
+      (loop for struct in (getf parsed :callback_structs)
+            do (merge-field struct :enums)))
     (remf parsed :interfaces)
     parsed))
 
@@ -376,26 +380,28 @@
   into)
 
 (defun compile-steam-api-spec (spec)
-  (flet ((%compile (compiler definitions)
-           (loop for definition in definitions
+  (flet ((%compile (compiler part)
+           (loop for definition in (getf spec part)
                  for (res note) = (multiple-value-list (funcall compiler definition))
                  do (cond (res
                            (handler-bind ((style-warning #'muffle-warning))
                              (with-simple-restart (continue "Ignore the failed evaluation")
-                               (eval res))))
+                               (eval (print res)))))
                           (note
                            (warn note)))
                  when res collect res)))
-    (append (%compile #'compile-const (getf spec :consts))
-            (%compile #'compile-callback (getf spec :callbacks))
-            (%compile #'compile-enum (getf spec :enums))
-            (%compile #'compile-typedef (getf spec :typedefs))
-            (%compile #'compile-struct (getf spec :structs))
-            (%compile #'compile-callresult (getf spec :methods))
-            (%compile #'compile-callresult (getf spec :callresults))
+    (append (%compile #'compile-const :consts)
+            (%compile #'compile-callback :callbacks)
+            (%compile #'compile-callback :callback_structs)
+            (%compile #'compile-enum :enums)
+            (%compile #'compile-typedef :typedefs)
+            (%compile #'compile-struct :structs)
+            (%compile #'compile-struct :callback_structs)
+            (%compile #'compile-callresult :methods)
+            (%compile #'compile-callresult :callresults)
             (let ((cache (make-hash-table :test 'equal)))
-              (%compile (lambda (f) (compile-method f cache)) (getf spec :methods)))
-            (%compile #'compile-function (getf spec :functions)))))
+              (%compile (lambda (f) (compile-method f cache)) :methods))
+            (%compile #'compile-function :functions))))
 
 (defun write-form (form &optional (stream *standard-output*))
   (with-standard-io-syntax

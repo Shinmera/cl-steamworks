@@ -9,7 +9,7 @@
 (defclass steamscreenshots (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamscreenshots) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamscreenshots) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-screenshots
                                                   (t-or version STEAM::STEAMSCREENSHOTS-INTERFACE-VERSION))))
 

@@ -9,7 +9,7 @@
 (defclass steamparties (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamparties) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamparties) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-parties
                                                   (t-or version STEAM::STEAMPARTIES-INTERFACE-VERSION))))
 

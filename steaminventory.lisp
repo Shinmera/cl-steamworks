@@ -7,7 +7,7 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defmacro with-inventory-result ((handle iface) &body body)
-  `(let ((,handle (with-foreign-value (,handle 'steam::steam-inventory-result-t)
+  `(let ((,handle (with-foreign-value (,handle 'steam::steam-inventory-result)
                     ,@body)))
      (make-instance 'inventory-result :interface ,iface :handle ,handle)))
 
@@ -15,7 +15,7 @@
   ((prices-available-p :initform NIL :accessor prices-available-p)
    (local-currency :initform NIL :accessor local-currency)))
 
-(defmethod initialize-instance :after ((interface steaminventory) &key version steamworks)
+(defmethod initialize-instance :after ((interface steaminventory) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-inventory
                                                   (t-or version STEAM::STEAMINVENTORY-INTERFACE-VERSION))))
 
@@ -46,40 +46,40 @@
            (check-result (steam::steam-inventory-eligible-promo-item-def-ids-result result)
                          'steam::inventory-request-eligible-promo-item-definitions-ids)
            (let ((count (steam::steam-inventory-eligible-promo-item-def-ids-eligible-promo-item-defs result)))
-             (cffi:with-foreign-object (array 'steam::steam-item-def-t count)
+             (cffi:with-foreign-object (array 'steam::steam-item-def count)
                (with-invalid-check NIL (steam::inventory-get-eligible-promo-item-definition-ids (handle inventory) (steam-id user) array count))
                (loop for i from 0 below count
-                     for handle = (cffi:mem-aref array 'steam::steam-item-def-t i)
+                     for handle = (cffi:mem-aref array 'steam::steam-item-def i)
                      collect (ensure-iface-obj 'item :interface inventory :handle handle))))))
         (prices
          (ensure-prices-available inventory)
          (let ((count (steam::inventory-get-num-items-with-prices (handle inventory))))
-           (cffi:with-foreign-objects ((handles 'steam::steam-item-def-t count)
+           (cffi:with-foreign-objects ((handles 'steam::steam-item-def count)
                                        (prices :uint64 count)
                                        (bases :uint64 count))
              (with-invalid-check NIL (steam::inventory-get-items-with-prices (handle inventory) handles prices bases count))
              (loop for i from 0 below count
-                   for handle = (cffi:mem-aref handles 'steam::steam-item-def-t i)
+                   for handle = (cffi:mem-aref handles 'steam::steam-item-def i)
                    for price = (cffi:mem-aref prices :uint64 i)
                    for base = (cffi:mem-aref bases :uint64 i)
                    collect (ensure-iface-obj 'item :interface inventory :handle handle :price (list base price))))))
         (ids
-         (cffi:with-foreign-objects ((idsp 'steam::steam-item-instance-id-t (length ids))
-                                     (result 'steam::steam-inventory-result-t))
+         (cffi:with-foreign-objects ((idsp 'steam::steam-item-instance-id (length ids))
+                                     (result 'steam::steam-inventory-result))
            (loop for i from 0 below (length ids)
                  for id in ids
-                 do (setf (cffi:mem-aref idsp 'steam::steam-item-instance-id-t i) id))
+                 do (setf (cffi:mem-aref idsp 'steam::steam-item-instance-id i) id))
            (with-invalid-check NIL (steam::inventory-get-items-by-id (handle inventory) result idsp 1))
-           (let* ((handle (cffi:mem-ref result 'steam::steam-inventory-result-t))
+           (let* ((handle (cffi:mem-ref result 'steam::steam-inventory-result))
                   (result (make-instance 'inventory-result :interface inventory :handle handle)))
              (list-items result))))
         (T
          (cffi:with-foreign-object (count :uint32)
            (with-invalid-check NIL (steam::inventory-get-item-definition-ids (handle inventory) (cffi:null-pointer) count))
-           (cffi:with-foreign-object (array 'steam::steam-item-def-t (cffi:mem-ref count :uint32))
+           (cffi:with-foreign-object (array 'steam::steam-item-def (cffi:mem-ref count :uint32))
              (with-invalid-check NIL (steam::inventory-get-item-definition-ids (handle inventory) array count))
              (loop for i from 0 below (cffi:mem-ref count :uint32)
-                   for handle = (cffi:mem-aref array 'steam::steam-item-def-t i)
+                   for handle = (cffi:mem-aref array 'steam::steam-item-def i)
                    collect (ensure-iface-obj 'item :interface inventory :handle handle)))))))
 
 (defmethod list-item-instances ((inventory steaminventory))
@@ -103,11 +103,11 @@
       (with-invalid-check NIL (steam::inventory-submit-update-properties (handle inventory) handle result)))))
 
 (defmethod item ((index integer) (inventory steaminventory))
-  (cffi:with-foreign-objects ((ids 'steam::steam-item-instance-id-t)
-                              (result 'steam::steam-inventory-result-t))
-    (setf (cffi:mem-ref ids 'steam::steam-item-instance-id-t) index)
+  (cffi:with-foreign-objects ((ids 'steam::steam-item-instance-id)
+                              (result 'steam::steam-inventory-result))
+    (setf (cffi:mem-ref ids 'steam::steam-item-instance-id) index)
     (with-invalid-check NIL (steam::inventory-get-items-by-id (handle inventory) result ids 1))
-    (let* ((handle (cffi:mem-ref result 'steam::steam-inventory-result-t))
+    (let* ((handle (cffi:mem-ref result 'steam::steam-inventory-result))
            (result (make-instance 'inventory-result :interface inventory :handle handle)))
       (first (list-items result)))))
 
@@ -137,46 +137,46 @@
 
 (defmethod grant-promo ((items cons))
   (with-inventory-result (handle (car items))
-    (cffi:with-foreign-object (g 'steam::steam-item-def-t (length items))
+    (cffi:with-foreign-object (g 'steam::steam-item-def (length items))
       (loop for i from 0
             for el in items
-            do (setf (cffi:mem-aref g 'steam::steam-item-def-t i) (handle el)))
+            do (setf (cffi:mem-aref g 'steam::steam-item-def i) (handle el)))
       (with-invalid-check NIL (steam::inventory-add-promo-items (iface* (car items)) handle g (length items))))))
 
 (defun generate-items (items)
   (with-inventory-result (handle (caar items))
-    (cffi:with-foreign-objects ((g 'steam::steam-item-def-t (length items))
+    (cffi:with-foreign-objects ((g 'steam::steam-item-def (length items))
                                 (q :uint32 (length items)))
       (loop for i from 0
             for item in items
             do (destructuring-bind (el qu) (enlist item 1)
                  (check-type el item)
-                 (setf (cffi:mem-aref g 'steam::steam-item-def-t i) (handle el))
+                 (setf (cffi:mem-aref g 'steam::steam-item-def i) (handle el))
                  (setf (cffi:mem-aref q :uint32 i) qu)))
       (with-invalid-check NIL (steam::inventory-add-promo-items (iface* (caar items)) handle g (length items))))))
 
 (defmethod exchange ((consume item-instance) (grant item))
   (with-inventory-result (handle consume)
-    (cffi:with-foreign-objects ((c 'steam::steam-item-def-t 1)
-                                (g 'steam::steam-item-def-t 1)
+    (cffi:with-foreign-objects ((c 'steam::steam-item-def 1)
+                                (g 'steam::steam-item-def 1)
                                 (q :uint32 1))
-      (setf (cffi:mem-aref c 'steam::steam-item-def-t 0) (handle consume))
-      (setf (cffi:mem-aref g 'steam::steam-item-def-t 0) (handle grant))
+      (setf (cffi:mem-aref c 'steam::steam-item-def 0) (handle consume))
+      (setf (cffi:mem-aref g 'steam::steam-item-def 0) (handle grant))
       (setf (cffi:mem-aref q :uint32) 1)
       (with-invalid-check NIL (steam::inventory-exchange-items (iface* consume) handle g q 1 c q 1)))))
 
 (defmethod exchange ((consume cons) (grant item))
   (with-inventory-result (handle consume)
-    (cffi:with-foreign-objects ((c 'steam::steam-item-def-t (length consume))
-                                (g 'steam::steam-item-def-t 1)
+    (cffi:with-foreign-objects ((c 'steam::steam-item-def (length consume))
+                                (g 'steam::steam-item-def 1)
                                 (q :uint32 (length consume)))
       (loop for i from 0
             for item in consume
             do (destructuring-bind (el qu) (enlist item 1)
                  (check-type el item-instance)
-                 (setf (cffi:mem-aref c 'steam::steam-item-def-t i) (handle el))
+                 (setf (cffi:mem-aref c 'steam::steam-item-def i) (handle el))
                  (setf (cffi:mem-aref q :uint32) qu)))
-      (setf (cffi:mem-aref g 'steam::steam-item-def-t 0) (handle grant))
+      (setf (cffi:mem-aref g 'steam::steam-item-def 0) (handle grant))
       (with-invalid-check NIL (steam::inventory-exchange-items (iface* consume) handle g q 1 c q 1)))))
 
 (defmethod property ((item item) (name string))
@@ -210,13 +210,13 @@
                                              (cffi:mem-ref price :uint64))))))
 
 (defmethod purchase-items ((items cons))
-  (cffi:with-foreign-objects ((p 'steam::steam-item-def-t (length items))
+  (cffi:with-foreign-objects ((p 'steam::steam-item-def (length items))
                               (q :uint32 (length items)))
     (loop for i from 0
           for item in items
           do (destructuring-bind (el qu) (enlist item 1)
                (check-type el item)
-               (setf (cffi:mem-aref p 'steam::steam-item-def-t i) (handle el))
+               (setf (cffi:mem-aref p 'steam::steam-item-def i) (handle el))
                (setf (cffi:mem-aref q :uint32 i) qu)))
     (with-call-result (result :poll T) (steam::inventory-start-purchase (iface* (caar items)) p q (length items))
       (check-result (steam::steam-inventory-start-purchase-result result)

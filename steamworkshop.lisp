@@ -9,7 +9,7 @@
 (defclass steamworkshop (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamworkshop) &key version steamworks content-directory)
+(defmethod initialize-instance :after ((interface steamworkshop) &key (version T) steamworks content-directory)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-ugc
                                                  (handle (user steamworks)) (handle (pipe steamworks))
                                                  (t-or version STEAM::STEAMUGC-INTERFACE-VERSION)))
@@ -21,9 +21,9 @@
 
 (defmethod list-subscribed-files ((workshop steamworkshop))
   (let ((count (steam::ugc-get-num-subscribed-items (handle workshop))))
-    (cffi:with-foreign-object (buffer 'steam::published-file-id-t count)
+    (cffi:with-foreign-object (buffer 'steam::published-file-id count)
       (loop for i from 0 below (steam::ugc-get-subscribed-items (handle workshop) buffer count)
-            for handle = (cffi:mem-aref buffer 'steam::published-file-id-t i)
+            for handle = (cffi:mem-aref buffer 'steam::published-file-id i)
             collect (ensure-iface-obj 'workshop-file :interface workshop
                                                      :app (app (interface 'steamapps (steamworks workshop)))
                                                      :handle handle)))))
@@ -123,11 +123,11 @@
                         :original (cffi:foreign-string-to-lisp original :count 256 :encoding :utf-8)))))
 
 (defmethod get-children ((query workshop-query) (index integer) count)
-  (cffi:with-foreign-object (buffer 'steam::published-file-id-t count)
+  (cffi:with-foreign-object (buffer 'steam::published-file-id count)
     (with-invalid-check NIL (steam::ugc-get-query-ugcchildren (iface* query) (handle query) index buffer count))
     (loop for i from 0 below count
           collect (ensure-iface-obj 'workshop-file :interface (iface query)
-                                                   :handle (cffi:mem-aref buffer 'steam::published-file-id-t i)
+                                                   :handle (cffi:mem-aref buffer 'steam::published-file-id i)
                                                    :app (app query)))))
 
 (defmethod get-key-value-tags ((query workshop-query) (index integer))
@@ -198,10 +198,10 @@
   ())
 
 (defmethod allocate-handle ((query workshop-detail-query) &key files)
-  (cffi:with-foreign-object (buffer 'steam::published-file-id-t (length files))
+  (cffi:with-foreign-object (buffer 'steam::published-file-id (length files))
     (loop for file in files
           for i from 0
-          do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
+          do (setf (cffi:mem-aref buffer 'steam::published-file-id i) (handle file)))
     (steam::ugc-create-query-ugcdetails-request
      (iface* query) buffer (length files))))
 
@@ -394,25 +394,25 @@
   (decode-flags 'steam::eitem-state result))
 
 (defmethod start-tracking ((files list))
-  (cffi:with-foreign-object (buffer 'steam::published-file-id-t 100)
+  (cffi:with-foreign-object (buffer 'steam::published-file-id 100)
     (loop while files
           for batch = (min 100 (length files))
           for workshop = (iface* (first files))
           do (loop for i from 0 below batch
                    for file = (pop files)
-                   do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
+                   do (setf (cffi:mem-aref buffer 'steam::published-file-id i) (handle file)))
              (with-call-result (result :poll T) (steam::ugc-start-playtime-tracking workshop buffer batch)
                (check-result (steam::start-playtime-tracking-result result)
                              'steam::ugc-start-playtime-tracking)))))
 
 (defmethod stop-tracking ((files list))
-  (cffi:with-foreign-object (buffer 'steam::published-file-id-t 100)
+  (cffi:with-foreign-object (buffer 'steam::published-file-id 100)
     (loop while files
           for batch = (min 100 (length files))
           for workshop = (iface* (first files))
           do (loop for i from 0 below batch
                    for file = (pop files)
-                   do (setf (cffi:mem-aref buffer 'steam::published-file-id-t i) (handle file)))
+                   do (setf (cffi:mem-aref buffer 'steam::published-file-id i) (handle file)))
              (with-call-result (result :poll T) (steam::ugc-stop-playtime-tracking workshop buffer batch)
                (check-result (steam::stop-playtime-tracking-result result)
                              'steam::ugc-stop-playtime-tracking)))))
@@ -445,7 +445,7 @@
       (loop with ptr = (struct-slot-ptr result 'steam::app-ids)
             for i from 0 below (steam::get-app-dependencies-num-app-dependencies result)
             collect (ensure-iface-obj 'app :interface (interface 'steamapps file)
-                                           :handle (cffi:mem-aref ptr 'steam::app-id-t i))
+                                           :handle (cffi:mem-aref ptr 'steam::app-id i))
             into results
             finally (setf (slot-value file 'app-dependencies) results))))
   (slot-value file 'app-dependencies))

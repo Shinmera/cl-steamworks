@@ -9,7 +9,7 @@
 (defclass steamuser (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamuser) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamuser) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-user
                                                  (t-or version steam::steamuser-interface-version))))
 

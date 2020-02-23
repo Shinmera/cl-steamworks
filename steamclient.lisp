@@ -9,7 +9,7 @@
 (defclass steamclient (interface)
   ())
 
-(defmethod initialize-instance :after ((client steamclient) &key version)
+(defmethod initialize-instance :after ((client steamclient) &key (version T))
   (let ((handle (steam::create-interface (t-or version STEAM::STEAMCLIENT-INTERFACE-VERSION))))
     (when (cffi:null-pointer-p handle)
       (error 'api-call-failed :api-call 'steam::create-interface))

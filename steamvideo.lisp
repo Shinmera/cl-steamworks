@@ -9,7 +9,7 @@
 (defclass steamvideo (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamvideo) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamvideo) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-video
                                                  (handle (user steamworks)) (handle (pipe steamworks))
                                                  (t-or version STEAM::STEAMVIDEO-INTERFACE-VERSION))))

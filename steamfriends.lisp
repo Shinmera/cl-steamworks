@@ -9,7 +9,7 @@
 (defclass steamfriends (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamfriends) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamfriends) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-friends
                                                   (t-or version STEAM::STEAMFRIENDS-INTERFACE-VERSION))))
 

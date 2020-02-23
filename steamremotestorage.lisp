@@ -9,7 +9,7 @@
 (defclass steamremotestorage (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamremotestorage) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamremotestorage) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-remote-storage
                                                   (t-or version STEAM::STEAMREMOTESTORAGE-INTERFACE-VERSION))))
 
@@ -140,12 +140,12 @@
   (:default-initargs :interface 'steamremotestorage))
 
 (defmethod initialize-instance :after ((ugc ugc) &key)
-  (cffi:with-foreign-objects ((app 'steam::app-id-t)
+  (cffi:with-foreign-objects ((app 'steam::app-id)
                               (name :pointer)
                               (size :int32)
                               (owner 'steam::steam-id))
     (with-invalid-check NIL (steam::remote-storage-get-ugcdetails (iface* ugc) (handle ugc) app name size owner))
-    (setf (slot-value ugc 'app) (ensure-iface-obj 'app :handle (cffi:mem-ref app 'steam::app-id-t)
+    (setf (slot-value ugc 'app) (ensure-iface-obj 'app :handle (cffi:mem-ref app 'steam::app-id)
                                                        :interface (interface 'steamapps ugc)))
     (setf (slot-value ugc 'name) (cffi:foreign-string-to-lisp (cffi:mem-ref name :pointer) :encoding :utf-8))
     (setf (slot-value ugc 'app) (cffi:mem-ref app :int32))

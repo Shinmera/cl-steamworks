@@ -43,9 +43,9 @@
 
 (defmethod initialize-instance :after ((steamworks steamworks) &key (interfaces *default-interfaces*))
   (tg:finalize steamworks (free-handle-function steamworks NIL))
+  (setf *steamworks* steamworks)
   (create-interfaces steamworks interfaces)
-  (create-global-callbacks)
-  (setf *steamworks* steamworks))
+  (create-global-callbacks))
 
 (defmethod free ((steamworks steamworks))
   (funcall (free-handle-function steamworks NIL)))

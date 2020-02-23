@@ -9,7 +9,7 @@
 (defclass steamhttp (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamhttp) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamhttp) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-http
                                                   (t-or version STEAM::STEAMHTTP-INTERFACE-VERSION))))
 
@@ -94,7 +94,7 @@
       (cffi:foreign-string-to-lisp data :encoding :utf-8))))
 
 (defmethod send ((request http-request) &key (block T) stream)
-  (let ((handle (with-foreign-value (call-result 'steam::steam-apicall-t)
+  (let ((handle (with-foreign-value (call-result 'steam::steam-apicall)
                   (if stream
                       (with-invalid-check NIL (steam::http-send-httprequest-and-stream-response (iface* request) (handle request) call-result))
                       (with-invalid-check NIL (steam::http-send-httprequest (iface* request) (handle request) call-result))))))

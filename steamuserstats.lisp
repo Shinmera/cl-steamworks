@@ -12,7 +12,7 @@
    (user-stats :initform (make-hash-table :test 'eql) :accessor user-stats-available-cache)
    (global-percentages :initform NIL :accessor global-percentages-available-p)))
 
-(defmethod initialize-instance :after ((interface steamuserstats) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamuserstats) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-user-stats
                                                   (t-or version STEAM::STEAMUSERSTATS-INTERFACE-VERSION))))
 

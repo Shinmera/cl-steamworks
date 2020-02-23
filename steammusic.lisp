@@ -9,7 +9,7 @@
 (defclass steammusic (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steammusic) &key version steamworks)
+(defmethod initialize-instance :after ((interface steammusic) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-music
                                                   (t-or version STEAM::STEAMMUSIC-INTERFACE-VERSION))))
 

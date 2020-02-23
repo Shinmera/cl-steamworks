@@ -9,7 +9,7 @@
 (defclass steammatchmaking (interface)
   ((servers-handle :accessor servers-handle)))
 
-(defmethod initialize-instance :after ((interface steammatchmaking) &key version servers-version steamworks)
+(defmethod initialize-instance :after ((interface steammatchmaking) &key (version T) (servers-version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-matchmaking
                                                   (t-or version STEAM::STEAMMATCHMAKING-INTERFACE-VERSION)))
   (setf (servers-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-matchmaking-servers
@@ -32,7 +32,7 @@
 
 (defmethod favorite-games ((interface steammatchmaking))
   (let ((count (steam::matchmaking-get-favorite-game-count (handle interface))))
-    (cffi:with-foreign-objects ((app 'steam::app-id-t)
+    (cffi:with-foreign-objects ((app 'steam::app-id)
                                 (ip :uint32)
                                 (connection-port :uint16)
                                 (query-port :uint16)
@@ -41,7 +41,7 @@
       (loop for i from 0 below count
             do (with-invalid-check NIL (steam::matchmaking-get-favorite-game (handle interface) i app ip connection-port query-port flags last-played))
             collect (list (ensure-iface-obj 'app :interface (interface 'steamapps interface)
-                                                 :handle (cffi:mem-ref app 'steam::app-id-t))
+                                                 :handle (cffi:mem-ref app 'steam::app-id))
                           (int->ipv4 (cffi:mem-ref ip :uint32))
                           (cffi:mem-ref connection-port :uint16)
                           (cffi:mem-ref query-port :uint16)

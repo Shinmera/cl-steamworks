@@ -9,7 +9,7 @@
 (defclass steamutils (interface)
   ())
 
-(defmethod initialize-instance :after ((interface steamutils) &key version steamworks)
+(defmethod initialize-instance :after ((interface steamutils) &key (version T) steamworks)
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-utils
                                                  (handle (pipe steamworks))
                                                  (t-or version STEAM::STEAMUTILS-INTERFACE-VERSION))))

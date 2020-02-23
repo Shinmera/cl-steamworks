@@ -13,7 +13,7 @@
 (defmethod initialize-instance :after ((interface steammusicremote) &key (name "remote"))
   (steam::music-remote-register-steam-music-remote (handle interface) name))
 
-(defmethod allocate-handle ((interface steammusicremote) &key version steamworks)
+(defmethod allocate-handle ((interface steammusicremote) &key (version T) steamworks)
   (get-interface-handle* steamworks 'steam::client-get-isteam-music-remote
                          (t-or version STEAM::STEAMMUSICREMOTE-INTERFACE-VERSION)))
 

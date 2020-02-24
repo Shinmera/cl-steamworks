@@ -19,15 +19,15 @@ Please follow the instructions in the documentation to set up this library prope
       (define-stub-types
         steam::hserver-list-request
         steam::hsteam-pipe
-        steam::depot-id-t
-        steam::app-id-t
-        steam::published-file-id-t
-        steam::controller-handle-t
-        steam::controller-action-set-handle-t
-        steam::steam-apicall-t
-        steam::steam-inventory-result-t
-        steam::steam-item-def-t
-        steam::steam-item-instance-id-t
+        steam::depot-id
+        steam::app-id
+        steam::published-file-id
+        steam::controller-handle
+        steam::controller-action-set-handle
+        steam::steam-apicall
+        steam::steam-inventory-result
+        steam::steam-item-def
+        steam::steam-item-instance-id
         steam::ematch-making-server-response
         steam::echat-entry-type
         steam::eitem-preview-type

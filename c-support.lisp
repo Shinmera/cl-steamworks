@@ -79,13 +79,13 @@
            (,handle-accessor ,name))))))
 
 (cffi:define-foreign-library steam::steamworks
-  ((:and :darwin :x86)
+  ((:and :darwin)
    "libsteam_api.dylib"
-   :search-path #.(merge-pathnames "osx32/" *static*))
-  ((:and :unix :x86)
+   :search-path #.(merge-pathnames "osx/" *static*))
+  ((:and :linux :x86)
    "libsteam_api.so"
    :search-path #.(merge-pathnames "linux32/" *static*))
-  ((:and :unix :x86-64)
+  ((:and :linux :x86-64)
    "libsteam_api.so"
    :search-path #.(merge-pathnames "linux64/" *static*))
   ((:and :windows :x86)
@@ -96,13 +96,13 @@
    :search-path #.(merge-pathnames "win64/" *static*)))
 
 (cffi:define-foreign-library steam::steamworks-shim
-  ((:and :darwin :x86)
+  ((:and :darwin)
    "steamworks_shim.dylib"
-   :search-path #.(merge-pathnames "osx32/" *static*))
-  ((:and :unix :x86)
+   :search-path #.(merge-pathnames "osx/" *static*))
+  ((:and :linux :x86)
    "steamworks_shim.so"
    :search-path #.(merge-pathnames "linux32/" *static*))
-  ((:and :unix :x86-64)
+  ((:and :linux :x86-64)
    "steamworks_shim.so"
    :search-path #.(merge-pathnames "linux64/" *static*))
   ((:and :windows :x86)

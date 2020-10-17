@@ -31,8 +31,8 @@
 (define-interface-method steamuser start-voice-recording (steam::user-start-voice-recording))
 (define-interface-method steamuser stop-voice-recording (steam::user-stop-voice-recording))
 
-(defmethod steam-id ((self (eql T)))
-  (steam-id (interface 'steamuser T)))
+(define-self-method steamuser steam-id)
+(define-self-method steamuser logged-on-p)
 
 ;; Internal static buffer for compressed voice data
 (#-sbcl defvar #+sbcl sb-ext:defglobal compressed-voice-buffer

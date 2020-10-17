@@ -20,6 +20,9 @@
 (define-interface-method steamfriends (setf display-name) (name steam::friends-set-persona-name))
 (define-interface-method steamfriends (setf listen-for-messages) (value steam::friends-set-listen-for-friends-messages))
 
+(define-self-method steamfriends display-name)
+(define-self-method steamfriends (setf display-name))
+
 (defmethod restricted-p ((friends steamfriends))
   (< 0 (steam::friends-get-user-restrictions (handle friends))))
 

@@ -337,3 +337,10 @@ Please follow the instructions in the documentation to set up this library prope
             while (< offset (length buffer))
             do (incf offset (read-sequence buffer stream :start offset)))
       buffer)))
+
+(defmacro define-self-method (interface name)
+  (if (listp name)
+      `(defmethod ,name (value (self (eql T)))
+         (setf (,(second name) (interface ',interface T)) value))
+      `(defmethod ,name ((self (eql T)))
+         (,name (interface ',interface T)))))

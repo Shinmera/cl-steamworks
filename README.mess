@@ -40,6 +40,15 @@ Huh. Please "let me know"(https://github.com/shinmera/cl-steamworks/issues/new) 
 ### SteamWorks updated and the new stuff is missing!
 Thanks for noticing! Please "submit a pull request"(https://github.com/shinmera/cl-steamworks/pulls) with the relevant fixes.
 
+### MacOS "Invalid Code Signature"
+So for whatever reason I've encountered the problem that the ``libsteam_api.dylib`` is unloadable and just spews an error about an invalid signature, despite codesign itself saying the signature is fine. There's not much out on the web about how to fix this and the only thing so far I've found to work at all is to just remove the signature:
+
+::
+codesign --remove-signature libsteam_api.dylib
+::
+
+Naturally doing this is Not Great, but it's better than not having Steam working at all.
+
 ## Misc
 ### Acknowledgements
 Thanks to Garry Newman's "blog entry"(https://garry.tv/2016/11/01/steamworks-sdk/) and the "Facepunch.Steamworks"(https://github.com/Facepunch/Facepunch.Steamworks) effort in general. It helped tremendously in figuring out some of the very obscure and annoying bits of the API.

@@ -47,6 +47,7 @@
                :trivial-features
                :trivial-garbage
                :trivial-gray-streams
+               :float-features
                :babel
                :cffi
                (:feature :sbcl (:require :sb-posix))))

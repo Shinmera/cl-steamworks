@@ -86,7 +86,8 @@
 (defmethod initialize-instance ((steamworks steamworks-client) &key app-id)
   (call-next-method)
   (tagbody retry
-     (unless (steam::init)
+     (unless (float-features:with-float-traps-masked T
+               (steam::init))
        (restart-case
            (error 'initialization-failed :api-call 'steam::init)
          (retry (&optional new-app-id)

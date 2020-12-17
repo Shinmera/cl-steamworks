@@ -478,10 +478,11 @@
                                              #+darwin "osx32"
                                              #+(and windows x86-64) "win64"
                                              #+(and windows x86) "")))
-    (uiop:run-program (list "make"
-                            "-C" (uiop:native-namestring source)
-                            (format NIL "steamworks=~a" (uiop:native-namestring sdk)))
-                      :output T :error-output T)
+    (with-simple-restart (continue "I have generated the shim manually, continue.")
+      (uiop:run-program (list "make"
+                              "-C" (uiop:native-namestring source)
+                              (format NIL "steamworks=~a" (uiop:native-namestring sdk)))
+                        :output T :error-output T))
     (uiop:copy-file (make-pathname :name "steamworks_shim" :type "so" :defaults source)
                     (make-pathname :name "steamworks_shim" :defaults target :type
                                    #+linux "so"

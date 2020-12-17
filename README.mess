@@ -6,6 +6,8 @@ It was last tested for SteamWorks 1.50
 ## Setup
 This library does //not// ship the SteamWorks and SteamClient binaries. You must get your own copy from "Valve"(https://partner.steamgames.com/). Once you have the SDK, load ``cl-steamworks-generator`` and run the ``setup`` function. It should handle everything automatically from there. Once the files have been generated, restart your Lisp and load ``cl-steamworks``.
 
+Note that as part of the process it will need to generate a shim library. This requires ``make`` and a C compiler (assumed to be ``g++`` by default) to be available. If you need to configure a different C compiler, set the environment variable ``CXX``. On Windows our recommendation is to use MSYS2 to compile the shim by going to the ``shim/`` directory and running ``make``. During ``setup`` then use the ``continue`` restart to skip compiling the binary and instead use the one you manually generated.
+
 ### Client
 Typically you'll be running a client instance when you ship your game. To get SteamWorks started up and ready, simply create an instance of ``steamworks-client``, passing your game's AppID as the ``:app-id`` initarg. If your game was not launched through steam, or steam isn't running and the app-id file isn't set up, it will signal an error and prompt you to restart through steam. For testing purposes, if you don't have a valid AppID yet, you can use ``480``, the AppID of their example game.
 

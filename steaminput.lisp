@@ -22,20 +22,20 @@
   (lambda () (steam::input-shutdown handle)))
 
 (define-interface-method steaminput find-action-set (steam::input-get-action-set-handle (name string))
-  (check-invalid 0 result 'steam::input-get-action-set-handle)
-  (ensure-iface-obj 'action-set :interface steaminput :handle result))
+  (when (< 0 result)
+    (ensure-iface-obj 'action-set :interface steaminput :handle result)))
 
 (define-interface-method steaminput find-analog-action (steam::input-get-analog-action-handle (name string))
-  (check-invalid 0 result 'steam::input-get-analog-action-handle)
-  (ensure-iface-obj 'analog-action :interface steaminput :handle result))
+  (when (< 0 result)
+    (ensure-iface-obj 'analog-action :interface steaminput :handle result)))
 
 (define-interface-method steaminput find-digital-action (steam::input-get-digital-action-handle (name string))
-  (check-invalid 0 result 'steam::input-get-digital-action-handle)
-  (ensure-iface-obj 'digital-action :interface steaminput :handle result))
+  (when (< 0 result)
+    (ensure-iface-obj 'digital-action :interface steaminput :handle result)))
 
 (define-interface-method steaminput find-controller (steam::input-get-controller-for-gamepad-index (index integer))
-  (check-invalid 0 result 'steam::input-get-controller-for-gamepad-index)
-  (ensure-iface-obj 'controller :interface steaminput :handle result))
+  (when (< 0 result)
+    (ensure-iface-obj 'controller :interface steaminput :handle result)))
 
 (define-interface-method steaminput action-glyph (steam::input-get-glyph-for-action-origin origin)
   ;; KLUDGE: ech, uiop

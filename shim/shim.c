@@ -14,7 +14,7 @@ extern "C"{
     
   /* } */
   
-  bool shim_SteamAPI_ISteamInput_GetDigitalActionData(ISteamInput *self, InputHandle_t controller, InputDigitalActionHandle_t action, InputDigitalActionData_t *out){
+  void shim_SteamAPI_ISteamInput_GetDigitalActionData(ISteamInput *self, InputHandle_t controller, InputDigitalActionHandle_t action, InputDigitalActionData_t *out){
     InputDigitalActionData_t in = self->GetDigitalActionData(controller, action);
     out->bState = in.bState;
     out->bActive = in.bActive;

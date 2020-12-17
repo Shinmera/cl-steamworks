@@ -18,7 +18,7 @@
             (apply #'make-instance class initargs))))
 
 (defmethod interface ((name symbol) (interface interface))
-  (interface (%steamworks interface)))
+  (interface name (%steamworks interface)))
 
 (defmethod interface-object (handle (interface symbol))
   (interface-object handle (interface interface T)))

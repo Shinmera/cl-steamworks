@@ -61,6 +61,16 @@
             for handle = (cffi:mem-aref handles 'steam::input-handle i)
             collect (ensure-iface-obj 'controller :interface steaminput :handle handle)))))
 
+(defmacro do-controllers ((controller interface) &body body)
+  (let ((steaminput (gensym "STEAMINPUT")))
+    `(cffi:with-foreign-object (handles 'steam::input-handle steam::steam-input-max-count)
+       (let* ((,steaminput ,interface)
+              (count (steam::input-get-connected-controllers (handle ,steaminput) handles)))
+         (loop for i from 0 below count
+               for handle = (cffi:mem-aref handles 'steam::input-handle i)
+               for ,controller = (ensure-iface-obj 'controller :interface ,steaminput :handle handle)
+               do (progn ,@body))))))
+
 (defclass controller (interface-object)
   ()
   (:default-initargs :interface 'steaminput))
@@ -152,7 +162,7 @@
   (steam::input-deactivate-all-action-set-layers (iface* set) controller))
 
 (defclass analog-action (interface-object)
-  ()
+  ((previous-action-data :initform '(:mode :none :x 0f0 :y 0f0 :active NIL) :accessor previous-action-data))
   (:default-initargs :interface 'steaminput))
 
 (defmethod origins ((action analog-action) (controller controller) (set action-set))
@@ -163,13 +173,13 @@
 
 (defmethod action-data ((action analog-action) (controller controller))
   (with-foreign-value (data '(:struct steam::input-analog-action-data))
-    (steam::shim-isteam-input-get-analog-action-data (iface* controller) (handle controller) (handle action) data)))
+    (setf (previous-action-data action) (steam::shim-isteam-input-get-analog-action-data (iface* controller) (handle controller) (handle action) data))))
 
 (defmethod stop-action-momentum ((action analog-action) (controller controller))
   (steam::input-stop-analog-action-momentum (iface* action) (handle controller) (handle action)))
 
 (defclass digital-action (interface-object)
-  ()
+  ((previous-action-data :initform '(:state NIL :active NIL) :accessor previous-action-data))
   (:default-initargs :interface 'steaminput))
 
 (defmethod origins ((action digital-action) (controller controller) (set action-set))
@@ -180,4 +190,4 @@
 
 (defmethod action-data ((action digital-action) (controller controller))
   (with-foreign-value (data '(:struct steam::input-digital-action-data))
-    (steam::shim-isteam-input-get-digital-action-data (iface* controller) (handle controller) (handle action) data)))
+    (setf (previous-action-data action) (steam::shim-isteam-input-get-digital-action-data (iface* controller) (handle controller) (handle action) data))))

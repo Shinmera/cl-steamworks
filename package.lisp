@@ -334,6 +334,7 @@
    #:run-frame
    #:translate-action-origin
    #:list-controllers
+   #:do-controllers
    #:controller
    #:list-action-set-layers
    #:action-set
@@ -353,6 +354,7 @@
    #:analog-action
    #:origins
    #:action-data
+   #:previous-action-data
    #:stop-action-momentum
    #:digital-action)
   ;; steaminventory.lisp

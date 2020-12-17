@@ -157,39 +157,6 @@
    #:client-user
    #:pipe
    #:account-type)
-  ;; steamcontroller.lisp
-  (:export
-   #:steamcontroller
-   #:find-action-set
-   #:find-analog-action
-   #:find-digital-action
-   #:find-controller
-   #:action-glyph
-   #:action-label
-   #:run-frame
-   #:list-controllers
-   #:controller
-   #:list-action-set-layers
-   #:action-set
-   #:index
-   #:input-type
-   #:show-binding-panel
-   #:led-color
-   #:motion-data
-   #:haptic-pulse
-   #:vibrate
-   #:action-set
-   #:activate
-   #:action-set-layer
-   #:activate
-   #:deactivate
-   #:analog-action
-   #:origins
-   #:action-data
-   #:stop-action-momentum
-   #:digital-action
-   #:origins
-   #:action-data)
   ;; steamfriends.lisp
   (:export
    #:steamfriends
@@ -355,6 +322,39 @@
    #:header
    #:send
    #:timeout)
+  ;; steaminput.lisp
+  (:export
+   #:steaminput
+   #:find-action-set
+   #:find-analog-action
+   #:find-digital-action
+   #:find-controller
+   #:action-glyph
+   #:action-label
+   #:run-frame
+   #:translate-action-origin
+   #:list-controllers
+   #:controller
+   #:list-action-set-layers
+   #:action-set
+   #:index
+   #:input-type
+   #:show-binding-panel
+   #:remote-play-session-id
+   #:xboxb-action-origin
+   #:device-binding-revision
+   #:led-color
+   #:motion-data
+   #:haptic-pulse
+   #:vibrate
+   #:action-set
+   #:activate
+   #:action-set-layer
+   #:analog-action
+   #:origins
+   #:action-data
+   #:stop-action-momentum
+   #:digital-action)
   ;; steaminventory.lisp
   (:export
    #:steaminventory

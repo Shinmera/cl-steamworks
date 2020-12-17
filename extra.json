@@ -151,6 +151,35 @@
             ]
         },
         {
+            "functionname": "shim_ISteamInput_GetDigitalActionData",
+            "returntype": "void",
+            "params": [
+                {"paramname": "self", "paramtype": "ISteamInput *"},
+                {"paramname": "controller", "paramtype": "InputHandle_t"},
+                {"paramname": "action", "paramtype": "InputDigitalActionHandle_t"},
+                {"paramname": "out", "paramtype": "InputDigitalActionData_t *"}
+            ]
+        },
+        {
+            "functionname": "shim_ISteamInput_GetAnalogActionData",
+            "returntype": "void",
+            "params": [
+                {"paramname": "self", "paramtype": "ISteamInput *"},
+                {"paramname": "controller", "paramtype": "InputHandle_t"},
+                {"paramname": "action", "paramtype": "InputAnalogActionHandle_t"},
+                {"paramname": "out", "paramtype": "InputAnalogActionData_t *"}
+            ]
+        },
+        {
+            "functionname": "shim_ISteamInput_GetMotionData",
+            "returntype": "void",
+            "params": [
+                {"paramname": "self", "paramtype": "ISteamInput *"},
+                {"paramname": "controller", "paramtype": "InputHandle_t"},
+                {"paramname": "out", "paramtype": "InputMotionData_t *"}
+            ]
+        },
+        {
             "functionname": "shim_ISteamController_GetDigitalActionData",
             "returntype": "void",
             "params": [

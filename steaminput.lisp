@@ -165,7 +165,7 @@
   (steam::input-deactivate-all-action-set-layers (iface* set) controller))
 
 (defclass analog-action (interface-object)
-  ((previous-action-data :initform '(:mode :none :x 0f0 :y 0f0 :active NIL) :accessor previous-action-data))
+  ((previous-action-data :initform '(NIL :none 0f0 0f0) :accessor previous-action-data))
   (:default-initargs :interface 'steaminput))
 
 (defmethod origins ((action analog-action) (controller controller) (set action-set))
@@ -175,14 +175,18 @@
             collect (cffi:mem-aref origins 'steam::econtroller-action-origin i)))))
 
 (defmethod action-data ((action analog-action) (controller controller))
-  (with-foreign-value (data '(:struct steam::input-analog-action-data))
-    (setf (previous-action-data action) (steam::shim-isteam-input-get-analog-action-data (iface* controller) (handle controller) (handle action) data))))
+  (cffi:with-foreign-object (data '(:struct steam::input-analog-action-data))
+    (steam::shim-isteam-input-get-analog-action-data (iface* controller) (handle controller) (handle action) data)
+    (setf (previous-action-data action) (list (cffi:foreign-slot-value data '(:struct steam::input-analog-action-data) 'steam::active)
+                                              (cffi:foreign-slot-value data '(:struct steam::input-analog-action-data) 'steam::mode)
+                                              (cffi:foreign-slot-value data '(:struct steam::input-analog-action-data) 'steam::x)
+                                              (cffi:foreign-slot-value data '(:struct steam::input-analog-action-data) 'steam::y)))))
 
 (defmethod stop-action-momentum ((action analog-action) (controller controller))
   (steam::input-stop-analog-action-momentum (iface* action) (handle controller) (handle action)))
 
 (defclass digital-action (interface-object)
-  ((previous-action-data :initform '(:state NIL :active NIL) :accessor previous-action-data))
+  ((previous-action-data :initform '(NIL NIL) :accessor previous-action-data))
   (:default-initargs :interface 'steaminput))
 
 (defmethod origins ((action digital-action) (controller controller) (set action-set))
@@ -192,5 +196,7 @@
             collect (cffi:mem-aref origins 'steam::econtroller-action-origin i)))))
 
 (defmethod action-data ((action digital-action) (controller controller))
-  (with-foreign-value (data '(:struct steam::input-digital-action-data))
-    (setf (previous-action-data action) (steam::shim-isteam-input-get-digital-action-data (iface* controller) (handle controller) (handle action) data))))
+  (cffi:with-foreign-object (data '(:struct steam::input-digital-action-data))
+    (steam::shim-isteam-input-get-digital-action-data (iface* controller) (handle controller) (handle action) data)
+    (setf (previous-action-data action) (list (cffi:foreign-slot-value data '(:struct steam::input-digital-action-data) 'steam::active)
+                                              (cffi:foreign-slot-value data '(:struct steam::input-digital-action-data) 'steam::state)))))

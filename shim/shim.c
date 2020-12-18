@@ -2,25 +2,25 @@
 #include "isteamcontroller.h"
 extern "C"{
   // FIXME: do this, also don't forget to include in extra.json
-  /* void shim_SteamAPI_ISteamNetworking_CreateConnectionSocket(ISteamNetworking *self,){ */
+  /* void shim_ISteamNetworking_CreateConnectionSocket(ISteamNetworking *self,){ */
     
   /* } */
   
-  /* void shim_SteamAPI_ISteamNetworking_CreateListenSocket(ISteamNetworking *self,){ */
+  /* void shim_ISteamNetworking_CreateListenSocket(ISteamNetworking *self,){ */
     
   /* } */
   
-  /* void shim_SteamAPI_ISteamParties_GetBeaconLocationData(ISteamParties *self,){ */
+  /* void shim_ISteamParties_GetBeaconLocationData(ISteamParties *self,){ */
     
   /* } */
   
-  void shim_SteamAPI_ISteamInput_GetDigitalActionData(ISteamInput *self, InputHandle_t controller, InputDigitalActionHandle_t action, InputDigitalActionData_t *out){
+  void shim_ISteamInput_GetDigitalActionData(ISteamInput *self, InputHandle_t controller, InputDigitalActionHandle_t action, InputDigitalActionData_t *out){
     InputDigitalActionData_t in = self->GetDigitalActionData(controller, action);
     out->bState = in.bState;
     out->bActive = in.bActive;
   }
   
-  void shim_SteamAPI_ISteamInput_GetAnalogActionData(ISteamInput *self, InputHandle_t controller, InputAnalogActionHandle_t action, InputAnalogActionData_t *out){
+  void shim_ISteamInput_GetAnalogActionData(ISteamInput *self, InputHandle_t controller, InputAnalogActionHandle_t action, InputAnalogActionData_t *out){
     InputAnalogActionData_t in = self->GetAnalogActionData(controller, action);
     out->eMode = in.eMode;
     out->x = in.x;
@@ -28,7 +28,7 @@ extern "C"{
     out->bActive = in.bActive;
   }
   
-  void shim_SteamAPI_ISteamInput_GetMotionData(ISteamInput *self, InputHandle_t controller, InputMotionData_t *out){
+  void shim_ISteamInput_GetMotionData(ISteamInput *self, InputHandle_t controller, InputMotionData_t *out){
     InputMotionData_t in = self->GetMotionData(controller);
     out->rotQuatX = in.rotQuatX;
     out->rotQuatY = in.rotQuatY;

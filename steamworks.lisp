@@ -10,7 +10,7 @@
 (defvar *default-interfaces* ; Does not include interfaces that need deallocation
   '(steamclient steamutils steamuser steamfriends steamapps steammatchmaking steammusic
     steamnetworking steamparties steamremotestorage steamscreenshots steamuserstats
-    steamvideo steamworkshop))
+    steamvideo steamworkshop steaminput))
 (defvar *default-server-interfaces* ; Does not include interfaces that are client-only
   '(steamclient steamutils steamuser steamfriends steamapps steamgameserver steamnetworking
     steamremotestorage steamuserstats steamworkshop))

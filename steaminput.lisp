@@ -11,7 +11,10 @@
    (action-label-cache :initform (make-hash-table :test 'eql) :reader action-label-cache))
   (:default-initargs :free-on-gc T))
 
-(defmethod initialize-instance :after ((interface steaminput) &key)
+(defmethod initialize-instance :after ((interface steaminput) &key (version T) steamworks)
+  (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-input
+                                                 (handle (user steamworks)) (handle (pipe steamworks))
+                                                 (t-or version STEAM::STEAMINPUT-INTERFACE-VERSION)))
   (steam::input-init (handle interface)))
 
 (defmethod allocate-handle ((interface steaminput) &key (version T) steamworks)

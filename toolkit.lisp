@@ -6,6 +6,8 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
+(defvar *steamworks* NIL)
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (unless (maybe-load-low-level)
     (alexandria:simple-style-warning "No low-level file present.
@@ -24,6 +26,8 @@ Please follow the instructions in the documentation to set up this library prope
         steam::published-file-id
         steam::controller-handle
         steam::controller-action-set-handle
+        steam::input-handle
+        steam::input-action-set-handle
         steam::steam-apicall
         steam::steam-inventory-result
         steam::steam-item-def
@@ -45,8 +49,14 @@ Please follow the instructions in the documentation to set up this library prope
                  (steam::strings :pointer)
                  (steam::num-strings :int))
         (:struct steam::steam-ugcdetails)
-        (:struct steam::input-digital-action-data)
-        (:struct steam::input-analog-action-data)
+        (:struct steam::input-digital-action-data
+                 (steam::state :bool :count 1 :offset 0)
+                 (steam::active :bool :count 1 :offset 4))
+        (:struct steam::input-analog-action-data
+                 (steam::mode :int :count 1 :offset 0)
+                 (steam::x :float :count 1 :offset 4)
+                 (steam::y :float :count 1 :offset 8)
+                 (steam::active :bool :count 1 :offset 12))
         (:struct steam::input-motion-data)))))
 
 (defmacro with-cleanup-on-failure (cleanup &body body)

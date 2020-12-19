@@ -6,7 +6,6 @@
 
 (in-package #:org.shirakumo.fraf.steamworks)
 
-(defvar *steamworks* NIL)
 (defvar *default-interfaces* ; Does not include interfaces that need deallocation
   '(steamclient steamutils steamuser steamfriends steamapps steammatchmaking steammusic
     steamnetworking steamparties steamremotestorage steamscreenshots steamuserstats

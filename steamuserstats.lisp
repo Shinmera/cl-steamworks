@@ -194,6 +194,15 @@
     (store-stats (iface achievement)))
   value)
 
+(defmethod (setf achieved-p) (value (string string) &key sync)
+  (let ((interface (interface 'steamuserstats T)))
+    (if value
+        (with-invalid-check NIL (steam::user-stats-set-achievement interface string))
+        (with-invalid-check NIL (steam::user-stats-clear-achievement interface string)))
+    (when sync
+      (store-stats interface))
+    value))
+
 (defmethod unlock-time ((achievement achievement) &optional user)
   (cffi:with-foreign-objects ((achieved-p :bool)
                               (time :uint32))

@@ -20,6 +20,9 @@
       (or *steamworks*
           (error 'steamworks-not-initialized))))
 
+(defun steamworks-available-p ()
+  (not (null *steamworks*)))
+
 (defclass pipe (c-object)
   ())
 

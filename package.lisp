@@ -635,6 +635,7 @@
   (:export
    #:*default-interfaces*
    #:*default-server-interfaces*
+   #:steamworks-available-p
    #:steamworks
    #:pipe
    #:user

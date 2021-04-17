@@ -15,6 +15,10 @@
 (defmethod initialize-instance :after ((callback global-callback) &key name)
   (setf (gethash name *instantiated-callbacks*) callback))
 
+(defmethod print-object ((callback global-callback) stream)
+  (print-unreadable-object (callback stream :type T)
+    (format stream "~s" (name callback))))
+
 (defun global-callback (name &optional (errorp T))
   (or (gethash name *global-callbacks*)
       (when errorp (error 'no-such-callback :callback-name name))))

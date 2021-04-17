@@ -197,8 +197,8 @@
 (defmethod (setf achieved-p) (value (string string) &key sync)
   (let ((interface (interface 'steamuserstats T)))
     (if value
-        (with-invalid-check NIL (steam::user-stats-set-achievement interface string))
-        (with-invalid-check NIL (steam::user-stats-clear-achievement interface string)))
+        (with-invalid-check NIL (steam::user-stats-set-achievement (handle interface) string))
+        (with-invalid-check NIL (steam::user-stats-clear-achievement (handle interface) string)))
     (when sync
       (store-stats interface))
     value))

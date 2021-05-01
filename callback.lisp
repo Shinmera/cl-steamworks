@@ -43,7 +43,7 @@
     `(flet ((callback-thunk (,result)
               (let ,(loop for slot in slots
                           collect (destructuring-bind (var name) (enlist slot slot)
-                                    (list var `(,(intern (format NIL "~a-~a" type name) '#:steam) ,result))))
+                                    (list var `(,(intern (format NIL "~a-~a" type name) '#:org.shirakumo.fraf.steamworks.cffi) ,result))))
                 ,@body)))
        (setf (global-callback ',name)
              (list ',type #'callback-thunk)))))

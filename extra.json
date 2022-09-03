@@ -40,7 +40,6 @@
             "methods": [],
             "fields": [
                 { "fieldname":"actionHandle", "fieldtype":"InputAnalogActionHandle_t" },
-                // KLUDGE: due to dependency ordering we spill the inner struct here.
                 { "fieldname":"eMode", "fieldtype":"EInputSourceMode" },
                 { "fieldname":"x", "fieldtype":"float" },
                 { "fieldname":"y", "fieldtype":"float" },
@@ -52,7 +51,6 @@
             "methods": [],
             "fields": [
                 { "fieldname":"actionHandle", "fieldtype":"InputDigitalActionHandle_t" },
-                // KLUDGE: due to dependency ordering we spill the inner struct here.
                 { "fieldname":"rotQuatX", "fieldtype":"float" },
                 { "fieldname":"rotQuatY", "fieldtype":"float" },
                 { "fieldname":"rotQuatZ", "fieldtype":"float" },

@@ -30,6 +30,8 @@
     (steam::utils-show-gamepad-text-input &key (mode :normal) (line-mode :single-line) (description "") (max 32) (default "")))
 (define-interface-method steamutils show-floating-text-input
     (steam::utils-show-floating-gamepad-text-input &key (mode :mode-single-line) (x 0) (y 0) (w 500) (h 300)))
+(define-interface-method steamutils hide-floating-text-input
+    (steam::utils-dismiss-floating-gamepad-text-input))
 
 (defmethod battery-power ((utils steamutils))
   (let ((res (steam::utils-get-current-battery-power (handle utils))))

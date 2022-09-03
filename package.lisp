@@ -617,6 +617,7 @@
    #:start-virtual-reality-dashboard
    #:show-text-input
    #:show-floating-text-input
+   #:hide-floating-text-input
    #:battery-power
    #:input-text
    #:with-input-text

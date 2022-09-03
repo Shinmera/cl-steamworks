@@ -15,7 +15,7 @@
   (setf (handle interface) (get-interface-handle steamworks 'steam::client-get-isteam-input
                                                  (handle (user steamworks)) (handle (pipe steamworks))
                                                  (t-or version STEAM::STEAMINPUT-INTERFACE-VERSION)))
-  (steam::input-init (handle interface)))
+  (steam::input-init (handle interface) T))
 
 (defmethod allocate-handle ((interface steaminput) &key (version T) steamworks)
   (get-interface-handle* steamworks 'steam::client-get-isteam-input

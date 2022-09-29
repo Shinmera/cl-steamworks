@@ -19,6 +19,10 @@
   (print-unreadable-object (callback stream :type T)
     (format stream "~s" (name callback))))
 
+(defmethod callback ((callback global-callback) parameter &optional failed api-call)
+  (declare (ignore api-call))
+  (funcall (closure callback) (if failed NIL parameter)))
+
 (defun global-callback (name &optional (errorp T))
   (or (gethash name *global-callbacks*)
       (when errorp (error 'no-such-callback :callback-name name))))

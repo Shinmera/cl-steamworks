@@ -41,7 +41,7 @@
   (let ((length (steam::utils-get-entered-gamepad-text-length (handle utils))))
     (cffi:with-foreign-object (data :char length)
       (with-invalid-check NIL (steam::utils-get-entered-gamepad-text-input (handle utils) data length))
-      (cffi:foreign-string-to-lisp data :count length :encoding :utf-8))))
+      (cffi:foreign-string-to-lisp data :count (max 0 (1- length)) :encoding :utf-8))))
 
 (defmacro with-input-text ((text utils &rest args) &body body)
   (let ((utilsg (gensym "UTILS"))

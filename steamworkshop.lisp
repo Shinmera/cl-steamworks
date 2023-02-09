@@ -348,8 +348,10 @@
    banned-p accepted-for-use-p tags file preview url votes-up votes-down score
    previews metadata statistics app-dependencies file-dependencies key-value-tags))
 
-(defmethod initialize-instance :after ((file workshop-file) &key app kind)
-  (unless app (error "APP required."))
+(defmethod initialize-instance :after ((file workshop-file) &key app (kind :community))
+  (unless app
+    (setf app (interface 'steamapps (steamworks file))))
+  (setf (slot-value file 'app) app)
   (unless (handle file)
     (with-call-result (result :poll T) (steam::ugc-create-item (iface* file) (handle app) kind)
       (when (steam::create-item-user-needs-to-accept-workshop-legal-agreement result)

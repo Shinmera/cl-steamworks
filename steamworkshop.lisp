@@ -498,11 +498,11 @@
                               (folder :char 256)
                               (last-update :uint32))
     (when (steam::ugc-get-item-install-info (iface* file) (handle file) size folder 256 last-update)
-      (values :size (cffi:mem-ref size :uint64)
-              ;; KLUDGE: I'm actually unsure that parsing with UTF-8 is correct here.
-              ;;         The code page on windows might be different for the FS...
-              :directory (parse-namestring (cffi:foreign-string-to-lisp folder :count 256 :encoding :utf-8))
-              :last-update (unix->universal (cffi:mem-ref last-update :uint32))))))
+      (list :size (cffi:mem-ref size :uint64)
+            ;; KLUDGE: I'm actually unsure that parsing with UTF-8 is correct here.
+            ;;         The code page on windows might be different for the FS...
+            :directory (parse-namestring (cffi:foreign-string-to-lisp folder :count 256 :encoding :utf-8))
+            :last-update (unix->universal (cffi:mem-ref last-update :uint32))))))
 
 (defmethod vote ((file workshop-file))
   (with-call-result (result :poll T) (steam::ugc-get-user-item-vote (iface* file) (handle file))

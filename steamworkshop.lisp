@@ -28,8 +28,8 @@
                                                      :app (app (interface 'steamapps (steamworks workshop)))
                                                      :handle handle)))))
 
-(defmethod query ((workshop steamworkshop) (app app) &rest args &key user list type sort on page exclude require key-value-tags request search any-tay rank-by-trend-days)
-  (declare (ignore list type sort on page exclude require key-value-tags request search any-tay rank-by-trend-days))
+(defmethod query ((workshop steamworkshop) (app app) &rest args &key user list type sort on page exclude require key-value-tags request search any-tag rank-by-trend-days)
+  (declare (ignore list type sort on page exclude require key-value-tags request search any-tag rank-by-trend-days))
   (let ((query (apply #'make-instance
                       (if user
                           'workshop-user-query

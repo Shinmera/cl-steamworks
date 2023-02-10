@@ -173,7 +173,7 @@
                                                                (sort :ranked-by-publication-date)
                                                                (on :target)
                                                                (page 1))
-  (steam::ugc-create-query-all-ugcrequest
+  (steam::ugc-create-query-all-ugcrequest-page
    (iface* query) sort type
    (ecase on (:creator (handle app)) (:target 0))
    (ecase on (:creator 0) (:target (handle app)))

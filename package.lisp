@@ -567,7 +567,8 @@
    #:payload
    #:begin-session
    #:auth-session
-   #:user)
+   #:user
+   #:make-encrypted-app-ticket)
   ;; steamuserstats.lisp
   (:export
    #:steamuserstats

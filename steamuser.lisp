@@ -100,3 +100,26 @@
 
 (defmethod user ((session auth-session))
   (ensure-iface-obj 'friend :handle (handle session) :interface (interface 'steamfriends session)))
+
+(defmethod make-encrypted-app-ticket ((interface steamuser) &key data)
+  (let ((buffer (cffi:null-pointer))
+        (bufsize 0))
+    (etypecase data
+      (null)
+      (string
+       (multiple-value-bind (b bs) (cffi:foreign-string-alloc data)
+         (setf buffer b bufsize bs)))
+      ((vector (unsigned-byte 8))
+       (multiple-value-bind (b bs) (cffi:foreign-array-alloc data :uint8)
+         (setf buffer b bufsize bs))))
+    (unwind-protect
+         (with-call-result (result :poll T) (steam::user-request-encrypted-app-ticket (handle interface) buffer bufsize)
+           (if (eql :ok (steam::encrypted-app-ticket-result result))
+               (cffi:with-foreign-objects ((ticket :uint8 1024)
+                                           (bytes :uint32))
+                 (if (steam::user-get-encrypted-app-ticket (handle interface) ticket 1024 bytes)
+                     (cffi:foreign-array-to-lisp ticket (list :array :uint8 (cffi:mem-ref bytes :uint32)))))
+               (error "Failed to get new encrypted app ticket: ~a"
+                      (steam::encrypted-app-ticket-result result))))
+      (unless (cffi:null-pointer-p buffer)
+        (cffi:foreign-free buffer)))))

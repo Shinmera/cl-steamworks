@@ -211,7 +211,7 @@ Please follow the instructions in the documentation to set up this library prope
   (- universal (encode-universal-time 0 0 0 1 1 1970 0)))
 
 (defun account-id (id)
-  (logand id #xFFFFFFFF))
+  (ldb (byte 32 0) id))
 
 (defun split-string (string split &optional (start 0))
   (let ((parts ())

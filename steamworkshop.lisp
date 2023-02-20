@@ -57,8 +57,8 @@
   (:default-initargs :interface 'steamworkshop
                      :free-on-gc T))
 
-(defmethod initialize-instance :after ((query workshop-query) &key files app sort page exclude require key-value-tags request search any-tag rank-by-trend-days)
-  (declare (ignore app sort page files))
+(defmethod initialize-instance :after ((query workshop-query) &key files app sort page user exclude require key-value-tags request search any-tag rank-by-trend-days)
+  (declare (ignore app sort page files user))
   (dolist (tag exclude)
     (add-excluded-tag tag query))
   (dolist (tag require)
@@ -581,5 +581,8 @@
   (let ((query (make-instance 'workshop-detail-query :interface (iface file)
                                                      :app (app file)
                                                      :files (list file))))
-    (execute query)
-    (complete-from-query file query index)))
+    (unwind-protect
+         (progn
+           (execute query)
+           (complete-from-query file query index))
+      (free query))))

@@ -34,6 +34,20 @@
             "callresult": "SteamUGCRequestUGCDetailsResult_t"
         }
     ],
+    "callback_structs":[
+        {
+            "callback_id": 3401,
+            "fields": [
+                { "fieldname":"m_handle", "fieldtype":"UGCQueryHandle_t" },
+                { "fieldname":"m_eResult", "fieldtype":"EResult" },
+                { "fieldname":"m_unNumResultsReturned", "fieldtype":"uint32" },
+                { "fieldname":"m_unTotalMatchingResults", "fieldtype":"uint32" },
+                { "fieldname":"m_bCachedData", "fieldtype":"bool" },
+                { "fieldname":"m_rgchNextCursor", "fieldtype":"uint8 [256]" }
+            ],
+            "struct": "SteamUGCQueryCompleted_t"
+        }
+    ],
     "structs":[
         {
             "struct": "SteamInputActionEvent_t_AnalogAction",

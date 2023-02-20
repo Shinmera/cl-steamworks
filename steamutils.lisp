@@ -14,6 +14,7 @@
                                                  (handle (pipe steamworks))
                                                  (t-or version STEAM::STEAMUTILS-INTERFACE-VERSION))))
 
+(define-self-method steamutils app-id)
 (define-interface-method steamutils app-id (steam::utils-get-app-id))
 (define-interface-method steamutils ipc-call-count (steam::utils-get-ipccall-count))
 (define-interface-method steamutils country-code (steam::utils-get-ipcountry))

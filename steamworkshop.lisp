@@ -37,12 +37,15 @@
                       :interface workshop
                       :app app
                       args)))
-    (multiple-value-bind (count total) (execute query)
-      (declare (ignore total))
-      (loop for i from 0 below count
-            for handle = (steam::steam-ugcdetails-published-file-id (get-details query i))
-            for file = (ensure-iface-obj 'workshop-file :interface workshop :app app :handle handle)
-            collect (complete-from-query file query i)))))
+    (unwind-protect
+         (multiple-value-bind (count total) (execute query)
+           (values
+            (loop for i from 0 below count
+                  for handle = (steam::steam-ugcdetails-published-file-id (get-details query i))
+                  for file = (ensure-iface-obj 'workshop-file :interface workshop :app app :handle handle)
+                  collect (complete-from-query file query i))
+            total))
+      (free query))))
 
 (defmethod stop-tracking ((workshop steamworkshop))
   (with-call-result (result :poll T) (steam::ugc-stop-playtime-tracking-for-all-items (handle workshop))
@@ -113,6 +116,7 @@
            (values (steam::steam-ugcquery-completed-num-results-returned result)
                    (steam::steam-ugcquery-completed-total-matching-results result))))
     (with-call-result (result :poll T) (steam::ugc-send-query-ugcrequest (iface* query) (handle query))
+      (setf (handle query) (steam::steam-ugcquery-completed-handle result))
       (funcall (or callback #'default-callback) result))))
 
 (defmethod get-previews ((query workshop-query) (index integer))
@@ -181,8 +185,8 @@
                                                                (page 1))
   (steam::ugc-create-query-all-ugcrequest-page
    (iface* query) sort type
-   (ecase on (:creator (handle app)) (:target 0))
-   (ecase on (:creator 0) (:target (handle app)))
+   (ecase on (:creator (app-id app)) (:target (app-id app)))
+   (ecase on (:creator 0) (:target (app-id app)))
    page))
 
 (defclass workshop-user-query (workshop-query)
@@ -196,8 +200,8 @@
                                                              (page 1))
   (steam::ugc-create-query-user-ugcrequest
    (iface* query) (account-id (handle user)) list type sort
-   (ecase on (:creator (handle app)) (:target 0))
-   (ecase on (:creator 0) (:target (handle app)))
+   (ecase on (:creator (app-id app)) (:target (app-id app)))
+   (ecase on (:creator 0) (:target (app-id app)))
    page))
 
 (defclass workshop-detail-query (workshop-query)
@@ -336,8 +340,8 @@
            (check-result (steam::submit-item-update-result result)
                          'steam::ugc-submit-item-update)
            (steam::submit-item-update-user-needs-to-accept-workshop-legal-agreement result)))
-    (with-call-result (result :poll (null callback)) (steam::ugc-submit-item-update (iface* update) (handle update)
-                                                                                    (or (change-note update) (cffi:null-pointer)))
+    (with-call-result (result :poll T) (steam::ugc-submit-item-update (iface* update) (handle update)
+                                                                      (or (change-note update) (cffi:null-pointer)))
       (funcall (or callback #'complete) result))))
 
 (defmethod update-status ((update workshop-update))

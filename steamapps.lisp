@@ -78,6 +78,9 @@
 (defmethod app ((apps steamapps))
   (find-app apps T))
 
+(defmethod app ((default (eql T)))
+  (find-app (interface 'steamapps T) T))
+
 (defclass app (interface-object)
   ()
   (:default-initargs :interface 'steamapps))

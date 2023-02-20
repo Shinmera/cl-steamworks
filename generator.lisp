@@ -284,8 +284,8 @@
     (if (and (%structure-types-p def)
              (not (find-symbol (string '#:libffi) '#:cffi)))
         (values NIL (format NIL "Ignored method definition ~s due to missing libffi." name))
-        `(cffi:defcfun (,(name (strip-function-name name)) ,name
-                        :library org.shirakumo.fraf.steamworks.cffi::steamworks)
+        `(steam::defcstruct* (,(name (strip-function-name name)) ,name
+                              :library org.shirakumo.fraf.steamworks.cffi::steamworks)
              ,(parse-typespec (getf def :returntype))
            ,@(when (getf def :desc) (list (getf def :desc)))
            (,(name "this") :pointer)
@@ -295,8 +295,8 @@
 
 (defun compile-function (def)
   (let ((name (getf def :functionname)))
-    `(cffi:defcfun (,(name (strip-function-name name)) ,name
-                    :library org.shirakumo.fraf.steamworks.cffi::steamworks)
+    `(steam::defcstruct* (,(name (strip-function-name name)) ,name
+                          :library org.shirakumo.fraf.steamworks.cffi::steamworks)
          ,(parse-typespec (getf def :returntype))
        ,@(when (getf def :desc) (list (getf def :desc)))
        ,@(loop for arg in (getf def :params)

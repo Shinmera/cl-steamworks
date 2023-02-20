@@ -13,6 +13,7 @@
     (make-pathname :name NIL :type NIL
                    :defaults (merge-pathnames "static/" *this*))))
 
+(defparameter steam::*debug-calls* NIL)
 (defvar steam::*callback-id-map* (make-hash-table :test 'eq))
 (defvar steam::*function-callresult-map* (make-hash-table :test 'eq))
 
@@ -57,6 +58,33 @@
            `(loop with ptr = (cffi:foreign-slot-pointer value '(:struct ,struct) ',name)
                   for i from 0 below ,count
                   collect (cffi:mem-aref ptr ',type i))))))
+
+(defmacro steam::defcfun* ((lisp-name foreign-name &rest options) return-type &rest args)
+  (flet ((format-arg (arg)
+           (case (let ((type (second arg)))
+                   (if (listp type) (first type) type))
+             (:pointer `(if (cffi:null-pointer-p ,(first arg))
+                            "NULL"
+                            (format NIL "0x~8,'0x" (cffi:pointer-address ,(first arg)))))
+             ((:bool :boolean) `(if ,(first arg) 1 0))
+             (T (first arg)))))
+    (let* ((arg-names (mapcar #'first args))
+           (arg-types (mapcar #'second args))
+           (syms (cffi::make-gensym-list (length args))))
+      (multiple-value-bind (prelude caller)
+          (cffi::defcfun-helper-forms
+              foreign-name lisp-name (cffi::canonicalize-foreign-type return-type)
+            syms (mapcar #'cffi::canonicalize-foreign-type arg-types) options)
+        `(progn
+           ,prelude
+           (defun ,lisp-name ,arg-names
+             ,(when steam::*debug-calls*
+                `(format *debug-io* ,(format NIL "~~&~a(~{~~a~*~^, ~}) " foreign-name args)
+                         ,@(mapcar #'format-arg args)))
+             (let ((retval ,(cffi::translate-objects syms arg-names arg-types return-type caller)))
+               ,(when (and steam::*debug-calls* (not (eql :void return-type)))
+                  `(format *debug-io* "~a~%" ,(format-arg (list 'retval return-type))))
+               retval)))))))
 
 (defmacro steam::defcstruct* (name &body slots)
   (flet ((name (format &rest args)

@@ -109,4 +109,4 @@
   (%steamworks (iface object)))
 
 (defmethod interface ((name symbol) (object interface-object))
-  (interface (%steamworks object)))
+  (interface name (%steamworks object)))

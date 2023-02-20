@@ -54,8 +54,8 @@
   (:default-initargs :interface 'steamworkshop
                      :free-on-gc T))
 
-(defmethod initialize-instance :after ((query workshop-query) &key app sort page exclude require key-value-tags request search any-tag rank-by-trend-days)
-  (declare (ignore app sort page))
+(defmethod initialize-instance :after ((query workshop-query) &key files app sort page exclude require key-value-tags request search any-tag rank-by-trend-days)
+  (declare (ignore app sort page files))
   (dolist (tag exclude)
     (add-excluded-tag tag query))
   (dolist (tag require)
@@ -213,7 +213,7 @@
 
 (defclass workshop-update (interface-object c-managed-object)
   ((workshop-file :initarg :workshop-file :reader workshop-file)
-   (change-note :initarg :change-node :reader change-note :writer set-change-note))
+   (change-note :initarg :change-node :initform NIL :accessor change-note))
   (:default-initargs :interface 'steamworkshop
                      :free-on-gc T))
 
@@ -356,16 +356,20 @@
 
 (defmethod initialize-instance :after ((file workshop-file) &key app (kind :community))
   (unless app
-    (setf app (interface 'steamapps (steamworks file))))
+    (setf app (app (interface 'steamapps (steamworks file)))))
   (setf (slot-value file 'app) app)
   (unless (handle file)
-    (with-call-result (result :poll T) (steam::ugc-create-item (iface* file) (handle app) kind)
+    (with-call-result (result :poll T) (steam::ugc-create-item (iface* file) (app-id app) kind)
       (when (steam::create-item-user-needs-to-accept-workshop-legal-agreement result)
         (warn 'workshop-agreement-not-accepted))
       (check-result (steam::create-item-result result)
                     'steam::ugc-create-item)
       (setf (handle file) (steam::create-item-published-file-id result))
-      (setf (interface-object (handle file) (iface file)) file))))
+      (setf (interface-object (handle file) (iface file)) file)
+      (setf (slot-value file 'key-value-tags) ())
+      (setf (slot-value file 'app-dependencies) ())
+      (setf (slot-value file 'file-dependencies) ())
+      (setf (slot-value file 'previews) ()))))
 
 (macrolet ((make-cache-filled (slot)
              `(defmethod ,slot ((file workshop-file))

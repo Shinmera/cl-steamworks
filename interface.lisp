@@ -50,14 +50,18 @@
 (defun get-interface-handle* (steamworks function version)
   (get-interface-handle steamworks function (handle (user steamworks)) (handle (pipe steamworks)) version))
 
-(defmethod call-with ((interface interface) function &rest args)
+(defmethod call-with (function (interface interface) &rest args)
   (apply function (handle interface) args))
 
-(defmethod call-with ((handle integer) function &rest args)
+(defmethod call-with (function (handle integer) &rest args)
   (apply function handle args))
 
-(defmethod call-with ((interface symbol) function &rest args)
-  (apply #'call-with (interface interface (steamworks)) function args))
+(defmethod call-with (function (interface symbol) &rest args)
+  (apply function (handle (interface interface (steamworks))) args))
+
+(defmethod call-with (function pointer &rest args)
+  (check-type pointer cffi:foreign-pointer)
+  (apply function pointer args))
 
 (defmacro define-interface-method (interface method call &body transform)
   (destructuring-bind (interface handle) (enlist interface 'handle)

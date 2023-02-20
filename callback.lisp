@@ -202,7 +202,8 @@
              (,interval (let ((,interval ,poll))
                           (etypecase ,interval
                             ((eql T) 0.1)
-                            (real ,interval)))))
+                            (real ,interval)
+                            (null NIL)))))
          (if ,interval
              (unwind-protect
                   (loop for ,result = (maybe-result ,instance)

@@ -54,8 +54,8 @@
   (:default-initargs :interface 'steamworkshop
                      :free-on-gc T))
 
-(defmethod initialize-instance :after ((query workshop-query) &key app exclude require key-value-tags request search any-tag rank-by-trend-days)
-  (declare (ignore app))
+(defmethod initialize-instance :after ((query workshop-query) &key app sort page exclude require key-value-tags request search any-tag rank-by-trend-days)
+  (declare (ignore app sort page))
   (dolist (tag exclude)
     (add-excluded-tag tag query))
   (dolist (tag require)
@@ -101,13 +101,18 @@
 (define-interface-submethod workshop-query (setf search-text) ((text string) steam::ugc-set-search-text))
 (define-interface-submethod workshop-query (setf language) ((language string) steam::ugc-set-language))
 
+(defmethod (setf ranked-by-trend-days-p) ((value symbol) (query workshop-query))
+  (setf (ranked-by-trend-days-p query) (if value 1 0)))
+(defmethod (setf playtime-stats-requested-p) ((value symbol) (query workshop-query))
+  (setf (playtime-stats-requested-p query) (if value 1 0)))
+
 (defmethod execute ((query workshop-query) &key callback)
   (flet ((default-callback (result)
            (check-result (steam::steam-ugcquery-completed-result result)
                          'steam::ugc-send-query-ugcrequest)
            (values (steam::steam-ugcquery-completed-num-results-returned result)
                    (steam::steam-ugcquery-completed-total-matching-results result))))
-    (with-call-result (result :poll (not (null callback))) (steam::ugc-send-query-ugcrequest (iface* query) (handle query))
+    (with-call-result (result :poll T) (steam::ugc-send-query-ugcrequest (iface* query) (handle query))
       (funcall (or callback #'default-callback) result))))
 
 (defmethod get-previews ((query workshop-query) (index integer))

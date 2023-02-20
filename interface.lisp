@@ -92,11 +92,11 @@
   ((interface :reader iface)))
 
 (defmethod initialize-instance ((object interface-object) &key interface steamworks)
-  (call-next-method)
   (setf (slot-value object 'interface)
         (etypecase interface
           (interface interface)
-          ((and symbol (not null)) (interface interface (or steamworks (steamworks)))))))
+          ((and symbol (not null)) (interface interface (or steamworks (steamworks))))))
+  (call-next-method))
 
 (defun iface* (object)
   (handle (iface object)))

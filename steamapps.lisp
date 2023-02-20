@@ -73,7 +73,7 @@
   (ensure-iface-obj 'app :interface apps :handle handle))
 
 (defmethod find-app ((apps steamapps) (handle (eql T)))
-  (app apps (app-id (interface 'steamutils (steamworks apps)))))
+  (find-app apps (app-id (interface 'steamutils (steamworks apps)))))
 
 (defmethod app ((apps steamapps))
   (find-app apps T))

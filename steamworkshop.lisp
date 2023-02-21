@@ -57,7 +57,7 @@
   (:default-initargs :interface 'steamworkshop
                      :free-on-gc T))
 
-(defmethod initialize-instance :after ((query workshop-query) &key files app sort page user exclude require key-value-tags request search any-tag rank-by-trend-days)
+(defmethod initialize-instance :after ((query workshop-query) &key files app sort page user exclude require key-value-tags request search any-tag rank-by-trend-days allow-cache)
   (declare (ignore app sort page files user))
   (dolist (tag exclude)
     (add-excluded-tag tag query))
@@ -65,6 +65,7 @@
     (add-required-tag tag query))
   (loop for (key . value) in key-value-tags
         do (add-key-value-tag key value query))
+  (setf (cached-response-allowed-p query) allow-cache)
   (setf (any-tag-matches-p query) any-tag)
   (setf (ranked-by-trend-days-p query) rank-by-trend-days)
   (setf (all-previews-requested-p query) (find :all-previews request))
@@ -108,6 +109,8 @@
   (setf (ranked-by-trend-days-p query) (if value 1 0)))
 (defmethod (setf playtime-stats-requested-p) ((value symbol) (query workshop-query))
   (setf (playtime-stats-requested-p query) (if value 1 0)))
+(defmethod (setf cached-response-allowed-p) ((value symbol) (query workshop-query))
+  (setf (cached-response-allowed-p query) (if value 1 0)))
 
 (defmethod execute ((query workshop-query) &key callback)
   (flet ((default-callback (result)

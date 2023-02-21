@@ -97,6 +97,12 @@
     (with-invalid-check NIL (steam::friends-set-rich-presence (handle friends) key value)))
   value)
 
+(defmethod self ((friends steamfriends))
+  (make-instance 'friend :interface friends :handle (steam-id T)))
+
+(defmethod self ((default (eql T)))
+  (self (interface 'steamfriends T)))
+
 (defclass friend (interface-object)
   ()
   (:default-initargs :interface 'steamfriends))

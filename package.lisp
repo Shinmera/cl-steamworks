@@ -173,6 +173,7 @@
    #:list-friend-groups
    #:list-friends
    #:rich-presence
+   #:self
    #:friend
    #:coplay-game
    #:coplay-time

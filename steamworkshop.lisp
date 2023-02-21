@@ -30,22 +30,22 @@
 
 (defmethod query ((workshop steamworkshop) (app app) &rest args &key user list type sort on page exclude require key-value-tags request search any-tag rank-by-trend-days)
   (declare (ignore list type sort on page exclude require key-value-tags request search any-tag rank-by-trend-days))
-  (let ((query (apply #'make-instance
-                      (if user
-                          'workshop-user-query
-                          'workshop-global-query)
-                      :interface workshop
-                      :app app
-                      args)))
-    (unwind-protect
-         (multiple-value-bind (count total) (execute query)
-           (values
-            (loop for i from 0 below count
-                  for handle = (steam::steam-ugcdetails-published-file-id (get-details query i))
-                  for file = (ensure-iface-obj 'workshop-file :interface workshop :app app :handle handle)
-                  collect (complete-from-query file query i))
-            total))
-      (free query))))
+  (query workshop (apply #'make-instance
+                         (if user
+                             'workshop-user-query
+                             'workshop-global-query)
+                         :interface workshop
+                         :app app
+                         args)))
+
+(defmethod query ((workshop steamworkshop) mod &rest args &key (app T) files list type sort on page exclude require key-value-tags request search any-tag rank-by-trend-days)
+  (declare (ignore list type sort on page exclude require key-value-tags request search any-tag rank-by-trend-days))
+  (query workshop (apply #'make-instance
+                         'workshop-detail-query
+                         :interface workshop
+                         :app app
+                         :files (list* mod files)
+                         args)))
 
 (defmethod stop-tracking ((workshop steamworkshop))
   (with-call-result (result :poll T) (steam::ugc-stop-playtime-tracking-for-all-items (handle workshop))
@@ -59,6 +59,10 @@
 
 (defmethod initialize-instance :after ((query workshop-query) &key files app sort page user exclude require key-value-tags request search any-tag rank-by-trend-days allow-cache)
   (declare (ignore app sort page files user))
+  (setf (any-tag-matches-p query) any-tag)
+  (setf (ranked-by-trend-days-p query) rank-by-trend-days)
+  (when search
+    (setf (search-text query) search))
   (dolist (tag exclude)
     (add-excluded-tag tag query))
   (dolist (tag require)
@@ -66,8 +70,6 @@
   (loop for (key . value) in key-value-tags
         do (add-key-value-tag key value query))
   (setf (cached-response-allowed-p query) allow-cache)
-  (setf (any-tag-matches-p query) any-tag)
-  (setf (ranked-by-trend-days-p query) rank-by-trend-days)
   (setf (all-previews-requested-p query) (find :all-previews request))
   (setf (children-requested-p query) (find :children request))
   (setf (key-value-tags-requested-p query) (find :key-value-tags request))
@@ -75,9 +77,7 @@
   (setf (metadata-requested-p query) (find :metadata request))
   (setf (ids-only-p query) (find :ids-only request))
   (setf (playtime-stats-requested-p query) (find :playtime-stats request))
-  (setf (totals-only-p query) (find :total-only request))
-  (when search
-    (setf (search-text query) search)))
+  (setf (totals-only-p query) (find :total-only request)))
 
 (defmethod free-handle-function ((query workshop-query) handle)
   (let ((workshop (iface* query)))
@@ -121,6 +121,18 @@
     (with-call-result (result :poll T) (steam::ugc-send-query-ugcrequest (iface* query) (handle query))
       (setf (handle query) (steam::steam-ugcquery-completed-handle result))
       (funcall (or callback #'default-callback) result))))
+
+(defmethod query ((workshop steamworkshop) (query workshop-query) &rest args)
+  (declare (ignore args))
+  (unwind-protect
+       (multiple-value-bind (count total) (execute query)
+         (values
+          (loop for i from 0 below count
+                for handle = (steam::steam-ugcdetails-published-file-id (get-details query i))
+                for file = (ensure-iface-obj 'workshop-file :interface workshop :app (app query) :handle handle)
+                collect (complete-from-query file query i))
+          total))
+    (free query)))
 
 (defmethod get-previews ((query workshop-query) (index integer))
   (cffi:with-foreign-objects ((source :char 256)

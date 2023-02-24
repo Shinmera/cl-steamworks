@@ -118,7 +118,7 @@
                (cffi:with-foreign-objects ((ticket :uint8 1024)
                                            (bytes :uint32))
                  (if (steam::user-get-encrypted-app-ticket (handle interface) ticket 1024 bytes)
-                     (cffi:foreign-array-to-lisp ticket (list :array :uint8 (cffi:mem-ref bytes :uint32)))))
+                     (cffi:foreign-array-to-lisp ticket (list :array :uint8 (cffi:mem-ref bytes :uint32)) :element-type '(unsigned-byte 8))))
                (error "Failed to get new encrypted app ticket: ~a"
                       (steam::encrypted-app-ticket-result result))))
       (unless (cffi:null-pointer-p buffer)

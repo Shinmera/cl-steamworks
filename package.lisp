@@ -616,6 +616,7 @@
    #:big-picture-p
    #:virtual-reality-p
    #:virtual-reality-streaming-p
+   #:overlay-enabled-p
    #:start-virtual-reality-dashboard
    #:show-text-input
    #:show-floating-text-input

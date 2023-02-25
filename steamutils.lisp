@@ -24,6 +24,7 @@
   (unix->universal result))
 (define-interface-method steamutils big-picture-p (steam::utils-is-steam-in-big-picture-mode))
 (define-interface-method steamutils virtual-reality-p (steam::utils-is-steam-running-in-vr))
+(define-interface-method steamutils overlay-enabled-p (steam::utils-is-overlay-enabled))
 (define-interface-method steamutils virtual-reality-streaming-p (steam::utils-is-vrheadset-streaming-enabled))
 (define-interface-method steamutils start-virtual-reality-dashboard (steam::utils-start-vrdashboard))
 (define-interface-method steamutils (setf virtual-reality-streaming-p) (value steam::utils-set-vrheadset-streaming-enabled))

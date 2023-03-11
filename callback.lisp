@@ -82,16 +82,26 @@
 ;;        but rather like stdcall with ECX being the this pointer. That's a big problem.
 ;;        See: https://docs.microsoft.com/en-us/cpp/cpp/thiscall?view=vs-2017
 (cffi:defcallback callback :void ((this :pointer) (parameter :pointer))
-  (let ((callback (pointer->object this)))
-    (if callback
-        (callback callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))))
-        (warn* "Callback for unregistered pointer ~a" this))))
+  (let ((callback (pointer->object this)) value)
+    (cond (callback
+           (handler-case (setf value (cffi:mem-ref parameter `(:struct ,(struct-type callback))))
+             (error (e)
+               (warn* "Failed to translate parameter for ~a: ~a" callback e)))
+           (when value
+             (callback callback value)))
+          (T
+           (warn* "Callback for unregistered pointer ~a" this)))))
 
 (cffi:defcallback callback-with-info :void ((this :pointer) (parameter :pointer) (failed :bool) (api-call :uint64))
   (let ((callback (pointer->object this)))
-    (if callback
-        (callback callback (cffi:mem-ref parameter `(:struct ,(struct-type callback))) failed api-call)
-        (warn* "Callback for unregistered pointer ~a" this))))
+    (cond (callback
+           (handler-case (setf value (cffi:mem-ref parameter `(:struct ,(struct-type callback))))
+             (error (e)
+               (warn* "Failed to translate parameter for ~a: ~a" callback e)))
+           (when value
+             (callback callback value failed api-call)))
+          (T
+           (warn* "Callback for unregistered pointer ~a" this)))))
 
 (cffi:defcallback size :int ((this :pointer))
   (let ((callback (pointer->object this)))

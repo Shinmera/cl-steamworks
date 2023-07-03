@@ -1,9 +1,3 @@
-#|
- This file is a part of cl-steamworks
- (c) 2019 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
- Author: Nicolas Hafner <shinmera@tymoon.eu>
-|#
-
 (defpackage #:cl-steamworks-generator
   (:nicknames #:org.shirakumo.fraf.steamworks.generator)
   (:use #:cl #:cffi)
@@ -422,16 +416,7 @@
                             :if-exists if-exists)
       (when stream
         (format stream "~
-#|
- This file is a part of cl-steamworks
- (c) 2019 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
- Author: Nicolas Hafner <shinmera@tymoon.eu>
-
- Note: This file is auto-generated based on the SteamWorks
-       steam_api.json file as available in the SteamWorks SDK.
-       The generation occurs via the machinery from generator.lisp
-       You should not edit this file manually.
-|#~%")
+~%")
         (write-form `(in-package #:org.shirakumo.fraf.steamworks.cffi) stream)
         (loop for form in forms
               do (write-form form stream))

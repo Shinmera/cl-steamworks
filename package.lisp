@@ -1,9 +1,3 @@
-#|
- This file is a part of cl-steamworks
- (c) 2019 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
- Author: Nicolas Hafner <shinmera@tymoon.eu>
-|#
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (let ((name '#:org.shirakumo.fraf.steamworks.cffi))
     (unless (find-package name)

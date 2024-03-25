@@ -83,7 +83,8 @@
   (call-next-method)
   (tagbody retry
      (unless (float-features:with-float-traps-masked T
-               (steam::init))
+               (or (ignore-errors (steam::init))
+                   (ignore-errors (steam::init-safe))))
        (restart-case
            (error 'initialization-failed :api-call 'steam::init)
          (retry (&optional new-app-id)

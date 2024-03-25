@@ -104,6 +104,10 @@
             "returntype": "bool"
         },
         {
+            "functionname": "SteamAPI_InitSafe",
+            "returntype": "bool"
+        },
+        {
             "functionname": "SteamAPI_RunCallbacks",
             "returntype": "void"
         },

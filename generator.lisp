@@ -17,6 +17,8 @@
 
 (defvar *extras-file* NIL)
 
+(defvar *struct-type-list* NIL)
+
 (defparameter *c-type-map*
   (let ((map (make-hash-table :test 'equalp)))
     (flet ((to-c-name (name)
@@ -175,8 +177,9 @@
                                                     until (or (null part) (find (char part 0) "*&[(E"))
                                                     collect part do (pop parts))))
                                 (name (strip-suffixes (format NIL "~{~a~^ ~}" parts) "_t")))
-                           (setf type (or (gethash name *c-type-map*)
-                                          (name name)))))))))
+                           (setf type (or (gethash name *c-type-map*) (name name)))
+                           (when (find type *struct-type-list*)
+                             (setf type `(:struct ,type)))))))))
     (values type count)))
 
 (defun compile-typedef (def)
@@ -383,18 +386,21 @@
                           (note
                            (warn note)))
                  when res collect res)))
-    (append (%compile #'compile-const :consts)
-            (%compile #'compile-callback :callbacks)
-            (%compile #'compile-callback :callback_structs)
-            (%compile #'compile-enum :enums)
-            (%compile #'compile-typedef :typedefs)
-            (%compile #'compile-struct :structs)
-            (%compile #'compile-struct :callback_structs)
-            (%compile #'compile-callresult :methods)
-            (%compile #'compile-callresult :callresults)
-            (let ((cache (make-hash-table :test 'equal)))
-              (%compile (lambda (f) (compile-method f cache)) :methods))
-            (%compile #'compile-function :functions))))
+    (let ((*struct-type-list*
+            (loop for def in (append (getf spec :structs) (getf spec :callback_structs))
+                  collect (name (strip-struct-name (getf def :struct))))))
+      (append (%compile #'compile-const :consts)
+              (%compile #'compile-callback :callbacks)
+              (%compile #'compile-callback :callback_structs)
+              (%compile #'compile-enum :enums)
+              (%compile #'compile-typedef :typedefs)
+              (%compile #'compile-struct :structs)
+              (%compile #'compile-struct :callback_structs)
+              (%compile #'compile-callresult :methods)
+              (%compile #'compile-callresult :callresults)
+              (let ((cache (make-hash-table :test 'equal)))
+                (%compile (lambda (f) (compile-method f cache)) :methods))
+              (%compile #'compile-function :functions)))))
 
 (defun write-form (form &optional (stream *standard-output*))
   (with-standard-io-syntax
@@ -435,12 +441,11 @@
                                                     (pathname-utils:subdirectory *this* "extra")))))
     (cl-steamworks::maybe-compile-low-level
      (write-low-level-file
-      (append
-       (compile-steam-api-spec
-        (merge-steam-api-spec
-         (read-steam-api-spec json)
-         (read-steam-api-spec extras)
-         (scan-all-headers meta))))
+      (compile-steam-api-spec
+       (merge-steam-api-spec
+        (read-steam-api-spec json)
+        (read-steam-api-spec extras)
+        (scan-all-headers meta)))
       :output output
       :if-exists if-exists))))
 

@@ -95,8 +95,8 @@
   (ensure-global-stats (iface stat))
   (cffi:with-foreign-object (data :int64 days)
     (let ((count (ecase (stat-type stat)
-                   (integer (steam::user-stats-get-global-stat-history (iface* stat) (handle stat) data (* days 8)))
-                   (float (steam::user-stats-get-global-stat-history0 (iface* stat) (handle stat) data (* days 8))))))
+                   (integer (steam::user-stats-get-global-stat-history-int64 (iface* stat) (handle stat) data (* days 8)))
+                   (float (steam::user-stats-get-global-stat-history-double (iface* stat) (handle stat) data (* days 8))))))
       (check-invalid 0 count 'steam::user-stats-get-global-stat-history)
       (ecase (stat-type stat)
         (integer (loop for i from 0 below count
@@ -113,18 +113,18 @@
     (ecase (stat-type stat)
       (integer (etypecase for
                  ((eql :global)
-                  (with-invalid-check NIL (steam::user-stats-get-global-stat (iface* stat) (handle stat) data)))
+                  (with-invalid-check NIL (steam::user-stats-get-global-stat-int64 (iface* stat) (handle stat) data)))
                  ((eql :local)
-                  (with-invalid-check NIL (steam::user-stats-get-stat (iface* stat) (handle stat) data)))
+                  (with-invalid-check NIL (steam::user-stats-get-stat-int32 (iface* stat) (handle stat) data)))
                  (friend
-                  (with-invalid-check NIL (steam::user-stats-get-user-stat (iface* stat) (steam-id for) (handle stat) data)))))
+                  (with-invalid-check NIL (steam::user-stats-get-user-stat-int32 (iface* stat) (steam-id for) (handle stat) data)))))
       (float (etypecase for
                ((eql :global)
-                (with-invalid-check NIL (steam::user-stats-get-global-stat0 (iface* stat) (handle stat) data)))
+                (with-invalid-check NIL (steam::user-stats-get-global-stat-double (iface* stat) (handle stat) data)))
                ((eql :local)
-                (with-invalid-check NIL (steam::user-stats-get-stat0 (iface* stat) (handle stat) data)))
+                (with-invalid-check NIL (steam::user-stats-get-stat-float (iface* stat) (handle stat) data)))
                (friend
-                (with-invalid-check NIL (steam::user-stats-get-user-stat0 (iface* stat) (steam-id for) (handle stat) data))))))
+                (with-invalid-check NIL (steam::user-stats-get-user-stat-float (iface* stat) (steam-id for) (handle stat) data))))))
     (case for
       (:global
        (ecase (stat-type stat)
@@ -138,8 +138,8 @@
 (defmethod (setf stat-value) (value (stat stat) &key sync)
   (ensure-current-stats (iface stat))
   (check-invalid NIL (etypecase value
-                       (integer (steam::user-stats-set-stat (iface* stat) (handle stat) value))
-                       (float (steam::user-stats-set-stat0 (iface* stat) (handle stat) (coerce value 'single-float))))
+                       (integer (steam::user-stats-set-stat-int32 (iface* stat) (handle stat) value))
+                       (float (steam::user-stats-set-stat-float (iface* stat) (handle stat) (coerce value 'single-float))))
                  'steam::user-stats-set-stat)
   (when sync
     (store-stats (iface stat)))

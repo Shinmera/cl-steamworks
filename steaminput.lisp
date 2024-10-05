@@ -34,12 +34,14 @@
   (when (< 0 result)
     (ensure-iface-obj 'controller :interface steaminput :handle result)))
 
-(define-interface-method steaminput action-glyph (steam::input-get-glyph-for-action-origin origin)
+(define-interface-method steaminput action-glyph (steam::input-get-glyph-for-action-origin-legacy origin)
   ;; KLUDGE: ech, uiop
   (uiop:parse-native-namestring result))
 (define-interface-method steaminput action-label (steam::input-get-string-for-action-origin origin))
-(define-interface-method steaminput run-frame (steam::input-run-frame))
 (define-interface-method steaminput translate-action-origin (steam::input-translate-action-origin controller-type button))
+
+(defmethod run-frame ((steaminput steaminput))
+  (steam::input-run-frame (handle steaminput) nil))
 
 (defmethod action-glyph :around ((interface steaminput) origin)
   (or (gethash origin (action-glyph-cache interface))
@@ -123,10 +125,10 @@
 
 (defmethod haptic-pulse ((controller controller) pad &key (duration 0.1) (pause 0.1) (repeat 1))
   (if (<= repeat 1)
-      (steam::input-trigger-haptic-pulse (iface* controller) (handle controller) pad
-                                         (microsecs duration))
-      (steam::input-trigger-repeated-haptic-pulse (iface* controller) (handle controller) pad
-                                                  (microsecs duration) (microsecs pause) repeat 0)))
+      (steam::input-legacy-trigger-haptic-pulse (iface* controller) (handle controller) pad
+                                                (microsecs duration))
+      (steam::input-legacy-trigger-repeated-haptic-pulse (iface* controller) (handle controller) pad
+                                                         (microsecs duration) (microsecs pause) repeat 0)))
 
 (defmethod vibrate ((controller controller) &key (duration 0.1) (left duration) (right duration))
   (steam::input-trigger-vibration (iface* controller) (handle controller)

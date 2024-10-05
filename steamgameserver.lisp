@@ -11,9 +11,6 @@
 
 (define-interface-method steamgameserver logged-on-p (steam::game-server-blogged-on))
 (define-interface-method steamgameserver secure-p (steam::game-server-bsecure))
-(define-interface-method steamgameserver heartbeat (steam::game-server-force-heartbeat))
-(define-interface-method steamgameserver public-ip (steam::game-server-get-public-ip)
-  (int->ipv4 result))
 (define-interface-method steamgameserver steam-id (steam::game-server-get-steam-id))
 (define-interface-method steamgameserver logoff (steam::game-server-log-off))
 (define-interface-method steamgameserver (setf bot-count) ((count integer) steam::game-server-set-bot-player-count))
@@ -89,17 +86,6 @@
   (steam::game-server-set-map-name (handle gameserver) value)
   value)
 
-(defmethod (setf heartbeat) ((value T) (gameserver steamgameserver))
-  (steam::game-server-enable-heartbeats (handle gameserver) T))
-
-(defmethod (setf heartbeat) ((value null) (gameserver steamgameserver))
-  (steam::game-server-enable-heartbeats (handle gameserver) NIL))
-
-(defmethod (setf heartbeat) ((value number) (gameserver steamgameserver))
-  (if (= 0 value)
-      (setf (heartbeat gameserver) NIL)
-      (steam::game-server-set-heartbeat-interval (handle gameserver) (millisecs value))))
-
 (defmethod (setf product) ((value integer) (gameserver steamgameserver))
   (steam::game-server-set-product (handle gameserver) (princ-to-string value)))
 
@@ -128,10 +114,10 @@
                             (check-utf8-size STEAM::STAT-NAME-MAX name)
                             (ecase type
                               (:int32
-                               (with-invalid-check NIL (steam::game-server-stats-get-user-stat (stats-handle gameserver) (steam-id user) name data))
+                               (with-invalid-check NIL (steam::game-server-stats-get-user-stat-int32 (stats-handle gameserver) (steam-id user) name data))
                                (cons name (cffi:mem-ref data :int32)))
                               (:float
-                               (with-invalid-check NIL (steam::game-server-stats-get-user-stat0 (stats-handle gameserver) (steam-id user) name data))
+                               (with-invalid-check NIL (steam::game-server-stats-get-user-stat-float (stats-handle gameserver) (steam-id user) name data))
                                (cons name (cffi:mem-ref data :float)))))))
           :achievements
           (cffi:with-foreign-object (data :bool)
@@ -147,9 +133,9 @@
       (loop for (stat . value) in stats
             do (check-invalid NIL (etypecase value
                                     (integer
-                                     (steam::game-server-stats-set-user-stat (stats-handle gameserver) (steam-id user) stat value))
+                                     (steam::game-server-stats-set-user-stat-int32 (stats-handle gameserver) (steam-id user) stat value))
                                     (float
-                                     (steam::game-server-stats-set-user-stat0 (stats-handle gameserver) (steam-id user) stat (coerce value 'single-float))))
+                                     (steam::game-server-stats-set-user-stat-float (stats-handle gameserver) (steam-id user) stat (coerce value 'single-float))))
                               'steam::game-server-stats-set-user-stat))
       (loop for (achievement . value) in achievements
             do (check-invalid NIL (if value
@@ -177,6 +163,7 @@
 (defmethod allocate-handle ((ticket server-session-ticket) &key)
   (cffi:with-foreign-objects ((buffer :uchar 1024)
                               (length :uint32))
+    ;; FIXME: iface changed
     (prog1 (steam::game-server-get-auth-session-ticket (iface* ticket) buffer 1024 length)
       (setf (slot-value ticket 'payload) (cffi:foreign-array-to-lisp buffer (list :array :uchar (cffi:mem-ref length :uint32)))))))
 

@@ -87,10 +87,10 @@
       (destructuring-bind (item property &optional (value NIL value-p)) update
         (if value-p
             (check-invalid NIL (etypecase value
-                                 (string (steam::inventory-set-property (handle inventory) handle (handle item) property value))
-                                 (boolean (steam::inventory-set-property0 (handle inventory) handle (handle item) property value))
-                                 ((unsigned-byte 64) (steam::inventory-set-property1 (handle inventory) handle (handle item) property value))
-                                 (float (steam::inventory-set-property2 (handle inventory) handle (handle item) property (coerce value 'single-float))))
+                                 (string (steam::inventory-set-property-string (handle inventory) handle (handle item) property value))
+                                 (boolean (steam::inventory-set-property-bool (handle inventory) handle (handle item) property value))
+                                 ((unsigned-byte 64) (steam::inventory-set-property-int64 (handle inventory) handle (handle item) property value))
+                                 (float (steam::inventory-set-property-float (handle inventory) handle (handle item) property (coerce value 'single-float))))
                            'steam::inventory-set-property)
             (with-invalid-check NIL (steam::inventory-remove-property (handle inventory) handle (handle item) property)))))
     (with-inventory-result (result inventory)

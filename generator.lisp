@@ -15,8 +15,7 @@
 (defvar *standard-low-level-file*
   (make-pathname :name "low-level" :type "lisp" :defaults *this*))
 
-(defvar *extras-file*
-  (make-pathname :name "extra" :type "json" :defaults *this*))
+(defvar *extras-file* NIL)
 
 (defparameter *c-type-map*
   (let ((map (make-hash-table :test 'equalp)))
@@ -422,16 +421,25 @@
               do (write-form form stream))
         file))))
 
-(defun generate (source &key output (if-exists :supersede))
+(defun detect-version (source)
+  (let ((readme (make-pathname :name "Readme" :type "txt" :defaults source)))
+    (when (probe-file readme)
+      (cl-ppcre:register-groups-bind (version) ("\\nv(\\d\\.\\d+)" (alexandria:read-file-into-string readme :external-format :latin-1))
+        version))))
+
+(defun generate (source &key output (if-exists :supersede) version)
   (let* ((meta (pathname-utils:subdirectory source "public" "steam"))
-         (json (make-pathname :name "steam_api" :type "json" :defaults meta)))
+         (json (make-pathname :name "steam_api" :type "json" :defaults meta))
+         (version (or version (detect-version source) (error "Couldn't detect SDK version.")))
+         (extras (or *extras-file* (merge-pathnames (make-pathname :name version :type "json")
+                                                    (pathname-utils:subdirectory *this* "extra")))))
     (cl-steamworks::maybe-compile-low-level
      (write-low-level-file
       (append
        (compile-steam-api-spec
         (merge-steam-api-spec
          (read-steam-api-spec json)
-         (read-steam-api-spec *extras-file*)
+         (read-steam-api-spec extras)
          (scan-all-headers meta))))
       :output output
       :if-exists if-exists))))

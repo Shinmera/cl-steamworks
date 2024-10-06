@@ -1,7 +1,7 @@
 ## About cl-steamworks
 This is a wrapper library to allow you to interface with the Valve SteamWorks API.
 
-It was last tested for SteamWorks 1.50
+It was last tested for SteamWorks 1.60
 
 ## Setup
 This library does //not// ship the SteamWorks and SteamClient binaries. You must get your own copy from "Valve"(https://partner.steamgames.com/). Once you have the SDK, load ``cl-steamworks-generator`` and run the ``setup`` function. It should handle everything automatically from there. Once the files have been generated, restart your Lisp and load ``cl-steamworks``.

@@ -449,14 +449,16 @@
       :output output
       :if-exists if-exists))))
 
-(defun query-directory ()
-  (format *query-io* "~&~%Please enter the path to the SteamWorks SDK root directory:~%> ")
+(defun query-directory (&optional (default (pathname-utils:subdirectory *this* "sdk")))
+  (format *query-io* "~&~%Please enter the path to the SteamWorks SDK root directory~%[~a]~%> "
+          default)
   (let ((path (read-line *query-io*)))
-    (when (string/= "" path)
-      (parse-namestring
-       (if (find (char path (1- (length path))) "\\/")
-           path
-           (format NIL "~a~c" path #+windows #\\ #-windows #\/))))))
+    (if (string= "" path)
+        default
+        (parse-namestring
+         (if (find (char path (1- (length path))) "\\/")
+             path
+             (format NIL "~a~c" path #+windows #\\ #-windows #\/))))))
 
 (defun copy-directory-contents (source dest)
   (dolist (file (directory (merge-pathnames pathname-utils:*wild-file* source)))

@@ -1,247 +1,255 @@
 {
-    "enums":[
-        {
-            "enumname": "EServerMode",
-            "values": [
-                {"name": "k_eServerModeInvalid", "value": "0"},
-                {"name": "k_eServerModeNoAuthentication", "value": "1"},
-                {"name": "k_eServerModeAuthentication", "value": "2"},
-                {"name": "k_eServerModeAuthenticationAndSecure", "value": "3"},
-            ]
-        },
-    ],
-    "consts":[
-        {
-            "constname": "k_cchPublishedDocumentTitleMax",
-            "consttype": "int",
-            "constval": "129"
-        },
-        {
-            "constname": "k_cchPublishedDocumentDescriptionMax",
-            "consttype": "int",
-            "constval": "8000"
-        },
-    ],
-    "callresults":[
-        {
-	        "classname": "ISteamFriends",
-	        "methodname": "DownloadClanActivityCounts",
-            "callresult": "DownloadClanActivityCountsResult_t"
-        },
-        {
-	        "classname": "ISteamUGC",
-	        "methodname": "RequestUGCDetails",
-            "callresult": "SteamUGCRequestUGCDetailsResult_t"
-        }
-    ],
-    "callback_structs":[
-    ],
-    "structs":[
-        {
-            "struct": "SteamInputActionEvent_t_AnalogAction",
-            "methods": [],
-            "fields": [
-                { "fieldname":"actionHandle", "fieldtype":"InputAnalogActionHandle_t" },
-                { "fieldname":"eMode", "fieldtype":"EInputSourceMode" },
-                { "fieldname":"x", "fieldtype":"float" },
-                { "fieldname":"y", "fieldtype":"float" },
-                { "fieldname":"bActive", "fieldtype":"bool" }
-            ]
-        },
-        {
-            "struct": "SteamInputActionEvent_t_DigitalAction",
-            "methods": [],
-            "fields": [
-                { "fieldname":"actionHandle", "fieldtype":"InputDigitalActionHandle_t" },
-                { "fieldname":"rotQuatX", "fieldtype":"float" },
-                { "fieldname":"rotQuatY", "fieldtype":"float" },
-                { "fieldname":"rotQuatZ", "fieldtype":"float" },
-                { "fieldname":"rotQuatW", "fieldtype":"float" },
-                { "fieldname":"posAccelX", "fieldtype":"float" },
-                { "fieldname":"posAccelY", "fieldtype":"float" },
-                { "fieldname":"posAccelZ", "fieldtype":"float" },
-                { "fieldname":"rotVelX", "fieldtype":"float" },
-                { "fieldname":"rotVelY", "fieldtype":"float" },
-                { "fieldname":"rotVelZ", "fieldtype":"float" }
-            ]
-        }
-    ],
-    "methods":[
-        {
-	    "classname": "ISteamAppTicket",
-	    "methodname": "GetAppOwnershipTicketData",
-	    "returntype": "uint32",
-	    "params": [
-                {"paramname": "nAppID", "paramtype": "uint32"},
-                {"paramname": "pvBuffer", "paramtype": "void *"},
-                {"paramname": "cbBufferLength", "paramtype": "uint32"},
-                {"paramname": "piAppId", "paramtype": "uint32 *"},
-                {"paramname": "piSteamId", "paramtype": "uint32 *"},
-                {"paramname": "piSignature", "paramtype": "uint32 *"},
-                {"paramname": "pcbSignature", "paramtype": "uint32 *"}
-	    ]
-        }
-    ],
-    "typedefs":[
-        {"typedef": "uintptr_t", "type": "void *"},
-        {"typedef": "intptr_t", "type": "void *"}
-    ],
-    "functions":[
-        {
-            "functionname": "SteamAPI_Init",
-            "returntype": "bool"
-        },
-        {
-            "functionname": "SteamAPI_InitSafe",
-            "returntype": "bool"
-        },
-        {
-            "functionname": "SteamAPI_RunCallbacks",
-            "returntype": "void"
-        },
+  "enums":[
+    {
+      "enumname": "EServerMode",
+      "values": [
+        {"name": "k_eServerModeInvalid", "value": "0"},
+        {"name": "k_eServerModeNoAuthentication", "value": "1"},
+        {"name": "k_eServerModeAuthentication", "value": "2"},
+        {"name": "k_eServerModeAuthenticationAndSecure", "value": "3"},
+      ]
+    },
+  ],
+  "consts":[
+    {
+      "constname": "k_cchPublishedDocumentTitleMax",
+      "consttype": "int",
+      "constval": "129"
+    },
+    {
+      "constname": "k_cchPublishedDocumentDescriptionMax",
+      "consttype": "int",
+      "constval": "8000"
+    },
+  ],
+  "callresults":[
+    {
+	  "classname": "ISteamFriends",
+	  "methodname": "DownloadClanActivityCounts",
+      "callresult": "DownloadClanActivityCountsResult_t"
+    },
+    {
+	  "classname": "ISteamUGC",
+	  "methodname": "RequestUGCDetails",
+      "callresult": "SteamUGCRequestUGCDetailsResult_t"
+    }
+  ],
+  "callback_structs":[
+  ],
+  "structs":[
+    {
+      "struct": "SteamInputActionEvent_t_AnalogAction",
+      "methods": [],
+      "fields": [
+        { "fieldname":"actionHandle", "fieldtype":"InputAnalogActionHandle_t" },
+        { "fieldname":"eMode", "fieldtype":"EInputSourceMode" },
+        { "fieldname":"x", "fieldtype":"float" },
+        { "fieldname":"y", "fieldtype":"float" },
+        { "fieldname":"bActive", "fieldtype":"bool" }
+      ]
+    },
+    {
+      "struct": "SteamInputActionEvent_t_DigitalAction",
+      "methods": [],
+      "fields": [
+        { "fieldname":"actionHandle", "fieldtype":"InputDigitalActionHandle_t" },
+        { "fieldname":"rotQuatX", "fieldtype":"float" },
+        { "fieldname":"rotQuatY", "fieldtype":"float" },
+        { "fieldname":"rotQuatZ", "fieldtype":"float" },
+        { "fieldname":"rotQuatW", "fieldtype":"float" },
+        { "fieldname":"posAccelX", "fieldtype":"float" },
+        { "fieldname":"posAccelY", "fieldtype":"float" },
+        { "fieldname":"posAccelZ", "fieldtype":"float" },
+        { "fieldname":"rotVelX", "fieldtype":"float" },
+        { "fieldname":"rotVelY", "fieldtype":"float" },
+        { "fieldname":"rotVelZ", "fieldtype":"float" }
+      ]
+    }
+  ],
+  "methods":[
+    {
+	  "classname": "ISteamAppTicket",
+	  "methodname": "GetAppOwnershipTicketData",
+	  "returntype": "uint32",
+	  "params": [
+        {"paramname": "nAppID", "paramtype": "uint32"},
+        {"paramname": "pvBuffer", "paramtype": "void *"},
+        {"paramname": "cbBufferLength", "paramtype": "uint32"},
+        {"paramname": "piAppId", "paramtype": "uint32 *"},
+        {"paramname": "piSteamId", "paramtype": "uint32 *"},
+        {"paramname": "piSignature", "paramtype": "uint32 *"},
+        {"paramname": "pcbSignature", "paramtype": "uint32 *"}
+	  ]
+    },
+    {
+      "classname": "ISteamUser",
+      "callresult": "UserStatsReceived_t",
+      "methodname": "RequestCurrentStats",
+      "methodname_flat": "SteamAPI_ISteamUserStats_RequestCurrentStats",
+      "params": [],
+      "returntype": "SteamAPICall_t"
+    },
+  ],
+  "typedefs":[
+    {"typedef": "uintptr_t", "type": "void *"},
+    {"typedef": "intptr_t", "type": "void *"}
+  ],
+  "functions":[
+    {
+      "functionname": "SteamAPI_Init",
+      "returntype": "bool"
+    },
+    {
+      "functionname": "SteamAPI_InitSafe",
+      "returntype": "bool"
+    },
+    {
+      "functionname": "SteamAPI_RunCallbacks",
+      "returntype": "void"
+    },
 
-        {
-            "functionname": "SteamGameServer_RunCallbacks",
-            "returntype": "void"
-        },
-        {
-            "functionname": "SteamAPI_RegisterCallback",
-            "returntype": "void",
-            "params": [
-                {"paramname": "pCallback", "paramtype": "void *"},
-                {"paramname": "callback", "paramtype": "int"}
-            ]
-        },
-        {
-            "functionname": "SteamAPI_UnregisterCallback",
-            "returntype": "void",
-            "params": [
-                {"paramname": "pCallback", "paramtype": "void *"}
-            ]
-        },
-        {
-            "functionname": "SteamAPI_RegisterCallResult",
-            "returntype": "void",
-            "params": [
-                {"paramname": "pCallback", "paramtype": "void *"},
-                {"paramname": "callback", "paramtype": "SteamAPICall_t"}
-            ]
-        },
-        {
-            "functionname": "SteamAPI_UnregisterCallResult",
-            "returntype": "void",
-            "params": [
-                {"paramname": "pCallback", "paramtype": "void *"},
-                {"paramname": "callback", "paramtype": "SteamAPICall_t"}
-            ]
-        },
-        {
-            "functionname": "SteamInternal_GameServer_Init",
-            "returntype": "bool",
-            "params": [
-                {"paramname": "unIP", "paramtype": "uint32"},
-                {"paramname": "usPort", "paramtype": "uint16"},
-                {"paramname": "usGamePort", "paramtype": "uint16"},
-                {"paramname": "usQueryPort", "paramtype": "uint16"},
-                {"paramname": "eServerMode", "paramtype": "enum EServerMode"},
-                {"paramname": "pchVersionString", "paramtype": "const char *"}
-            ]
-        },
-        {
-            "functionname": "SteamAPI_Shutdown",
-            "returntype": "void"
-        },
-        {
-            "functionname": "SteamGameServer_Shutdown",
-            "returntype": "void"
-        },
-        {
-            "functionname": "SteamAPI_GetHSteamUser",
-            "returntype": "HSteamUser"
-        },
-        {
-            "functionname": "SteamAPI_GetHSteamPipe",
-            "returntype": "HSteamPipe"
-        },
-        {
-            "functionname": "SteamGameServer_GetHSteamUser",
-            "returntype": "HSteamUser"
-        },
-        {
-            "functionname": "SteamGameServer_GetHSteamPipe",
-            "returntype": "HSteamPipe"
-        },
-        {
-            "functionname": "SteamInternal_CreateInterface",
-            "returntype": "void *",
-            "params": [
-                {"paramname": "version", "paramtype": "const char *"}
-            ]
-        },
-        {
-            "functionname": "SteamAPI_RestartAppIfNecessary",
-            "returntype": "bool",
-            "params": [
-                {"paramname": "unOwnAppID", "paramtype": "uint32"}
-            ]
-        },
-        {
-            "functionname": "shim_ISteamInput_GetDigitalActionData",
-            "returntype": "void",
-            "params": [
-                {"paramname": "self", "paramtype": "ISteamInput *"},
-                {"paramname": "controller", "paramtype": "InputHandle_t"},
-                {"paramname": "action", "paramtype": "InputDigitalActionHandle_t"},
-                {"paramname": "out", "paramtype": "InputDigitalActionData_t *"}
-            ]
-        },
-        {
-            "functionname": "shim_ISteamInput_GetAnalogActionData",
-            "returntype": "void",
-            "params": [
-                {"paramname": "self", "paramtype": "ISteamInput *"},
-                {"paramname": "controller", "paramtype": "InputHandle_t"},
-                {"paramname": "action", "paramtype": "InputAnalogActionHandle_t"},
-                {"paramname": "out", "paramtype": "InputAnalogActionData_t *"}
-            ]
-        },
-        {
-            "functionname": "shim_ISteamInput_GetMotionData",
-            "returntype": "void",
-            "params": [
-                {"paramname": "self", "paramtype": "ISteamInput *"},
-                {"paramname": "controller", "paramtype": "InputHandle_t"},
-                {"paramname": "out", "paramtype": "InputMotionData_t *"}
-            ]
-        },
-        {
-            "functionname": "shim_ISteamController_GetDigitalActionData",
-            "returntype": "void",
-            "params": [
-                {"paramname": "self", "paramtype": "ISteamController *"},
-                {"paramname": "controller", "paramtype": "ControllerHandle_t"},
-                {"paramname": "action", "paramtype": "ControllerDigitalActionHandle_t"},
-                {"paramname": "out", "paramtype": "InputDigitalActionData_t *"}
-            ]
-        },
-        {
-            "functionname": "shim_ISteamController_GetAnalogActionData",
-            "returntype": "void",
-            "params": [
-                {"paramname": "self", "paramtype": "ISteamController *"},
-                {"paramname": "controller", "paramtype": "ControllerHandle_t"},
-                {"paramname": "action", "paramtype": "ControllerAnalogActionHandle_t"},
-                {"paramname": "out", "paramtype": "InputAnalogActionData_t *"}
-            ]
-        },
-        {
-            "functionname": "shim_ISteamController_GetMotionData",
-            "returntype": "void",
-            "params": [
-                {"paramname": "self", "paramtype": "ISteamController *"},
-                {"paramname": "controller", "paramtype": "ControllerHandle_t"},
-                {"paramname": "out", "paramtype": "InputMotionData_t *"}
-            ]
-        }
-    ]
+    {
+      "functionname": "SteamGameServer_RunCallbacks",
+      "returntype": "void"
+    },
+    {
+      "functionname": "SteamAPI_RegisterCallback",
+      "returntype": "void",
+      "params": [
+        {"paramname": "pCallback", "paramtype": "void *"},
+        {"paramname": "callback", "paramtype": "int"}
+      ]
+    },
+    {
+      "functionname": "SteamAPI_UnregisterCallback",
+      "returntype": "void",
+      "params": [
+        {"paramname": "pCallback", "paramtype": "void *"}
+      ]
+    },
+    {
+      "functionname": "SteamAPI_RegisterCallResult",
+      "returntype": "void",
+      "params": [
+        {"paramname": "pCallback", "paramtype": "void *"},
+        {"paramname": "callback", "paramtype": "SteamAPICall_t"}
+      ]
+    },
+    {
+      "functionname": "SteamAPI_UnregisterCallResult",
+      "returntype": "void",
+      "params": [
+        {"paramname": "pCallback", "paramtype": "void *"},
+        {"paramname": "callback", "paramtype": "SteamAPICall_t"}
+      ]
+    },
+    {
+      "functionname": "SteamInternal_GameServer_Init",
+      "returntype": "bool",
+      "params": [
+        {"paramname": "unIP", "paramtype": "uint32"},
+        {"paramname": "usPort", "paramtype": "uint16"},
+        {"paramname": "usGamePort", "paramtype": "uint16"},
+        {"paramname": "usQueryPort", "paramtype": "uint16"},
+        {"paramname": "eServerMode", "paramtype": "enum EServerMode"},
+        {"paramname": "pchVersionString", "paramtype": "const char *"}
+      ]
+    },
+    {
+      "functionname": "SteamAPI_Shutdown",
+      "returntype": "void"
+    },
+    {
+      "functionname": "SteamGameServer_Shutdown",
+      "returntype": "void"
+    },
+    {
+      "functionname": "SteamAPI_GetHSteamUser",
+      "returntype": "HSteamUser"
+    },
+    {
+      "functionname": "SteamAPI_GetHSteamPipe",
+      "returntype": "HSteamPipe"
+    },
+    {
+      "functionname": "SteamGameServer_GetHSteamUser",
+      "returntype": "HSteamUser"
+    },
+    {
+      "functionname": "SteamGameServer_GetHSteamPipe",
+      "returntype": "HSteamPipe"
+    },
+    {
+      "functionname": "SteamInternal_CreateInterface",
+      "returntype": "void *",
+      "params": [
+        {"paramname": "version", "paramtype": "const char *"}
+      ]
+    },
+    {
+      "functionname": "SteamAPI_RestartAppIfNecessary",
+      "returntype": "bool",
+      "params": [
+        {"paramname": "unOwnAppID", "paramtype": "uint32"}
+      ]
+    },
+    {
+      "functionname": "shim_ISteamInput_GetDigitalActionData",
+      "returntype": "void",
+      "params": [
+        {"paramname": "self", "paramtype": "ISteamInput *"},
+        {"paramname": "controller", "paramtype": "InputHandle_t"},
+        {"paramname": "action", "paramtype": "InputDigitalActionHandle_t"},
+        {"paramname": "out", "paramtype": "InputDigitalActionData_t *"}
+      ]
+    },
+    {
+      "functionname": "shim_ISteamInput_GetAnalogActionData",
+      "returntype": "void",
+      "params": [
+        {"paramname": "self", "paramtype": "ISteamInput *"},
+        {"paramname": "controller", "paramtype": "InputHandle_t"},
+        {"paramname": "action", "paramtype": "InputAnalogActionHandle_t"},
+        {"paramname": "out", "paramtype": "InputAnalogActionData_t *"}
+      ]
+    },
+    {
+      "functionname": "shim_ISteamInput_GetMotionData",
+      "returntype": "void",
+      "params": [
+        {"paramname": "self", "paramtype": "ISteamInput *"},
+        {"paramname": "controller", "paramtype": "InputHandle_t"},
+        {"paramname": "out", "paramtype": "InputMotionData_t *"}
+      ]
+    },
+    {
+      "functionname": "shim_ISteamController_GetDigitalActionData",
+      "returntype": "void",
+      "params": [
+        {"paramname": "self", "paramtype": "ISteamController *"},
+        {"paramname": "controller", "paramtype": "ControllerHandle_t"},
+        {"paramname": "action", "paramtype": "ControllerDigitalActionHandle_t"},
+        {"paramname": "out", "paramtype": "InputDigitalActionData_t *"}
+      ]
+    },
+    {
+      "functionname": "shim_ISteamController_GetAnalogActionData",
+      "returntype": "void",
+      "params": [
+        {"paramname": "self", "paramtype": "ISteamController *"},
+        {"paramname": "controller", "paramtype": "ControllerHandle_t"},
+        {"paramname": "action", "paramtype": "ControllerAnalogActionHandle_t"},
+        {"paramname": "out", "paramtype": "InputAnalogActionData_t *"}
+      ]
+    },
+    {
+      "functionname": "shim_ISteamController_GetMotionData",
+      "returntype": "void",
+      "params": [
+        {"paramname": "self", "paramtype": "ISteamController *"},
+        {"paramname": "controller", "paramtype": "ControllerHandle_t"},
+        {"paramname": "out", "paramtype": "InputMotionData_t *"}
+      ]
+    }
+  ]
 }

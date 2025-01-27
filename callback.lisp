@@ -89,11 +89,12 @@
 (cffi:defcallback callback-with-info :void ((this :pointer) (parameter :pointer) (failed :bool) (api-call :uint64))
   (let ((callback (pointer->object this)))
     (cond (callback
-           (handler-case (setf value (cffi:mem-ref parameter `(:struct ,(struct-type callback))))
-             (error (e)
-               (warn* "Failed to translate parameter for ~a: ~a" callback e)))
-           (when value
-             (callback callback value failed api-call)))
+           (let ((value (handler-case (cffi:mem-ref parameter `(:struct ,(struct-type callback)))
+                          (error (e)
+                            (warn* "Failed to translate parameter for ~a: ~a" callback e)
+                            NIL))))
+             (when value
+               (callback callback value failed api-call))))
           (T
            (warn* "Callback for unregistered pointer ~a" this)))))
 

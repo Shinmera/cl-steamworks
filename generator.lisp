@@ -447,7 +447,8 @@
         (read-steam-api-spec extras)
         (scan-all-headers meta)))
       :output output
-      :if-exists if-exists))))
+      :if-exists if-exists)
+     T)))
 
 (defun query-directory (&optional (default (pathname-utils:subdirectory *this* "sdk")))
   (format *query-io* "~&~%Please enter the path to the SteamWorks SDK root directory~%[~a]~%> "

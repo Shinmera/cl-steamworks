@@ -8,6 +8,7 @@
                    :defaults (merge-pathnames "static/" *this*))))
 
 (defparameter steam::*debug-calls* NIL)
+(defvar *low-level-present* NIL)
 (defvar steam::*callback-id-map* (make-hash-table :test 'eq))
 (defvar steam::*function-callresult-map* (make-hash-table :test 'eq))
 
@@ -136,14 +137,12 @@
 
 (cffi:defctype steam::steam-id :unsigned-long)
 
-(defvar *low-level-present* NIL)
-
-(defun maybe-load-low-level (&optional file)
+(defun maybe-load-low-level (&optional file recompile)
   (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
     (when (probe-file file)
       (let ((fasl #+asdf (funcall asdf/driver:*output-translation-function* (compile-file-pathname file))
                   #-asdf (compile-file-pathname file)))
-        (unless (probe-file fasl)
+        (when (or recompile (not (probe-file fasl)))
           (ignore-errors (compile-file file :verbose NIL :print NIL :output-file fasl)))
         (if (probe-file fasl)
             (load fasl :verbose NIL :print NIL)

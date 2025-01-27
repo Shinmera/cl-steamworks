@@ -124,7 +124,6 @@
    #:beta-name
    #:file-details
    #:launch-command-line
-   #:list-apps
    #:find-app
    #:app
    #:installed-p

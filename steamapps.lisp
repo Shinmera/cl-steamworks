@@ -1,14 +1,11 @@
 (in-package #:org.shirakumo.fraf.steamworks)
 
 (defclass steamapps (interface)
-  ((applist-handle :initarg :applist-handle :accessor applist-handle)
-   (appticket-handle :initarg :appticket-handle :accessor appticket-handle)))
+  ((appticket-handle :initarg :appticket-handle :accessor appticket-handle)))
 
-(defmethod initialize-instance :after ((interface steamapps) &key (version T) (applist-version T) (appticket-version T) steamworks)
+(defmethod initialize-instance :after ((interface steamapps) &key (version T) (appticket-version T) steamworks)
   (setf (handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-apps
                                                  (t-or version STEAM::STEAMAPPS-INTERFACE-VERSION)))
-  (setf (applist-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-app-list
-                                                         (t-or applist-version STEAM::STEAMAPPLIST-INTERFACE-VERSION)))
   (setf (appticket-handle interface) (get-interface-handle* steamworks 'steam::client-get-isteam-generic-interface
                                                             (t-or appticket-version STEAM::STEAMAPPTICKET-INTERFACE-VERSION))))
 
@@ -56,12 +53,6 @@
   (cffi:with-foreign-object (buffer :char 1024)
     (let ((count (steam::apps-get-launch-command-line (handle apps) buffer 256)))
       (cffi:foreign-string-to-lisp buffer :count count :encoding :utf-8))))
-
-(defmethod list-apps ((apps steamapps))
-  (let ((count (steam::app-list-get-num-installed-apps (applist-handle apps))))
-    (cffi:with-foreign-object (buffer 'steam::app-id count)
-      (loop for i from 0 below (steam::app-list-get-installed-apps (applist-handle apps) buffer count)
-            collect (ensure-iface-obj 'app :interface apps :handle (cffi:mem-aref buffer 'steam::app-id i))))))
 
 (defmethod find-app ((apps steamapps) (handle integer))
   (ensure-iface-obj 'app :interface apps :handle handle))

@@ -32,8 +32,7 @@
   (ensure-iface-obj 'controller :interface steamcontroller :handle result))
 
 (define-interface-method steamcontroller action-glyph (steam::controller-get-glyph-for-action-origin origin)
-  ;; KLUDGE: ech, uiop
-  (uiop:parse-native-namestring result))
+  (pathname-utils:parse-native-namestring result))
 (define-interface-method steamcontroller action-label (steam::controller-get-string-for-action-origin origin))
 (define-interface-method steamcontroller run-frame (steam::controller-run-frame))
 

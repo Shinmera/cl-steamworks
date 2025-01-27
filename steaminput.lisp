@@ -35,8 +35,7 @@
     (ensure-iface-obj 'controller :interface steaminput :handle result)))
 
 (define-interface-method steaminput action-glyph (steam::input-get-glyph-for-action-origin-legacy origin)
-  ;; KLUDGE: ech, uiop
-  (uiop:parse-native-namestring result))
+  (pathname-utils:parse-native-namestring result))
 (define-interface-method steaminput action-label (steam::input-get-string-for-action-origin origin))
 (define-interface-method steaminput translate-action-origin (steam::input-translate-action-origin controller-type button))
 

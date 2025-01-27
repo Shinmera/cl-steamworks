@@ -439,7 +439,7 @@
          (version (or version (detect-version source) (error "Couldn't detect SDK version.")))
          (extras (or *extras-file* (merge-pathnames (make-pathname :name version :type "json")
                                                     (pathname-utils:subdirectory *this* "extra")))))
-    (cl-steamworks::maybe-compile-low-level
+    (cl-steamworks::maybe-load-low-level
      (write-low-level-file
       (compile-steam-api-spec
        (merge-steam-api-spec
@@ -480,8 +480,8 @@
                                              #+(and windows x86) "")))
     (with-simple-restart (continue "I have generated the shim manually, continue.")
       (uiop:run-program (list "make"
-                              "-C" (uiop:native-namestring source)
-                              (format NIL "steamworks=~a" (uiop:native-namestring sdk)))
+                              "-C" (pathname-utils:native-namestring source)
+                              (format NIL "steamworks=~a" (pathname-utils:native-namestring sdk)))
                         :output T :error-output T))
     (uiop:copy-file (make-pathname :name "steamworks_shim" :type "so" :defaults source)
                     (make-pathname :name "steamworks_shim" :defaults target :type

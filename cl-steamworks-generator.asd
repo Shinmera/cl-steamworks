@@ -10,6 +10,7 @@
                (:file "c-support")
                (:file "generator"))
   :depends-on (:yason
+               :uiop
                :cffi
                :pathname-utils
                :parse-number

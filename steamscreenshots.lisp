@@ -19,11 +19,11 @@
                       (vr
                        (destructuring-bind (type vrfile) vr
                          (steam::screenshots-add-vrscreenshot-to-library
-                          (handle interface) type (uiop:native-namestring file) (uiop:native-namestring vrfile))))
+                          (handle interface) type (pathname-utils:native-namestring file) (pathname-utils:native-namestring vrfile))))
                       (file
                        (steam::screenshots-add-screenshot-to-library
-                        (handle interface) (uiop:native-namestring file)
-                        (if thumbnail (uiop:native-namestring thumbnail) (cffi:null-pointer))
+                        (handle interface) (pathname-utils:native-namestring file)
+                        (if thumbnail (pathname-utils:native-namestring thumbnail) (cffi:null-pointer))
                         width height))
                       (T
                        (error 'argument-missing :argument '(or pixels vr file))))))

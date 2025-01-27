@@ -37,6 +37,7 @@
                (:file "steamvideo")
                (:file "documentation"))
   :depends-on (:documentation-utils
+               :pathname-utils
                :alexandria
                :trivial-features
                :trivial-garbage

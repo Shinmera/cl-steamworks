@@ -141,32 +141,14 @@
 (defun maybe-load-low-level (&optional file)
   (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
     (when (probe-file file)
-      (let ((fasl #-asdf (compile-file-pathname file)
-                  #+asdf (asdf:output-file (asdf:find-operation NIL 'asdf:compile-op)
-                                           (make-instance 'asdf:cl-source-file
-                                                          :parent (asdf:find-system :cl-steamworks)
-                                                          :name "low-level"
-                                                          :pathname file))))
+      (let ((fasl #+asdf (funcall asdf/driver:*output-translation-function* (compile-file-pathname file))
+                  #-asdf (compile-file-pathname file)))
+        (unless (probe-file fasl)
+          (ignore-errors (compile-file file :verbose NIL :print NIL :output-file fasl)))
         (if (probe-file fasl)
             (load fasl :verbose NIL :print NIL)
             (load file :verbose NIL :print NIL)))
       (setf *low-level-present* T))))
-
-(defun maybe-compile-low-level (&optional file)
-  (let ((file (or file (make-pathname :name "low-level" :type "lisp" :defaults *this*))))
-    (when (probe-file file)
-      (cffi:load-foreign-library 'steam::steamworks)
-      #+asdf
-      (let ((component (make-instance 'asdf:cl-source-file
-                                      :parent (asdf:find-system :cl-steamworks)
-                                      :name "low-level"
-                                      :pathname file))
-            (compile (asdf:find-operation NIL 'asdf:compile-op)))
-        (asdf:perform compile component))
-      #-asdf
-      (let ((fasl (compile-file-pathname file)))
-        (compile-file file :verbose NIL :print NIL :output-file fasl))
-      T)))
 
 ;; DEFCSTRUCT interns its accessors in *PACKAGE* rather than using the package
 ;; of either CONC-NAME or the slot name, so we have to switch packages here.

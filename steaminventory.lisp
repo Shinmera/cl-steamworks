@@ -222,7 +222,7 @@
   (with-inventory-result (handle item)
     (with-invalid-check NIL (steam::inventory-trigger-item-drop (iface* item) handle (handle item)))))
 
-(defclass inventory-result (c-managed-object interface-item)
+(defclass inventory-result (c-managed-object interface-object)
   ()
   (:default-initargs :interface 'steaminventory
                      :free-on-gc T))

@@ -37,10 +37,10 @@ When you are about to shut the server down again, make sure to call ``(free (ste
 The wrapper specifically does //not// include parts that have been marked as deprecated, superseded, or unused. If you find yourself in the unfortunate situation of having to access one of those functions anyway, you can always fall back to directly calling the C functions from the ``cl-steamworks-cffi`` package and retrieving relevant handles and IDs of the objects with ``handle``.
 
 ### This Wrapper is Broken!
-Huh. Please "let me know"(https://github.com/shinmera/cl-steamworks/issues/new) what's broken. It's entirely possible that a wide set of things don't work quite right yet, as I don't have the time to thoroughly test everything.
+Huh. Please "let me know"(https://shinmera.com/project/cl-steamworks/issues/new) what's broken. It's entirely possible that a wide set of things don't work quite right yet, as I don't have the time to thoroughly test everything.
 
 ### SteamWorks updated and the new stuff is missing!
-Thanks for noticing! Please "submit a pull request"(https://github.com/shinmera/cl-steamworks/pulls) with the relevant fixes.
+Thanks for noticing! Please "submit a pull request"(https://shinmera.com/project/cl-steamworks/pulls) with the relevant fixes.
 
 ### MacOS "Invalid Code Signature"
 So for whatever reason I've encountered the problem that the ``libsteam_api.dylib`` is unloadable and just spews an error about an invalid signature, despite codesign itself saying the signature is fine. There's not much out on the web about how to fix this and the only thing so far I've found to work at all is to just remove the signature:

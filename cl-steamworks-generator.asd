@@ -4,7 +4,7 @@
   :author "Yukari Hafner <shinmera@tymoon.eu>"
   :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "Generator for the low-level steamworks bindings."
-  :homepage "https://github.com/Shinmera/cl-steamworks"
+  :homepage "https://shinmera.com/project/cl-steamworks"
   :serial T
   :components ((:file "package")
                (:file "c-support")

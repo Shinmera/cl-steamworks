@@ -4,7 +4,7 @@
   :author "Yukari Hafner <shinmera@tymoon.eu>"
   :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "A wrapper for the Valve SteamWorks API."
-  :homepage "https://github.com/Shinmera/cl-steamworks"
+  :homepage "https://shinmera.com/project/cl-steamworks"
   :serial T
   :components ((:file "package")
                (:file "conditions")
